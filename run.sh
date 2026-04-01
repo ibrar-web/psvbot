@@ -12,4 +12,4 @@ if [[ "${1:-}" == "deploy" ]]; then
   exit 0
 fi
 
-uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}" --reload
+uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" --reload

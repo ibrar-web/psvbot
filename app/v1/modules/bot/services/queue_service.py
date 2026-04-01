@@ -18,11 +18,19 @@ from app.v1.core.settings import (
     PRINTSMITH_USERNAME,
 )
 from app.v1.modules.bot.services.estimate_service import run_estimate_flow
-from app.v1.schemas.jobqueuemodel import JobQueueDocument
+from app.v1.schemas.jobqueuemodel import JobQueueDocument, JobQueueStatus
 
 logger = logging.getLogger(__name__)
 _poller_lock = asyncio.Lock()
 _active_poll_task: asyncio.Task | None = None
+
+
+def _main_server_endpoint(path: str) -> str:
+    base = MAIN_SERVER_API_BASE_URL.rstrip("/")
+    clean_path = path if path.startswith("/") else f"/{path}"
+    if base.endswith("/api/v1"):
+        return f"{base}{clean_path}"
+    return f"{base}/api/v1{clean_path}"
 
 
 def _auth_headers() -> Dict[str, str]:
@@ -52,12 +60,20 @@ def _normalize_runtime_credentials(data: Optional[Dict[str, Any]]) -> Dict[str, 
         payload.get("printsmith_url") or payload.get("url") or PRINTSMITH_URL
     ).strip()
     username = str(
-        payload.get("printsmith_username") or payload.get("username") or PRINTSMITH_USERNAME
+        payload.get("printsmith_username")
+        or payload.get("username")
+        or PRINTSMITH_USERNAME
     ).strip()
     password = str(
-        payload.get("printsmith_password") or payload.get("password") or PRINTSMITH_PASSWORD
+        payload.get("printsmith_password")
+        or payload.get("password")
+        or PRINTSMITH_PASSWORD
     ).strip()
-    company = str(payload.get("printsmith_company") or payload.get("company") or PRINTSMITH_COMPANY).strip()
+    company = str(
+        payload.get("printsmith_company")
+        or payload.get("company")
+        or PRINTSMITH_COMPANY
+    ).strip()
 
     if not company and printsmith_url:
         hostname = urlparse(printsmith_url).hostname or ""
@@ -73,24 +89,59 @@ def _normalize_runtime_credentials(data: Optional[Dict[str, Any]]) -> Dict[str, 
 
 async def fetch_main_server_record(queue_id: str) -> Dict[str, Any]:
     if not MAIN_SERVER_API_BASE_URL:
-        raise HTTPException(status_code=500, detail="MAIN_SERVER_API_BASE_URL is not configured")
+        raise HTTPException(
+            status_code=500, detail="MAIN_SERVER_API_BASE_URL is not configured"
+        )
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(
-            f"{MAIN_SERVER_API_BASE_URL}/api/v1/quotation/job/{queue_id}/quote-detail",
+            _main_server_endpoint(f"/quotation/job/{queue_id}/quote-detail"),
             headers=_auth_headers(),
         )
         response.raise_for_status()
         payload = response.json()
+        print(f'payload: {payload}')
 
     if isinstance(payload, dict) and "data" in payload:
         return payload["data"] or {}
     return payload
 
 
+def _build_bot_quote_record(
+    payload: Dict[str, Any], job: JobQueueDocument
+) -> Dict[str, Any]:
+    quote = payload.get("quote") or {}
+    requirements = payload.get("requirements") or quote.get("requirements") or {}
+
+    quote_id = str(
+        quote.get("_id")
+        or quote.get("id")
+        or quote.get("quote_id")
+        or job.record_id
+        or job.quotation_id
+    )
+
+    return {
+        "_id": quote_id,
+        "quote_id": quote_id,
+        "tenant_id": quote.get("tenant_id"),
+        "user_email": quote.get("user_email", ""),
+        "account_name": quote.get("account_name", ""),
+        "contact_person": quote.get("contact_person", ""),
+        "contact_email": quote.get("contact_email", ""),
+        "contact_phone": quote.get("contact_phone", ""),
+        "requirements": {
+            "stock_search": requirements.get("stock_search", ""),
+            "quantity": requirements.get("quantity", ""),
+            "job_charges": requirements.get("job_charges", []),
+        },
+    }
+
+
 async def sync_job_with_main_server(job: JobQueueDocument) -> Dict[str, Any]:
     payload = await fetch_main_server_record(str(job.id))
     quote = payload.get("quote") or {}
+    job_data = payload.get("job") or {}
 
     if quote:
         job.quotation_id = str(
@@ -105,13 +156,20 @@ async def sync_job_with_main_server(job: JobQueueDocument) -> Dict[str, Any]:
             or quote.get("quote_id")
             or job.record_id
         )
+        job.tenant_id = quote.get("tenant_id") or job.tenant_id
+
+    if job_data:
+        job.tenant_id = job_data.get("tenant_id") or job.tenant_id
+        job.created_by = job_data.get("created_by") or job.created_by
 
     job.updated_at = datetime.utcnow()
     await job.save()
     return payload
 
 
-async def _notify_main_server(job: JobQueueDocument, result: Dict[str, Any]) -> Dict[str, Any]:
+async def _notify_main_server(
+    job: JobQueueDocument, result: Dict[str, Any]
+) -> Dict[str, Any]:
     if not MAIN_SERVER_API_BASE_URL:
         return {
             "status": "skipped",
@@ -122,13 +180,16 @@ async def _notify_main_server(job: JobQueueDocument, result: Dict[str, Any]) -> 
         "queue_id": str(job.id),
         "success": result.get("status") == "success",
         "summary_file_name": result.get("summary_file_name"),
-        "summary_file_url": result.get("summary_file_url") or result.get("summary_file_gcs_uri"),
-        "error_message": None if result.get("status") == "success" else result.get("message"),
+        "summary_file_url": result.get("summary_file_url")
+        or result.get("summary_file_gcs_uri"),
+        "error_message": (
+            None if result.get("status") == "success" else result.get("message")
+        ),
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
-            f"{MAIN_SERVER_API_BASE_URL}/api/v1/quotation/job/result",
+            _main_server_endpoint("/quotation/job/result"),
             json=payload,
             headers=_auth_headers(),
         )
@@ -148,55 +209,78 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
         }
 
     job.is_processing = True
-    job.status = "processing"
+    job.status = JobQueueStatus.processing
     job.updated_at = now
     await job.save()
 
     try:
         payload = await fetch_main_server_record(str(job.id))
-        quote_record = payload.get("quote") or {}
+        quote = payload.get("quote") or {}
+        job_data = payload.get("job") or {}
         psv_credentials = payload.get("psv_credentials") or {}
+        quote_record = _build_bot_quote_record(payload, job)
 
-        if quote_record:
+        if quote:
             job.quotation_id = str(
-                quote_record.get("_id")
-                or quote_record.get("id")
-                or quote_record.get("quote_id")
+                quote.get("_id")
+                or quote.get("id")
+                or quote.get("quote_id")
                 or job.quotation_id
             )
             job.record_id = str(
-                quote_record.get("_id")
-                or quote_record.get("id")
-                or quote_record.get("quote_id")
+                quote.get("_id")
+                or quote.get("id")
+                or quote.get("quote_id")
                 or job.record_id
             )
-            job.updated_at = datetime.utcnow()
-            await job.save()
+            job.tenant_id = quote.get("tenant_id") or job.tenant_id
 
-        runtime_credentials = _normalize_runtime_credentials(psv_credentials) or _build_runtime_credentials()
+        if job_data:
+            job.tenant_id = job_data.get("tenant_id") or job.tenant_id
+            job.created_by = job_data.get("created_by") or job.created_by
+
+        job.updated_at = datetime.utcnow()
+        await job.save()
+
+        runtime_credentials = (
+            _normalize_runtime_credentials(psv_credentials)
+            or _build_runtime_credentials()
+        )
         if not runtime_credentials["printsmith_url"]:
-            raise HTTPException(status_code=500, detail="PRINTSMITH_URL is not configured")
+            raise HTTPException(
+                status_code=500, detail="PRINTSMITH_URL is not configured"
+            )
         if not runtime_credentials["username"]:
-            raise HTTPException(status_code=500, detail="PRINTSMITH_USERNAME is not configured")
+            raise HTTPException(
+                status_code=500, detail="PRINTSMITH_USERNAME is not configured"
+            )
         if not runtime_credentials["password"]:
-            raise HTTPException(status_code=500, detail="PRINTSMITH_PASSWORD is not configured")
+            raise HTTPException(
+                status_code=500, detail="PRINTSMITH_PASSWORD is not configured"
+            )
         if not runtime_credentials["company"]:
-            raise HTTPException(status_code=500, detail="PRINTSMITH_COMPANY is not configured")
+            raise HTTPException(
+                status_code=500, detail="PRINTSMITH_COMPANY is not configured"
+            )
 
         result = await run_in_threadpool(
             run_estimate_flow,
             runtime_credentials,
-            quote_record or {"quote_id": job.quotation_id, "_id": job.record_id or job.quotation_id},
+            quote_record,
         )
 
         job.is_processing = False
         job.updated_at = datetime.utcnow()
 
         if result.get("status") == "success":
-            job.status = "completed"
+            job.status = JobQueueStatus.complete
+            job.file_name = result.get("summary_file_name")
+            job.file_url = result.get("summary_file_url") or result.get(
+                "summary_file_gcs_uri"
+            )
             job.last_error = None
         else:
-            job.status = "failed"
+            job.status = JobQueueStatus.failed
             job.retry_count += 1
             job.last_error = result.get("message") or "Bot processing failed"
             job.failure_history.append(
@@ -211,16 +295,20 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
         try:
             result["main_server_callback"] = await _notify_main_server(job, result)
         except Exception as exc:
-            logger.exception("Failed to notify main server for queue_id=%s", getattr(job, "id", None))
+            logger.exception(
+                "Failed to notify main server for queue_id=%s", getattr(job, "id", None)
+            )
             result["main_server_callback"] = {
                 "status": "error",
                 "message": str(exc),
             }
         return result
     except Exception as exc:
-        logger.exception("Queue processing failed for queue_id=%s", getattr(job, "id", None))
+        logger.exception(
+            "Queue processing failed for queue_id=%s", getattr(job, "id", None)
+        )
         job.is_processing = False
-        job.status = "failed"
+        job.status = JobQueueStatus.failed
         job.retry_count += 1
         job.last_error = str(exc)
         job.failure_history.append(
@@ -237,16 +325,21 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             "message": str(exc),
         }
         try:
-            error_result["main_server_callback"] = await _notify_main_server(job, error_result)
+            error_result["main_server_callback"] = await _notify_main_server(
+                job, error_result
+            )
         except Exception:
-            logger.exception("Failed to notify main server for queue_id=%s", getattr(job, "id", None))
+            logger.exception(
+                "Failed to notify main server for queue_id=%s", getattr(job, "id", None)
+            )
         return error_result
 
 
 async def _run_pending_jobs_batch() -> None:
+    print('checking pending taskes')
     pending_jobs = await JobQueueDocument.find(
         Or(
-            JobQueueDocument.status == "pending",
+            JobQueueDocument.status == JobQueueStatus.pending,
             JobQueueDocument.status == None,
         ),
         JobQueueDocument.is_processing == False,
