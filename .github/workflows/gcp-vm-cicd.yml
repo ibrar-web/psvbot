@@ -9,11 +9,11 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  APP_DIR: ${{ vars.GCP_VM_APP_DIR || format('/home/{0}/alphgraphics', secrets.GCP_VM_USER) }}
-  SERVICE_NAME: ${{ vars.GCP_VM_SERVICE_NAME || 'alphgraphics' }}
+  APP_DIR: ${{ vars.GCP_VM_APP_DIR || format('/home/{0}/psvbot', secrets.GCP_VM_USER) }}
+  SERVICE_NAME: ${{ vars.GCP_VM_SERVICE_NAME || 'psvbot' }}
   SSH_PORT: ${{ vars.GCP_VM_SSH_PORT || '22' }}
   APP_HOST: ${{ vars.GCP_VM_APP_HOST || '127.0.0.1' }}
-  APP_PORT: ${{ vars.GCP_VM_APP_PORT || '8000' }}
+  APP_PORT: ${{ vars.GCP_VM_APP_PORT || '8001' }}
 
 jobs:
   ci:
@@ -37,14 +37,14 @@ jobs:
 
       - name: Run smoke checks
         run: |
-          python -m compileall app v3_api main.py app.py
+          python -m compileall app main.py
           python -c "import main"
 
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     needs: ci
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/bot'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     environment: production
 
     steps:
@@ -58,7 +58,7 @@ jobs:
           username: ${{ secrets.GCP_VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           port: ${{ env.SSH_PORT }}
-          source: "app,v3_api,scripts,deploy,public,main.py,app.py,requirements.txt,Readme.md,run.sh,dockerfile,AG_NameTag_Price_List_-_Sheet1.csv"
+          source: "app,scripts,.github,main.py,requirements.txt,README.md,run.sh,dockerfile,.env.example"
           target: ${{ env.APP_DIR }}
           overwrite: true
           rm: false
