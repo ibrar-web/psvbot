@@ -201,7 +201,7 @@ async def _notify_main_server(
 
 
 async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
-    now = datetime.utcnow()
+    started_at = datetime.utcnow()
     if job.is_processing:
         return {
             "status": "skipped",
@@ -210,8 +210,13 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
 
     job.is_processing = True
     job.status = JobQueueStatus.processing
-    job.updated_at = now
+    job.updated_at = started_at
     await job.save()
+    logger.info(
+        "Queue processing started queue_id=%s start_time=%s",
+        getattr(job, "id", None),
+        started_at.isoformat(),
+    )
 
     try:
         payload = await fetch_main_server_record(str(job.id))
@@ -269,8 +274,10 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             quote_record,
         )
 
+        ended_at = datetime.utcnow()
+        total_time_used_seconds = round((ended_at - started_at).total_seconds(), 3)
         job.is_processing = False
-        job.updated_at = datetime.utcnow()
+        job.updated_at = ended_at
 
         if result.get("status") == "success":
             job.status = JobQueueStatus.complete
@@ -292,6 +299,13 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             )
 
         await job.save()
+        logger.info(
+            "Queue processing finished queue_id=%s end_time=%s total_time_used_seconds=%s status=%s",
+            getattr(job, "id", None),
+            ended_at.isoformat(),
+            total_time_used_seconds,
+            job.status,
+        )
         try:
             result["main_server_callback"] = await _notify_main_server(job, result)
         except Exception as exc:
@@ -318,8 +332,17 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
                 "timestamp": datetime.utcnow().isoformat(),
             }
         )
-        job.updated_at = datetime.utcnow()
+        ended_at = datetime.utcnow()
+        total_time_used_seconds = round((ended_at - started_at).total_seconds(), 3)
+        job.updated_at = ended_at
         await job.save()
+        logger.info(
+            "Queue processing failed queue_id=%s end_time=%s total_time_used_seconds=%s error=%s",
+            getattr(job, "id", None),
+            ended_at.isoformat(),
+            total_time_used_seconds,
+            str(exc),
+        )
         error_result = {
             "status": "error",
             "message": str(exc),
@@ -344,7 +367,7 @@ async def _run_pending_jobs_batch() -> None:
         ),
         JobQueueDocument.is_processing == False,
     ).to_list()
-
+    print(f'checking pending taskes {pending_jobs}')
     for job in pending_jobs:
         await process_job_queue_document(job)
 
