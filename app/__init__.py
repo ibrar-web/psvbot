@@ -110,12 +110,16 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def startup_event() -> None:
-        from app.v1.modules.bot.services.queue_service import schedule_queue_poll_if_idle
+        from app.v1.modules.bot.services.queue_service import (
+            recover_incomplete_jobs,
+            schedule_queue_poll_if_idle,
+        )
 
         await init_beanie(
             database=mongo_client[MONGO_DB],
             document_models=[JobQueueDocument],
         )
+        await recover_incomplete_jobs()
 
         async def _queue_poller() -> None:
             while True:

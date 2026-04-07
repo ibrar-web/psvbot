@@ -11,7 +11,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 
 from app.v1.common.storage_service import build_s3_key, generate_presigned_download_url, upload_bytes_to_s3
 from app.v1.core.settings import BUCKET_NAME, QUOTE_SUMMARY_STORAGE_ROOT
-from app.v1.modules.bot.config import DEBUG
+from app.v1.modules.bot.config import DEBUG, DEFAULT_TIMEOUT_SECONDS
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.driver import create_driver
 from app.v1.modules.bot.pages.estimate_page import EstimatePage
@@ -21,7 +21,7 @@ from app.v1.modules.bot.pages.logout_page import LogoutPage
 from app.v1.modules.bot.pages.new_estimate_page import NewEstimatePage
 
 logger = logging.getLogger(__name__)
-FLOW_TIMEOUT_SECONDS = 300
+FLOW_TIMEOUT_SECONDS = DEFAULT_TIMEOUT_SECONDS
 
 _flow_lock = Lock()
 

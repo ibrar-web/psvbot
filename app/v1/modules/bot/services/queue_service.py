@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import gc
 from datetime import datetime
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
@@ -9,6 +10,7 @@ from beanie.operators import Or
 from fastapi import HTTPException
 from fastapi.concurrency import run_in_threadpool
 
+from app.v1.modules.bot.config import DEFAULT_TIMEOUT_SECONDS
 from app.v1.core.settings import (
     MAIN_SERVER_API_BASE_URL,
     MAIN_SERVER_API_TOKEN,
@@ -23,6 +25,20 @@ from app.v1.schemas.jobqueuemodel import JobQueueDocument, JobQueueStatus
 logger = logging.getLogger(__name__)
 _poller_lock = asyncio.Lock()
 _active_poll_task: asyncio.Task | None = None
+
+
+def _flush_log_handlers() -> None:
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        try:
+            handler.flush()
+        except Exception:
+            pass
+
+
+def _cleanup_after_job() -> None:
+    _flush_log_handlers()
+    gc.collect()
 
 
 def _main_server_endpoint(path: str) -> str:
@@ -100,7 +116,6 @@ async def fetch_main_server_record(queue_id: str) -> Dict[str, Any]:
         )
         response.raise_for_status()
         payload = response.json()
-        print(f'payload: {payload}')
 
     if isinstance(payload, dict) and "data" in payload:
         return payload["data"] or {}
@@ -200,6 +215,31 @@ async def _notify_main_server(
             return {"status": "success", "http_status": response.status_code}
 
 
+async def recover_incomplete_jobs() -> None:
+    stuck_jobs = await JobQueueDocument.find(
+        JobQueueDocument.is_processing == True
+    ).to_list()
+    if not stuck_jobs:
+        logger.info("Queue recovery check completed: no stuck jobs found")
+        return
+
+    logger.warning("Queue recovery found %s stuck job(s)", len(stuck_jobs))
+    for job in stuck_jobs:
+        job.is_processing = False
+        job.status = JobQueueStatus.pending
+        job.last_error = "Recovered after service restart before previous run completed"
+        job.failure_history.append(
+            {
+                "retry": job.retry_count,
+                "message": job.last_error,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
+        job.updated_at = datetime.utcnow()
+        await job.save()
+        logger.info("Recovered stuck queue job queue_id=%s", getattr(job, "id", None))
+
+
 async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
     started_at = datetime.utcnow()
     if job.is_processing:
@@ -219,6 +259,7 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
     )
 
     try:
+        logger.info("Queue step=fetch_main_record queue_id=%s", getattr(job, "id", None))
         payload = await fetch_main_server_record(str(job.id))
         quote = payload.get("quote") or {}
         job_data = payload.get("job") or {}
@@ -268,6 +309,11 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
                 status_code=500, detail="PRINTSMITH_COMPANY is not configured"
             )
 
+        logger.info(
+            "Queue step=run_bot queue_id=%s flow_timeout_seconds=%s",
+            getattr(job, "id", None),
+            DEFAULT_TIMEOUT_SECONDS,
+        )
         result = await run_in_threadpool(
             run_estimate_flow,
             runtime_credentials,
@@ -356,10 +402,20 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
                 "Failed to notify main server for queue_id=%s", getattr(job, "id", None)
             )
         return error_result
+    finally:
+        logger.info("Queue cleanup queue_id=%s", getattr(job, "id", None))
+        _cleanup_after_job()
 
 
 async def _run_pending_jobs_batch() -> None:
-    print('checking pending taskes')
+    logger.info("Queue scheduler checking pending jobs")
+    processing_job = await JobQueueDocument.find_one(JobQueueDocument.is_processing == True)
+    if processing_job is not None:
+        logger.info(
+            "Queue scheduler skipped because queue_id=%s is already processing",
+            getattr(processing_job, "id", None),
+        )
+        return
     pending_jobs = await JobQueueDocument.find(
         Or(
             JobQueueDocument.status == JobQueueStatus.pending,
@@ -367,7 +423,7 @@ async def _run_pending_jobs_batch() -> None:
         ),
         JobQueueDocument.is_processing == False,
     ).to_list()
-    print(f'checking pending taskes {pending_jobs}')
+    logger.info("Queue scheduler found %s pending job(s)", len(pending_jobs))
     for job in pending_jobs:
         await process_job_queue_document(job)
 
@@ -391,6 +447,7 @@ def schedule_queue_poll_if_idle() -> bool:
     global _active_poll_task
 
     if _active_poll_task is not None and not _active_poll_task.done():
+        logger.info("Queue scheduler tick skipped because previous batch is still running")
         return False
 
     _active_poll_task = asyncio.create_task(poll_and_process_pending_jobs())
