@@ -3,6 +3,7 @@ import re
 import tempfile
 import time
 from pathlib import Path
+from typing import Any, Dict, Optional
 from urllib.parse import unquote, urlparse
 from urllib.request import Request, urlopen
 
@@ -18,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 class EstimatedSummaryTab(BasePage):
     ESTIMATE_SUMMARY_TAB = "//li[@role='tab' and .//span[normalize-space()='Estimate Summary']]"
+    CREATE_PROSPECT_BUTTON = (
+        "//button[@name='create_account_button'"
+        " and .//span[contains(normalize-space(),'Create Prospect')]]"
+    )
     US685_E_ESTIMATE_BUTTON = (
         "//div[@name='print_btn_group']//button[@name='print_btn'"
         " and .//span[normalize-space()='US685 E-Estimate']]"
@@ -47,8 +52,15 @@ class EstimatedSummaryTab(BasePage):
         )
         self.wait_for_spinner_to_disappear()
 
-    def click_us685_eestimate_and_download(self) -> Path:
+    def click_us685_eestimate_and_download(
+        self,
+        customer_selection_status: Optional[Dict[str, Any]] = None,
+    ) -> Path:
         temp_dir = Path(tempfile.mkdtemp(prefix="psv_invoices_"))
+        customer_selection_status = customer_selection_status or {}
+
+        if customer_selection_status.get("used_fallback_customer"):
+            self._create_prospect()
 
         self._debug("Waiting for US685 E-Estimate button on Estimate Summary")
         existing_handles = list(self.driver.window_handles)
@@ -76,6 +88,12 @@ class EstimatedSummaryTab(BasePage):
                 self.driver.close()
             finally:
                 self.driver.switch_to.window(current_handle)
+
+    def _create_prospect(self) -> None:
+        self._debug("Creating prospect before downloading estimate")
+        self.wait_for_spinner_to_disappear()
+        self.click(By.XPATH, self.CREATE_PROSPECT_BUTTON)
+        self.wait_for_spinner_to_disappear()
 
     def _wait_for_download_url(self) -> str:
         def resolve_url(driver) -> str | None:

@@ -94,7 +94,7 @@ class InvoicePage(BasePage):
         self._retry_step("job_details", lambda: self._complete_job_details(job_data))
         return self._retry_step(
             "estimate_summary_download",
-            self._download_from_estimate_summary,
+            lambda: self._download_from_estimate_summary(customer_selection_status),
         )
 
     def _retry_step(self, step_name: str, callback, retries: int = 1):
@@ -128,13 +128,18 @@ class InvoicePage(BasePage):
         job_details_tab.select_stock_from_picker(job_data)
         job_details_tab.configure_price_breakup(job_data)
 
-    def _download_from_estimate_summary(self) -> Path:
+    def _download_from_estimate_summary(
+        self,
+        customer_selection_status: Optional[Dict[str, Any]] = None,
+    ) -> Path:
         estimated_summary_tab = EstimatedSummaryTab(self.driver, self.timeout)
         self._debug("Switching to Estimate Summary tab")
         estimated_summary_tab.switch_to_tab()
         self._debug(f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}")
         self._debug("Downloading invoice from Estimate Summary")
-        return estimated_summary_tab.click_us685_eestimate_and_download()
+        return estimated_summary_tab.click_us685_eestimate_and_download(
+            customer_selection_status=customer_selection_status,
+        )
 
     def _switch_to_job_details_tab(self) -> None:
         self.wait_for_spinner_to_disappear()
