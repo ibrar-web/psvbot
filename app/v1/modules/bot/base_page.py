@@ -94,3 +94,33 @@ class BasePage:
                 """
             )
         )
+
+    def wait_for_kendo_combobox_search_to_settle(self, input_locator: str) -> None:
+        time.sleep(0.2)
+        WebDriverWait(self.driver, self.timeout).until(
+            lambda d: d.execute_script(
+                """
+                const input = document.evaluate(
+                  arguments[0],
+                  document,
+                  null,
+                  XPathResult.FIRST_ORDERED_NODE_TYPE,
+                  null
+                ).singleNodeValue;
+                if (!input) return false;
+
+                const combo = input.closest('kendo-combobox');
+                if (!combo) return false;
+
+                const icon = combo.querySelector('.k-select .k-icon');
+                if (!icon) return false;
+
+                const className = icon.className || '';
+                const isLoading = className.includes('k-i-loading');
+                const isReady = className.includes('k-i-arrow-s');
+
+                return !isLoading && isReady;
+                """,
+                input_locator,
+            )
+        )

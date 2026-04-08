@@ -56,10 +56,10 @@ class NewEstimatePage(BasePage):
         )
         fallback_customer_name = "walk-in"
         self._debug(f"Typing customer search: {primary_customer_name}")
-        self.wait_for_spinner_to_disappear()
+        self.wait_for_kendo_combobox_search_to_settle(self.CHOOSE_CUSTOMER_INPUT)
         customer_input = self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_INPUT)
         self._replace_customer_search_value(customer_input, primary_customer_name)
-        self.wait_for_spinner_to_disappear()
+        self.wait_for_kendo_combobox_search_to_settle(self.CHOOSE_CUSTOMER_INPUT)
 
         self._debug(f"Selecting '{primary_customer_name}' from customer dropdown")
         selection_outcome = self._select_customer_dropdown_option(primary_customer_name)
@@ -71,17 +71,17 @@ class NewEstimatePage(BasePage):
             )
             customer_input = self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_INPUT)
             self._replace_customer_search_value(customer_input, fallback_customer_name)
-            self.wait_for_spinner_to_disappear()
+            self.wait_for_kendo_combobox_search_to_settle(self.CHOOSE_CUSTOMER_INPUT)
             self._debug("Selecting 'walk-in' from customer dropdown")
             self._select_customer_dropdown_option(fallback_customer_name)
-            self.wait_for_spinner_to_disappear()
+            self.wait_for_kendo_combobox_search_to_settle(self.CHOOSE_CUSTOMER_INPUT)
             return {
                 "used_fallback_customer": True,
                 "requested_customer_name": primary_customer_name,
                 "selected_customer_name": fallback_customer_name,
                 "fallback_reason": selection_outcome,
             }
-        self.wait_for_spinner_to_disappear()
+        self.wait_for_kendo_combobox_search_to_settle(self.CHOOSE_CUSTOMER_INPUT)
         return {
             "used_fallback_customer": False,
             "requested_customer_name": primary_customer_name,
