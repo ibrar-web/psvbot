@@ -42,9 +42,12 @@ class InvoicePage(BasePage):
         requirements = quote_record.get("requirements") or {}
         contact_data = {
             "account_name": quote_record.get("account_name", ""),
+            "company_name": quote_record.get("company_name", quote_record.get("account_name", "")),
             "contact_person": quote_record.get("contact_person", ""),
             "contact_email": quote_record.get("contact_email", ""),
             "contact_phone": quote_record.get("contact_phone", ""),
+            "street": quote_record.get("street", ""),
+            "city": quote_record.get("city", ""),
         }
         job_data = {
             "stock_search_term": requirements.get(

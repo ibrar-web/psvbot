@@ -83,7 +83,7 @@ class ContactPersonTab(BasePage):
         self._debug("Saving contact details")
         # UI needs a brief settle time before invoice form becomes stable.
         time.sleep(1)
-        # self._fill_invoice_address_with_retry(data, retries=2)
+        self._fill_invoice_address_with_retry(data, retries=2)
         # Keep a brief pause after successful invoice fill before tab switch.
         # time.sleep(1)
 
@@ -127,14 +127,18 @@ class ContactPersonTab(BasePage):
     def _fill_invoice_address(self, data: Mapping[str, str]) -> None:
         self._debug("Filling invoice address details")
         self._wait_for_spinner_overlay()
-        self._safe_type(By.XPATH, self.INVOICE_COMPANY_INPUT, data.get("invoice_company", ""))
-        self._safe_type(By.XPATH, self.INVOICE_STREET1_INPUT, data.get("invoice_street1", ""))
-        self._safe_type(By.XPATH, self.INVOICE_STREET2_INPUT, data.get("invoice_street2", ""))
+        self._safe_type(
+            By.XPATH,
+            self.INVOICE_COMPANY_INPUT,
+            data.get("company_name", data.get("account_name", "")),
+        )
+        self._safe_type(By.XPATH, self.INVOICE_STREET1_INPUT, data.get("street", ""))
+        # self._safe_type(By.XPATH, self.INVOICE_STREET2_INPUT, data.get("street2", ""))
 
-        self._type_combo_value(self.INVOICE_CITY_INPUT, data.get("invoice_city", ""))
-        self._type_combo_value(self.INVOICE_STATE_INPUT, data.get("invoice_state", ""))
-        self._type_combo_value(self.INVOICE_ZIP_INPUT, data.get("invoice_zip", ""))
-        self._type_combo_value(self.INVOICE_COUNTRY_INPUT, data.get("invoice_country", ""))
+        self._type_combo_value(self.INVOICE_CITY_INPUT, data.get("city", ""))
+        # self._type_combo_value(self.INVOICE_STATE_INPUT, data.get("state", ""))
+        # self._type_combo_value(self.INVOICE_ZIP_INPUT, data.get("zip", ""))
+        # self._type_combo_value(self.INVOICE_COUNTRY_INPUT, data.get("country", ""))
 
         self._debug("Saving invoice address details")
         self._wait_for_spinner_overlay()
