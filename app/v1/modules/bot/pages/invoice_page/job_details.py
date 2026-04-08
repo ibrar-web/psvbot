@@ -20,6 +20,7 @@ class JobDetailsTab(BasePage):
     JOB_DETAILS_TAB = "//li[@role='tab' and .//span[normalize-space()='Job Details']]"
     STOCK_PICKER_BUTTON = "//a[@ptooltip='Stock Picker']"
     STOCK_CONFIRM_BUTTON = "//button[@name='save_stock_details']"
+    STOCK_CANCEL_BUTTON = "//button[@name='cancel_stock_details']"
     CHARGES_MODAL = "//div[@id='charges_popup']"
     CHARGES_SEARCH_INPUT = (
         CHARGES_MODAL
@@ -123,6 +124,14 @@ class JobDetailsTab(BasePage):
                       })
                       .filter(Boolean);
 
+                    const noDataNode = Array.from(modalRoot.querySelectorAll(
+                      ".k-grid-norecords, .k-no-data, .k-grid-nodata, .k-nodata"
+                    )).find(node => {
+                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                      return !text || text.includes("no data") || text.includes("no records");
+                    });
+
+                    if (noDataNode) return true;
                     if (!stockNames.length) return false;
                     if (!term) return true;
                     return stockNames.some(text => text.includes(term));
@@ -135,60 +144,64 @@ class JobDetailsTab(BasePage):
     def _select_matching_stock_row(self, term: str) -> None:
         self._debug(f"Selecting best matching stock row for: {term}")
         self.wait_for_spinner_to_disappear()
-        selected_text = WebDriverWait(self.driver, self.timeout).until(
-            lambda d: d.execute_script(
-                """
-                const term = (arguments[0] || "").trim().toLowerCase();
-                const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
-                  .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
-                if (!btn) return null;
+        try:
+            selected_text = WebDriverWait(self.driver, self.timeout).until(
+                lambda d: d.execute_script(
+                    """
+                    const term = (arguments[0] || "").trim().toLowerCase();
+                    const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                      .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                    if (!btn) return false;
 
-                const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
-                const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"))
-                  .filter(row => {
-                    const style = window.getComputedStyle(row);
-                    return style.display !== "none" && style.visibility !== "hidden" && row.offsetParent !== null;
-                  });
-                if (!rows.length) return null;
+                    const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
+                    const noDataNode = Array.from(modalRoot.querySelectorAll(
+                      ".k-grid-norecords, .k-no-data, .k-grid-nodata, .k-nodata"
+                    )).find(node => {
+                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                      return !text || text.includes("no data") || text.includes("no records");
+                    });
+                    if (noDataNode) return "__NO_MATCH__";
 
-                const entries = rows.map(row => ({
-                  node: row,
-                  cell: row.querySelector("td[aria-colindex='1']"),
-                  text: (row.querySelector("td[aria-colindex='1']")?.innerText || row.querySelector("td[aria-colindex='1']")?.textContent || "")
-                    .replace(/\\s+/g, " ")
-                    .trim()
-                })).filter(entry => entry.text);
+                    const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"))
+                      .filter(row => {
+                        const style = window.getComputedStyle(row);
+                        return style.display !== "none" && style.visibility !== "hidden" && row.offsetParent !== null;
+                      });
+                    if (!rows.length) return false;
 
-                let target = entries.find(entry => entry.text.toLowerCase() === term) || null;
-                if (!target) {
-                  target = entries.find(entry => entry.text.toLowerCase().startsWith(term)) || null;
-                }
-                if (!target) {
-                  target = entries.find(entry => entry.text.toLowerCase().includes(term)) || null;
-                }
-                if (!target) {
-                  const scored = entries
-                    .map(entry => {
-                      const text = entry.text.toLowerCase();
-                      const words = term.split(/\\s+/).filter(Boolean);
-                      const hits = words.filter(word => text.includes(word)).length;
-                      return { ...entry, hits };
-                    })
-                    .sort((a, b) => b.hits - a.hits || a.text.length - b.text.length);
-                  target = scored[0] || null;
-                }
-                if (!target) return null;
+                    const entries = rows.map(row => ({
+                      node: row,
+                      cell: row.querySelector("td[aria-colindex='1']"),
+                      text: (row.querySelector("td[aria-colindex='1']")?.innerText || row.querySelector("td[aria-colindex='1']")?.textContent || "")
+                        .replace(/\\s+/g, " ")
+                        .trim()
+                    })).filter(entry => entry.text);
 
-                const clickable = target.cell || target.node;
-                clickable.scrollIntoView({ block: "center" });
-                clickable.click();
-                return target.text;
-                """,
-                term,
+                    let target = entries.find(entry => entry.text.toLowerCase() === term) || null;
+                    if (!target) {
+                      target = entries.find(entry => entry.text.toLowerCase().startsWith(term)) || null;
+                    }
+                    if (!target) {
+                      target = entries.find(entry => entry.text.toLowerCase().includes(term)) || null;
+                    }
+                    if (!target) return "__NO_MATCH__";
+
+                    const clickable = target.cell || target.node;
+                    clickable.scrollIntoView({ block: "center" });
+                    clickable.click();
+                    return target.text;
+                    """,
+                    term,
+                )
             )
-        )
-        if not selected_text:
-            raise TimeoutException(f"Could not find stock match for: {term}")
+        except TimeoutException:
+            selected_text = "__NO_MATCH__"
+
+        if not selected_text or selected_text == "__NO_MATCH__":
+            self._cancel_stock_selection()
+            raise TimeoutException(
+                f"Invalid stock search term '{term}': no matching stock found in Stock Picker"
+            )
         self._wait_for_stock_row_selected(selected_text)
 
     def _wait_for_stock_row_selected(self, selected_text: str) -> None:
@@ -247,6 +260,18 @@ class JobDetailsTab(BasePage):
             self.driver.execute_script("arguments[0].click();", confirm_btn)
 
         # 4️⃣ Wait for spinner triggered by the click to disappear
+        self.wait_for_spinner_to_disappear()
+
+    def _cancel_stock_selection(self) -> None:
+        self._debug("Cancelling stock picker because no matching stock was found")
+        self.wait_for_spinner_to_disappear()
+        cancel_btn = WebDriverWait(self.driver, self.timeout).until(
+            EC.element_to_be_clickable((By.XPATH, self.STOCK_CANCEL_BUTTON))
+        )
+        try:
+            cancel_btn.click()
+        except ElementClickInterceptedException:
+            self.driver.execute_script("arguments[0].click();", cancel_btn)
         self.wait_for_spinner_to_disappear()
         
     def _open_add_new_charges_modal(self) -> None:
