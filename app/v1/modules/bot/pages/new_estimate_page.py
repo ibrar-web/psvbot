@@ -3,6 +3,7 @@ from collections.abc import Mapping
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 
 from app.v1.modules.bot.base_page import BasePage
@@ -55,34 +56,12 @@ class NewEstimatePage(BasePage):
         self._debug(f"Typing customer search: {primary_customer_name}")
         self.wait_for_spinner_to_disappear()
         customer_input = self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_INPUT)
-        self.driver.execute_script("arguments[0].click();", customer_input)
-        customer_input.clear()
-        customer_input.send_keys(primary_customer_name)
+        self._replace_customer_search_value(customer_input, primary_customer_name)
         self.wait_for_spinner_to_disappear()
 
         self._debug(f"Selecting '{primary_customer_name}' from customer dropdown")
         try:
-            WebDriverWait(self.driver, self.timeout).until(
-                lambda d: bool(
-                    d.execute_script(
-                        """
-                        const searchText = (arguments[0] || "").trim().toLowerCase();
-                        const nodes = Array.from(document.querySelectorAll(
-                          ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
-                        ));
-                        const target = nodes.find(node => {
-                          const text = (node.innerText || node.textContent || "").trim().toLowerCase();
-                          return searchText && text.includes(searchText);
-                        });
-                        if (!target) return false;
-                        target.scrollIntoView({block: "center"});
-                        target.click();
-                        return true;
-                        """,
-                        primary_customer_name,
-                    )
-                )
-            )
+            self._select_customer_dropdown_option(primary_customer_name)
         except TimeoutException:
             self._debug(
                 f"Could not find '{primary_customer_name}' in dropdown, "
@@ -90,31 +69,56 @@ class NewEstimatePage(BasePage):
                 f"{fallback_customer_name}"
             )
             customer_input = self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_INPUT)
-            self.driver.execute_script("arguments[0].click();", customer_input)
-            customer_input.clear()
-            customer_input.send_keys(fallback_customer_name)
+            self._replace_customer_search_value(customer_input, fallback_customer_name)
             self.wait_for_spinner_to_disappear()
             self._debug("Selecting 'walk-in' from customer dropdown")
-            WebDriverWait(self.driver, self.timeout).until(
-                lambda d: bool(
-                    d.execute_script(
-                        """
-                        const nodes = Array.from(document.querySelectorAll(
-                          ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
-                        ));
-                        const target = nodes.find(node => {
-                          const text = (node.innerText || node.textContent || "").trim().toLowerCase();
-                          return text.includes("walk-in") || text.includes("walk in");
-                        });
-                        if (!target) return false;
-                        target.scrollIntoView({block: "center"});
-                        target.click();
-                        return true;
-                        """
-                    )
+            self._select_customer_dropdown_option(fallback_customer_name)
+        self.wait_for_spinner_to_disappear()
+
+    def _replace_customer_search_value(self, customer_input, value: str) -> None:
+        self.driver.execute_script("arguments[0].click();", customer_input)
+        customer_input.send_keys(Keys.CONTROL, "a")
+        customer_input.send_keys(Keys.DELETE)
+        if value:
+            customer_input.send_keys(value)
+        current_value = (customer_input.get_attribute("value") or "").strip()
+        expected_value = (value or "").strip()
+        if current_value != expected_value:
+            self.driver.execute_script(
+                """
+                const input = arguments[0];
+                const newValue = arguments[1];
+                input.value = newValue;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'n' }));
+                """,
+                customer_input,
+                value or "",
+            )
+
+    def _select_customer_dropdown_option(self, search_text: str) -> None:
+        WebDriverWait(self.driver, self.timeout).until(
+            lambda d: bool(
+                d.execute_script(
+                    """
+                    const normalizedSearch = (arguments[0] || "").trim().toLowerCase();
+                    const nodes = Array.from(document.querySelectorAll(
+                      ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
+                    ));
+                    const target = nodes.find(node => {
+                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                      return normalizedSearch && text.includes(normalizedSearch);
+                    });
+                    if (!target) return false;
+                    target.scrollIntoView({block: "center"});
+                    target.click();
+                    return true;
+                    """,
+                    search_text,
                 )
             )
-        self.wait_for_spinner_to_disappear()
+        )
 
     def _select_digital_color(self) -> None:
         self._debug("Selecting job method: Digital Color")
