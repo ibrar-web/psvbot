@@ -191,6 +191,7 @@ def run_estimate_flow(
     started_at = time.monotonic()
     logout_succeeded = False
     logout_error: Optional[str] = None
+    customer_selection_status: Optional[Dict[str, Any]] = None
 
     try:
         with _flow_lock:
@@ -225,7 +226,9 @@ def run_estimate_flow(
             for attempt in range(2):
                 try:
                     _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                    new_estimate_page.complete_walk_in_digital_color(quote_record or {})
+                    customer_selection_status = new_estimate_page.complete_walk_in_digital_color(
+                        quote_record or {}
+                    )
                     break
                 except Exception:
                     logger.exception(
@@ -274,6 +277,7 @@ def run_estimate_flow(
                 "logout_error": logout_error,
                 "session_reused": False,
                 "browser_open": False,
+                "customer_selection": customer_selection_status,
                 **upload_result,
             }
 
@@ -288,6 +292,7 @@ def run_estimate_flow(
             "step": current_step,
             "logout_succeeded": logout_succeeded,
             "logout_error": logout_error,
+            "customer_selection": customer_selection_status,
         }
 
     except Exception as exc:
@@ -301,6 +306,7 @@ def run_estimate_flow(
             "step": current_step,
             "logout_succeeded": logout_succeeded,
             "logout_error": logout_error,
+            "customer_selection": customer_selection_status,
         }
 
     finally:

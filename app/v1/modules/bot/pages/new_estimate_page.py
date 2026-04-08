@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Mapping
+from typing import Any
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -36,11 +37,12 @@ class NewEstimatePage(BasePage):
     def complete_walk_in_digital_color(
         self,
         data: Mapping[str, str] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         self._wait_for_modal_ready()
-        self._select_walk_in_customer(data or {})
+        selection_status = self._select_walk_in_customer(data or {})
         self._select_digital_color()
         self._wait_for_invoice_page()
+        return selection_status
 
     def _wait_for_modal_ready(self) -> None:
         self._debug("Waiting for Choose Customer form on invoice page")
@@ -48,7 +50,7 @@ class NewEstimatePage(BasePage):
         self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_LABEL)
         self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_INPUT)
 
-    def _select_walk_in_customer(self, data: Mapping[str, str]) -> None:
+    def _select_walk_in_customer(self, data: Mapping[str, str]) -> dict[str, Any]:
         primary_customer_name = (
             str(data.get("contact_person") or "walk-in").strip() or "walk-in"
         )
@@ -60,9 +62,8 @@ class NewEstimatePage(BasePage):
         self.wait_for_spinner_to_disappear()
 
         self._debug(f"Selecting '{primary_customer_name}' from customer dropdown")
-        try:
-            self._select_customer_dropdown_option(primary_customer_name)
-        except TimeoutException:
+        selection_outcome = self._select_customer_dropdown_option(primary_customer_name)
+        if selection_outcome != "selected":
             self._debug(
                 f"Could not find '{primary_customer_name}' in dropdown, "
                 "using fallback customer value: "
@@ -73,7 +74,20 @@ class NewEstimatePage(BasePage):
             self.wait_for_spinner_to_disappear()
             self._debug("Selecting 'walk-in' from customer dropdown")
             self._select_customer_dropdown_option(fallback_customer_name)
+            self.wait_for_spinner_to_disappear()
+            return {
+                "used_fallback_customer": True,
+                "requested_customer_name": primary_customer_name,
+                "selected_customer_name": fallback_customer_name,
+                "fallback_reason": selection_outcome,
+            }
         self.wait_for_spinner_to_disappear()
+        return {
+            "used_fallback_customer": False,
+            "requested_customer_name": primary_customer_name,
+            "selected_customer_name": primary_customer_name,
+            "fallback_reason": None,
+        }
 
     def _replace_customer_search_value(self, customer_input, value: str) -> None:
         self.driver.execute_script("arguments[0].click();", customer_input)
@@ -97,28 +111,40 @@ class NewEstimatePage(BasePage):
                 value or "",
             )
 
-    def _select_customer_dropdown_option(self, search_text: str) -> None:
-        WebDriverWait(self.driver, self.timeout).until(
-            lambda d: bool(
-                d.execute_script(
+    def _select_customer_dropdown_option(self, search_text: str) -> str:
+        try:
+            return WebDriverWait(self.driver, self.timeout).until(
+                lambda d: d.execute_script(
                     """
                     const normalizedSearch = (arguments[0] || "").trim().toLowerCase();
                     const nodes = Array.from(document.querySelectorAll(
                       ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
                     ));
+                    const noDataNode = Array.from(document.querySelectorAll(
+                      ".k-animation-container .k-nodata, .k-list .k-nodata, .k-no-data, .k-list-nodata"
+                    )).find(node => {
+                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                      return text.includes("no data found");
+                    });
                     const target = nodes.find(node => {
                       const text = (node.innerText || node.textContent || "").trim().toLowerCase();
                       return normalizedSearch && text.includes(normalizedSearch);
                     });
-                    if (!target) return false;
-                    target.scrollIntoView({block: "center"});
-                    target.click();
-                    return true;
+                    if (target) {
+                      target.scrollIntoView({block: "center"});
+                      target.click();
+                      return "selected";
+                    }
+                    if (noDataNode || (normalizedSearch && nodes.length === 0)) {
+                      return "no_data_found";
+                    }
+                    return false;
                     """,
                     search_text,
                 )
             )
-        )
+        except TimeoutException:
+            return "timeout"
 
     def _select_digital_color(self) -> None:
         self._debug("Selecting job method: Digital Color")
