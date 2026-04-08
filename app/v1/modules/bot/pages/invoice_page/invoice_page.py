@@ -9,7 +9,10 @@ from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.pages.invoice_page.contact_person import ContactPersonTab
 from app.v1.modules.bot.pages.invoice_page.estimated_summary import EstimatedSummaryTab
-from app.v1.modules.bot.pages.invoice_page.job_details import JobDetailsTab
+from app.v1.modules.bot.pages.invoice_page.job_details import (
+    InvalidStockSearchError,
+    JobDetailsTab,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +105,8 @@ class InvoicePage(BasePage):
             except Exception as exc:
                 last_exc = exc
                 self._debug(f"Step '{step_name}' failed ({attempt}/{attempts}): {exc}")
+                if isinstance(exc, InvalidStockSearchError):
+                    raise
                 if attempt < attempts:
                     time.sleep(1)
         if last_exc is not None:

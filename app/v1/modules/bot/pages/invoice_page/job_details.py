@@ -16,6 +16,10 @@ from app.v1.modules.bot.config import DEBUG
 logger = logging.getLogger(__name__)
 
 
+class InvalidStockSearchError(Exception):
+    pass
+
+
 class JobDetailsTab(BasePage):
     JOB_DETAILS_TAB = "//li[@role='tab' and .//span[normalize-space()='Job Details']]"
     STOCK_PICKER_BUTTON = "//a[@ptooltip='Stock Picker']"
@@ -199,7 +203,7 @@ class JobDetailsTab(BasePage):
 
         if not selected_text or selected_text == "__NO_MATCH__":
             self._cancel_stock_selection()
-            raise TimeoutException(
+            raise InvalidStockSearchError(
                 f"Invalid stock search term '{term}': no matching stock found in Stock Picker"
             )
         self._wait_for_stock_row_selected(selected_text)
