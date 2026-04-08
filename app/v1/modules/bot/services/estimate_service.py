@@ -248,6 +248,7 @@ def run_estimate_flow(
                     invoice_path = invoice_page.complete_information_tabs(
                         resume_from="auto",
                         quote_record=quote_record,
+                        customer_selection_status=customer_selection_status,
                     )
                     break
                 except Exception:

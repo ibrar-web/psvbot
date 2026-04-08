@@ -27,6 +27,7 @@ class InvoicePage(BasePage):
         self,
         resume_from: str = "auto",
         quote_record: Optional[Dict[str, Any]] = None,
+        customer_selection_status: Optional[Dict[str, Any]] = None,
     ) -> Path:
         """
         resume_from:
@@ -58,9 +59,18 @@ class InvoicePage(BasePage):
         }
 
         normalized = (resume_from or "auto").strip().lower()
+        customer_selection_status = customer_selection_status or {}
+        used_fallback_customer = bool(
+            customer_selection_status.get("used_fallback_customer")
+        )
 
         should_start_from_job = normalized == "job"
-        if normalized == "auto" and self._is_account_information_complete():
+        if normalized == "auto" and not used_fallback_customer:
+            self._debug(
+                "Existing customer selected from dropdown; skipping Account Information and moving to Job Details"
+            )
+            should_start_from_job = True
+        elif normalized == "auto" and self._is_account_information_complete():
             self._debug("Account Information already complete; resuming from Job Details")
             should_start_from_job = True
 
