@@ -21,10 +21,9 @@ CORS_ALLOW_ORIGINS = os.getenv(
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 MONGO_DB = os.getenv("MONGO_DB", "alphagraphics-multitenant")
 
-BOT_STORAGE_ROOT = Path(os.getenv("BOT_STORAGE_ROOT", "storage")).resolve()
 QUOTE_SUMMARY_STORAGE_ROOT = os.getenv(
     "PRINTSMITH_QUOTE_SUMMARY_STORAGE_ROOT",
-    str(BOT_STORAGE_ROOT / "estimates"),
+    str("estimates"),
 ).strip()
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
