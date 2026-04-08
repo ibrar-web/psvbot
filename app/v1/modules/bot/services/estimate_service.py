@@ -225,7 +225,7 @@ def run_estimate_flow(
             for attempt in range(2):
                 try:
                     _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                    new_estimate_page.complete_walk_in_digital_color()
+                    new_estimate_page.complete_walk_in_digital_color(quote_record or {})
                     break
                 except Exception:
                     logger.exception(

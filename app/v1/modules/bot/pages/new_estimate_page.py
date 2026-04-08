@@ -1,5 +1,5 @@
-
 import logging
+from collections.abc import Mapping
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 class NewEstimatePage(BasePage):
     INVOICE_PAGE_URL_PART = "#/invoicing/invoice-page"
-    CHOOSE_CUSTOMER_LABEL = "//label[@name='choose_type' and normalize-space()='Choose Customer']"
+    CHOOSE_CUSTOMER_LABEL = (
+        "//label[@name='choose_type' and normalize-space()='Choose Customer']"
+    )
     CHOOSE_CUSTOMER_INPUT = (
         "//kendo-combobox[@name='choose_type_value']//input"
         " | //label[@name='choose_type']/following::kendo-combobox[1]//input"
@@ -30,9 +32,12 @@ class NewEstimatePage(BasePage):
             print(f"[PrintSmith][NewEstimatePage] {message}")
             logger.info(message)
 
-    def complete_walk_in_digital_color(self) -> None:
+    def complete_walk_in_digital_color(
+        self,
+        data: Mapping[str, str] | None = None,
+    ) -> None:
         self._wait_for_modal_ready()
-        self._select_walk_in_customer()
+        self._select_walk_in_customer(data or {})
         self._select_digital_color()
         self._wait_for_invoice_page()
 
@@ -42,37 +47,73 @@ class NewEstimatePage(BasePage):
         self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_LABEL)
         self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_INPUT)
 
-    def _select_walk_in_customer(self) -> None:
-        self._debug("Typing customer search: walk-in")
+    def _select_walk_in_customer(self, data: Mapping[str, str]) -> None:
+        primary_customer_name = (
+            str(data.get("contact_person") or "walk-in").strip() or "walk-in"
+        )
+        fallback_customer_name = "walk-in"
+        self._debug(f"Typing customer search: {primary_customer_name}")
         self.wait_for_spinner_to_disappear()
         customer_input = self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_INPUT)
         self.driver.execute_script("arguments[0].click();", customer_input)
         customer_input.clear()
-        customer_input.send_keys("walk-in")
+        customer_input.send_keys(primary_customer_name)
         self.wait_for_spinner_to_disappear()
 
-        self._debug("Selecting 'walk-in' from customer dropdown")
-        selected = WebDriverWait(self.driver, self.timeout).until(
-            lambda d: bool(
-                d.execute_script(
-                    """
-                    const nodes = Array.from(document.querySelectorAll(
-                      ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
-                    ));
-                    const target = nodes.find(node => {
-                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
-                      return text.includes("walk-in") || text.includes("walk in");
-                    });
-                    if (!target) return false;
-                    target.scrollIntoView({block: "center"});
-                    target.click();
-                    return true;
-                    """
+        self._debug(f"Selecting '{primary_customer_name}' from customer dropdown")
+        try:
+            WebDriverWait(self.driver, self.timeout).until(
+                lambda d: bool(
+                    d.execute_script(
+                        """
+                        const searchText = (arguments[0] || "").trim().toLowerCase();
+                        const nodes = Array.from(document.querySelectorAll(
+                          ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
+                        ));
+                        const target = nodes.find(node => {
+                          const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                          return searchText && text.includes(searchText);
+                        });
+                        if (!target) return false;
+                        target.scrollIntoView({block: "center"});
+                        target.click();
+                        return true;
+                        """,
+                        primary_customer_name,
+                    )
                 )
             )
-        )
-        if not selected:
-            raise TimeoutException("Could not find 'walk-in' option in customer dropdown")
+        except TimeoutException:
+            self._debug(
+                f"Could not find '{primary_customer_name}' in dropdown, "
+                "using fallback customer value: "
+                f"{fallback_customer_name}"
+            )
+            customer_input = self.wait_for_visible(By.XPATH, self.CHOOSE_CUSTOMER_INPUT)
+            self.driver.execute_script("arguments[0].click();", customer_input)
+            customer_input.clear()
+            customer_input.send_keys(fallback_customer_name)
+            self.wait_for_spinner_to_disappear()
+            self._debug("Selecting 'walk-in' from customer dropdown")
+            WebDriverWait(self.driver, self.timeout).until(
+                lambda d: bool(
+                    d.execute_script(
+                        """
+                        const nodes = Array.from(document.querySelectorAll(
+                          ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
+                        ));
+                        const target = nodes.find(node => {
+                          const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                          return text.includes("walk-in") || text.includes("walk in");
+                        });
+                        if (!target) return false;
+                        target.scrollIntoView({block: "center"});
+                        target.click();
+                        return true;
+                        """
+                    )
+                )
+            )
         self.wait_for_spinner_to_disappear()
 
     def _select_digital_color(self) -> None:
@@ -89,7 +130,9 @@ class NewEstimatePage(BasePage):
 
     def _wait_for_invoice_page(self) -> None:
         self._debug("Waiting for invoice page navigation")
-        WebDriverWait(self.driver, self.timeout).until(lambda d: self._is_invoice_page())
+        WebDriverWait(self.driver, self.timeout).until(
+            lambda d: self._is_invoice_page()
+        )
 
     def _is_invoice_page(self) -> bool:
         return self.INVOICE_PAGE_URL_PART in (self.driver.current_url or "")
