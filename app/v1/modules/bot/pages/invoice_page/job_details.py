@@ -20,11 +20,20 @@ class InvalidStockSearchError(Exception):
     pass
 
 
+class ExpiredStockPriceError(Exception):
+    pass
+
+
 class JobDetailsTab(BasePage):
     JOB_DETAILS_TAB = "//li[@role='tab' and .//span[normalize-space()='Job Details']]"
     STOCK_PICKER_BUTTON = "//a[@ptooltip='Stock Picker']"
     STOCK_CONFIRM_BUTTON = "//button[@name='save_stock_details']"
     STOCK_CANCEL_BUTTON = "//button[@name='cancel_stock_details']"
+    STOCK_ALERT_DIALOG = (
+        "//div[contains(@class,'ui-confirmdialog')]"
+        "[.//span[contains(@class,'ui-confirmdialog-message') and contains(translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'price for this stock expired')]]"
+    )
+    STOCK_ALERT_OK_BUTTON = STOCK_ALERT_DIALOG + "//button[.//span[normalize-space()='OK']]"
     CHARGES_MODAL = "//div[@id='charges_popup']"
     CHARGES_SEARCH_INPUT = (
         CHARGES_MODAL
@@ -263,8 +272,19 @@ class JobDetailsTab(BasePage):
         except ElementClickInterceptedException:
             self.driver.execute_script("arguments[0].click();", confirm_btn)
 
+        if self._is_stock_price_expired_alert_visible():
+            self._acknowledge_stock_price_expired_alert()
+            raise ExpiredStockPriceError(
+                "Selected stock has an expired price and cannot be processed automatically"
+            )
+
         # 4️⃣ Wait for spinner triggered by the click to disappear
         self.wait_for_spinner_to_disappear()
+        if self._is_stock_price_expired_alert_visible():
+            self._acknowledge_stock_price_expired_alert()
+            raise ExpiredStockPriceError(
+                "Selected stock has an expired price and cannot be processed automatically"
+            )
 
     def _cancel_stock_selection(self) -> None:
         self._debug("Cancelling stock picker because no matching stock was found")
@@ -276,6 +296,19 @@ class JobDetailsTab(BasePage):
             cancel_btn.click()
         except ElementClickInterceptedException:
             self.driver.execute_script("arguments[0].click();", cancel_btn)
+        self.wait_for_spinner_to_disappear()
+
+    def _is_stock_price_expired_alert_visible(self) -> bool:
+        return self.is_visible(By.XPATH, self.STOCK_ALERT_DIALOG)
+
+    def _acknowledge_stock_price_expired_alert(self) -> None:
+        self._debug("Stock price expired alert detected; acknowledging and stopping process")
+        self.wait_for_visible(By.XPATH, self.STOCK_ALERT_DIALOG)
+        try:
+            self.click(By.XPATH, self.STOCK_ALERT_OK_BUTTON)
+        except Exception:
+            ok_button = self.wait_for_visible(By.XPATH, self.STOCK_ALERT_OK_BUTTON)
+            self.driver.execute_script("arguments[0].click();", ok_button)
         self.wait_for_spinner_to_disappear()
         
     def _open_add_new_charges_modal(self) -> None:

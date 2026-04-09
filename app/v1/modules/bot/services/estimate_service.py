@@ -16,7 +16,10 @@ from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.driver import create_driver
 from app.v1.modules.bot.pages.estimate_page import EstimatePage
 from app.v1.modules.bot.pages.invoice_page.invoice_page import InvoicePage
-from app.v1.modules.bot.pages.invoice_page.job_details import InvalidStockSearchError
+from app.v1.modules.bot.pages.invoice_page.job_details import (
+    ExpiredStockPriceError,
+    InvalidStockSearchError,
+)
 from app.v1.modules.bot.pages.login_page import LoginPage
 from app.v1.modules.bot.pages.logout_page import LogoutPage
 from app.v1.modules.bot.pages.new_estimate_page import NewEstimatePage
@@ -252,7 +255,7 @@ def run_estimate_flow(
                         customer_selection_status=customer_selection_status,
                     )
                     break
-                except InvalidStockSearchError:
+                except (InvalidStockSearchError, ExpiredStockPriceError):
                     raise
                 except Exception:
                     logger.exception(
