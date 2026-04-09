@@ -226,14 +226,25 @@ async def _notify_main_server(
 
 
 async def recover_incomplete_jobs() -> None:
-    stuck_jobs = await JobQueueDocument.find(
-        JobQueueDocument.is_processing == True
-    ).to_list()
+    stuck_jobs = [
+        job
+        for job in await JobQueueDocument.find(
+            JobQueueDocument.is_processing == True
+        ).to_list()
+        if _is_job_assigned_to_current_machine(job.machine_name)
+    ]
     if not stuck_jobs:
-        logger.info("Queue recovery check completed: no stuck jobs found")
+        logger.info(
+            "Queue recovery check completed: no stuck jobs found for current machine=%s",
+            MACHINE_NAME or "unset",
+        )
         return
 
-    logger.warning("Queue recovery found %s stuck job(s)", len(stuck_jobs))
+    logger.warning(
+        "Queue recovery found %s stuck job(s) for current machine=%s",
+        len(stuck_jobs),
+        MACHINE_NAME or "unset",
+    )
     for job in stuck_jobs:
         job.is_processing = False
         job.status = JobQueueStatus.pending
@@ -451,11 +462,21 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
 
 async def _run_pending_jobs_batch() -> None:
     logger.info("Queue scheduler checking pending jobs")
-    processing_job = await JobQueueDocument.find_one(JobQueueDocument.is_processing == True)
+    processing_job = next(
+        (
+            job
+            for job in await JobQueueDocument.find(
+                JobQueueDocument.is_processing == True
+            ).to_list()
+            if _is_job_assigned_to_current_machine(job.machine_name)
+        ),
+        None,
+    )
     if processing_job is not None:
         logger.info(
-            "Queue scheduler skipped because queue_id=%s is already processing",
+            "Queue scheduler skipped because queue_id=%s is already processing on current_machine=%s",
             getattr(processing_job, "id", None),
+            MACHINE_NAME or "unset",
         )
         return
     pending_jobs = await JobQueueDocument.find(
