@@ -23,6 +23,7 @@ from app.v1.modules.bot.pages.new_estimate_page import NewEstimatePage
 
 logger = logging.getLogger(__name__)
 FLOW_TIMEOUT_SECONDS = DEFAULT_TIMEOUT_SECONDS
+LOGOUT_TIMEOUT_SECONDS = 8
 
 _flow_lock = Lock()
 
@@ -143,7 +144,7 @@ def _logout_if_possible(
     last_error: Optional[str] = None
     for attempt in range(1, retries + 2):
         try:
-            logout_page = LogoutPage(driver)
+            logout_page = LogoutPage(driver, timeout=LOGOUT_TIMEOUT_SECONDS)
             logout_page.logout()
             _debug("Logout flow completed")
             return True, None
