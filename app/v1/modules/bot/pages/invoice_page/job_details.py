@@ -20,10 +20,6 @@ class InvalidStockSearchError(Exception):
     pass
 
 
-class ExpiredStockPriceError(Exception):
-    pass
-
-
 class JobDetailsTab(BasePage):
     JOB_DETAILS_TAB = "//li[@role='tab' and .//span[normalize-space()='Job Details']]"
     STOCK_PICKER_BUTTON = "//a[@ptooltip='Stock Picker']"
@@ -114,9 +110,9 @@ class JobDetailsTab(BasePage):
         stock_filter.send_keys(Keys.ENTER)
         self._debug("Search text entered; waiting for filtered stock rows")
         self.wait_for_spinner_to_disappear()
-        WebDriverWait(self.driver, self.timeout).until(
-            lambda d: bool(
-                d.execute_script(
+        try:
+            search_outcome = WebDriverWait(self.driver, self.timeout).until(
+                lambda d: d.execute_script(
                     """
                     const term = (arguments[0] || "").trim().toLowerCase();
                     const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
@@ -144,15 +140,22 @@ class JobDetailsTab(BasePage):
                       return !text || text.includes("no data") || text.includes("no records");
                     });
 
-                    if (noDataNode) return true;
+                    if (noDataNode) return "__NO_MATCH__";
                     if (!stockNames.length) return false;
-                    if (!term) return true;
-                    return stockNames.some(text => text.includes(term));
+                    if (!term) return "__HAS_RESULTS__";
+                    return stockNames.some(text => text.includes(term)) ? "__HAS_RESULTS__" : false;
                     """,
                     term,
                 )
             )
-        )
+        except TimeoutException:
+            search_outcome = "__NO_MATCH__"
+
+        if search_outcome == "__NO_MATCH__":
+            self._cancel_stock_selection()
+            raise InvalidStockSearchError(
+                f"Invalid stock search term '{term}': stock not found in Stock Picker"
+            )
 
     def _select_matching_stock_row(self, term: str) -> None:
         self._debug(f"Selecting best matching stock row for: {term}")
@@ -274,17 +277,11 @@ class JobDetailsTab(BasePage):
 
         if self._is_stock_price_expired_alert_visible():
             self._acknowledge_stock_price_expired_alert()
-            raise ExpiredStockPriceError(
-                "Selected stock has an expired price and cannot be processed automatically"
-            )
 
         # 4️⃣ Wait for spinner triggered by the click to disappear
         self.wait_for_spinner_to_disappear()
         if self._is_stock_price_expired_alert_visible():
             self._acknowledge_stock_price_expired_alert()
-            raise ExpiredStockPriceError(
-                "Selected stock has an expired price and cannot be processed automatically"
-            )
 
     def _cancel_stock_selection(self) -> None:
         self._debug("Cancelling stock picker because no matching stock was found")

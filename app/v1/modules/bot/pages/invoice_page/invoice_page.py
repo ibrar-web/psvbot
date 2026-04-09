@@ -10,7 +10,6 @@ from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.pages.invoice_page.contact_person import ContactPersonTab
 from app.v1.modules.bot.pages.invoice_page.estimated_summary import EstimatedSummaryTab
 from app.v1.modules.bot.pages.invoice_page.job_details import (
-    ExpiredStockPriceError,
     InvalidStockSearchError,
     JobDetailsTab,
 )
@@ -118,7 +117,7 @@ class InvoicePage(BasePage):
                 self._debug(
                     f"Step '{step_name}' failed ({attempt}/{attempts}) after {elapsed}s: {exc}"
                 )
-                if isinstance(exc, (InvalidStockSearchError, ExpiredStockPriceError)):
+                if isinstance(exc, InvalidStockSearchError):
                     raise
                 if attempt < attempts:
                     time.sleep(1)
