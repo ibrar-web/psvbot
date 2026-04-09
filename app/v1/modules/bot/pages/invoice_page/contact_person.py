@@ -130,7 +130,7 @@ class ContactPersonTab(BasePage):
         self._safe_type(
             By.XPATH,
             self.INVOICE_COMPANY_INPUT,
-            data.get("company_name", data.get("account_name", "")),
+            data.get("company_name", data.get("contact_person", "")),
         )
         self._safe_type(By.XPATH, self.INVOICE_STREET1_INPUT, data.get("street", ""))
         # self._safe_type(By.XPATH, self.INVOICE_STREET2_INPUT, data.get("street2", ""))
