@@ -355,7 +355,13 @@ class JobDetailsTab(BasePage):
             if not term:
                 continue
             self._debug(f"Adding charge from search: {term}")
-            self._select_charge_from_search(term)
+            try:
+                self._select_charge_from_search(term)
+            except TimeoutException:
+                self._debug(
+                    f"Charge not found in search list, skipping charge: {term}"
+                )
+                continue
 
         self._debug("Saving selected job charges")
         self.wait_for_spinner_to_disappear()
@@ -425,7 +431,8 @@ class JobDetailsTab(BasePage):
             )
         )
         if not selected:
-            raise TimeoutException(f"Could not select charge from search: {term}")
+            self._debug(f"Could not select charge from search: {term}")
+            return
 
         self.wait_for_spinner_to_disappear()
         self._confirm_charge_item(term)
