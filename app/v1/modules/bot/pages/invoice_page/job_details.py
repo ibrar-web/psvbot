@@ -369,38 +369,17 @@ class JobDetailsTab(BasePage):
         self.wait_for_spinner_to_disappear()
 
     def _select_charge_from_search(self, term: str) -> None:
-        print(f"[CHARGE] term={term}")
         self.wait_for_spinner_to_disappear()
         search_input = self._prepare_charges_search_input()
-        print("[CHARGE] input focused")
         self._clear_input_value(search_input)
         search_input.send_keys(term)
-        print("[CHARGE] sending input term")
-
-        visible_items = WebDriverWait(self.driver, self.timeout).until(
-            lambda d: d.execute_script(
-                """
-                const items = Array.from(document.querySelectorAll(
-                  ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
-                ));
-                return items
-                  .filter(item => {
-                    const style = window.getComputedStyle(item);
-                    return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
-                  })
-                  .map(item => (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim())
-                  .filter(Boolean);
-                """
-            )
-        )
-        print(f"[CHARGE] visibleItems={visible_items}")
-
-        selected = WebDriverWait(self.driver, self.timeout).until(
-            lambda d: bool(
-                d.execute_script(
+        try:
+            selection_result = WebDriverWait(self.driver, min(self.timeout, 3)).until(
+                lambda d: d.execute_script(
                     """
                     const term = (arguments[0] || "").trim().toLowerCase();
-                    if (!term) return false;
+                    if (!term) return "__NO_MATCH__";
+
                     const items = Array.from(document.querySelectorAll(
                       ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
                     ));
@@ -408,6 +387,17 @@ class JobDetailsTab(BasePage):
                       const style = window.getComputedStyle(item);
                       return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
                     });
+
+                    const noDataNode = Array.from(document.querySelectorAll(
+                      ".k-animation-container .k-nodata, .k-list .k-nodata, .k-no-data, .k-list-nodata"
+                    )).find(node => {
+                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                      return !text || text.includes("no data") || text.includes("no records");
+                    });
+                    if (noDataNode) return "__NO_MATCH__";
+
+                    if (!visibleItems.length) return false;
+
                     const normalized = visibleItems.map(item => ({
                       node: item,
                       text: (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase()
@@ -420,17 +410,19 @@ class JobDetailsTab(BasePage):
                     if (!target) {
                       target = normalized.find(entry => entry.text.includes(term))?.node || null;
                     }
-                    
-                    if (!target) return false;
+
+                    if (!target) return "__NO_MATCH__";
                     target.scrollIntoView({ block: "center" });
                     target.click();
-                    return true;
+                    return "__SELECTED__";
                     """,
                     term,
                 )
             )
-        )
-        if not selected:
+        except TimeoutException:
+            selection_result = "__NO_MATCH__"
+
+        if selection_result != "__SELECTED__":
             self._debug(f"Could not select charge from search: {term}")
             return
 
