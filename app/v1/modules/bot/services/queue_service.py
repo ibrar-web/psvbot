@@ -391,6 +391,10 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             job.status,
         )
         try:
+            logger.info(
+                "Queue step=notify_main_server queue_id=%s after bot upload and logout",
+                getattr(job, "id", None),
+            )
             result["main_server_callback"] = await _notify_main_server(job, result)
         except Exception as exc:
             logger.exception(

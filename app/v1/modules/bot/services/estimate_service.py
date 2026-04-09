@@ -72,7 +72,7 @@ def _upload_summary_file(
         or "manual"
     ).strip() or "manual"
 
-    folder_prefix = f"{QUOTE_SUMMARY_STORAGE_ROOT}/{tenant_id}/quotations/{quote_id}"
+    folder_prefix = f"{QUOTE_SUMMARY_STORAGE_ROOT}/{tenant_id}/{quote_id}"
     storage_key = build_s3_key(folder_prefix, summary_file_name)
     upload_bytes_to_s3(
         key=storage_key,
