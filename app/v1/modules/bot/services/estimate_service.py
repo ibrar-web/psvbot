@@ -49,16 +49,8 @@ def _build_quick_access_url(base_url: str) -> str:
 
 def _build_summary_output_path(quote_record: Optional[Dict[str, Any]], summary_file_name: str) -> Path:
     root = Path(QUOTE_SUMMARY_STORAGE_ROOT)
-    tenant_id = str((quote_record or {}).get("tenant_id") or "adhoc").strip() or "adhoc"
-    quote_id = str(
-        (quote_record or {}).get("_id")
-        or (quote_record or {}).get("id")
-        or (quote_record or {}).get("quote_id")
-        or "manual"
-    ).strip() or "manual"
-    target_dir = root / tenant_id / quote_id
-    target_dir.mkdir(parents=True, exist_ok=True)
-    return target_dir / summary_file_name
+    root.mkdir(parents=True, exist_ok=True)
+    return root / summary_file_name
 
 
 def _upload_summary_file(
@@ -89,9 +81,17 @@ def _upload_summary_file(
         },
     )
 
+    try:
+        saved_summary_path.unlink(missing_ok=True)
+    except Exception:
+        logger.exception(
+            "Failed to remove local summary copy after GCS upload: %s",
+            saved_summary_path,
+        )
+
     return {
         "summary_file_name": summary_file_name,
-        "summary_file_path": str(saved_summary_path),
+        "summary_file_path": None,
         "summary_file_storage_key": storage_key,
         "summary_file_gcs_uri": f"gs://{BUCKET_NAME}/{storage_key}",
         "summary_file_url": generate_presigned_download_url(key=storage_key),
