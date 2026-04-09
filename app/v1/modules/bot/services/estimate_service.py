@@ -166,6 +166,11 @@ def _ensure_within_timeout(started_at: float, step: str) -> None:
         )
 
 
+def _log_step_duration(step_name: str, step_started_at: float) -> None:
+    elapsed = round(time.monotonic() - step_started_at, 3)
+    logger.info("Flow step=%s duration_seconds=%s", step_name, elapsed)
+
+
 def run_estimate_flow(
     tenant_credentials: Optional[Dict[str, Any]] = None,
     quote_record: Optional[Dict[str, Any]] = None,
@@ -206,27 +211,34 @@ def run_estimate_flow(
                 )
             current_step = "login"
             _ensure_within_timeout(started_at, current_step)
+            step_started_at = time.monotonic()
             driver = _ensure_driver_and_login(
                 base_url=base_url,
                 username=username,
                 password=password,
                 company=company,
             )
+            _log_step_duration(current_step, step_started_at)
 
             current_step = "quick_access"
             _ensure_within_timeout(started_at, current_step)
+            step_started_at = time.monotonic()
             driver.get(quick_access_url)
             BasePage(driver).wait_for_spinner_to_disappear()
             _debug(f"Quick access page loaded. URL: {driver.current_url}")
+            _log_step_duration(current_step, step_started_at)
 
             current_step = "create_estimate_click"
             _ensure_within_timeout(started_at, current_step)
+            step_started_at = time.monotonic()
             estimate_page = EstimatePage(driver)
             estimate_page.click_create_estimate_quick_access()
             _debug(f"Create Estimate clicked. URL: {driver.current_url}")
+            _log_step_duration(current_step, step_started_at)
 
             current_step = "new_estimate_setup"
             new_estimate_page = NewEstimatePage(driver)
+            step_started_at = time.monotonic()
             for attempt in range(2):
                 try:
                     _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
@@ -243,9 +255,11 @@ def run_estimate_flow(
                         continue
                     raise
             _debug(f"New Estimate setup completed. URL: {driver.current_url}")
+            _log_step_duration(current_step, step_started_at)
 
             current_step = "invoice_tabs"
             invoice_page = InvoicePage(driver)
+            step_started_at = time.monotonic()
             for attempt in range(2):
                 try:
                     _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
@@ -266,13 +280,18 @@ def run_estimate_flow(
                         continue
                     raise
             _debug(f"Invoice tab flow completed. URL: {driver.current_url}")
+            _log_step_duration(current_step, step_started_at)
 
             current_step = "save_summary"
             _ensure_within_timeout(started_at, current_step)
+            step_started_at = time.monotonic()
             upload_result = _upload_summary_file(invoice_path, quote_record)
+            _log_step_duration(current_step, step_started_at)
 
             current_step = "logout"
+            step_started_at = time.monotonic()
             logout_succeeded, logout_error = _logout_if_possible(driver, retries=1)
+            _log_step_duration(current_step, step_started_at)
 
             return {
                 "status": "success",

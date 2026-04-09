@@ -102,13 +102,22 @@ class InvoicePage(BasePage):
         attempts = retries + 1
         last_exc: Exception | None = None
         for attempt in range(1, attempts + 1):
+            step_started_at = time.monotonic()
             try:
                 if attempt > 1:
                     self._debug(f"Retrying step '{step_name}' ({attempt}/{attempts})")
-                return callback()
+                result = callback()
+                elapsed = round(time.monotonic() - step_started_at, 3)
+                self._debug(
+                    f"Step '{step_name}' completed ({attempt}/{attempts}) in {elapsed}s"
+                )
+                return result
             except Exception as exc:
                 last_exc = exc
-                self._debug(f"Step '{step_name}' failed ({attempt}/{attempts}): {exc}")
+                elapsed = round(time.monotonic() - step_started_at, 3)
+                self._debug(
+                    f"Step '{step_name}' failed ({attempt}/{attempts}) after {elapsed}s: {exc}"
+                )
                 if isinstance(exc, (InvalidStockSearchError, ExpiredStockPriceError)):
                     raise
                 if attempt < attempts:

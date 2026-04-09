@@ -1,6 +1,7 @@
 import os
 import asyncio
 import contextlib
+import logging
 
 from beanie import init_beanie
 from fastapi import FastAPI, HTTPException
@@ -20,6 +21,14 @@ from app.v1.core.settings import (
 from app.v1.middleware.auth import AuthMiddleware
 from app.v1.routes import api_router
 from app.v1.schemas.jobqueuemodel import JobQueueDocument
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    force=True,
+)
 
 
 def create_app() -> FastAPI:
