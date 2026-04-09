@@ -14,6 +14,7 @@ from app.v1.modules.bot.config import DEFAULT_TIMEOUT_SECONDS
 from app.v1.core.settings import (
     MAIN_SERVER_API_BASE_URL,
     MAIN_SERVER_API_TOKEN,
+    MACHINE_NAME,
     PRINTSMITH_COMPANY,
     PRINTSMITH_PASSWORD,
     PRINTSMITH_URL,
@@ -68,6 +69,14 @@ def _build_runtime_credentials() -> Dict[str, str]:
         "password": PRINTSMITH_PASSWORD,
         "company": company,
     }
+
+
+def _is_job_assigned_to_current_machine(machine_name: Optional[str]) -> bool:
+    assigned_machine = str(machine_name or "").strip()
+    current_machine = str(MACHINE_NAME or "").strip()
+    if not assigned_machine or not current_machine:
+        return True
+    return assigned_machine.lower() == current_machine.lower()
 
 
 def _normalize_runtime_credentials(data: Optional[Dict[str, Any]]) -> Dict[str, str]:
@@ -176,6 +185,7 @@ async def sync_job_with_main_server(job: JobQueueDocument) -> Dict[str, Any]:
     if job_data:
         job.tenant_id = job_data.get("tenant_id") or job.tenant_id
         job.created_by = job_data.get("created_by") or job.created_by
+        job.machine_name = job_data.get("machine_name") or job.machine_name
 
     job.updated_at = datetime.utcnow()
     await job.save()
@@ -247,6 +257,14 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             "status": "skipped",
             "message": "Queue record is already processing",
         }
+    if not _is_job_assigned_to_current_machine(job.machine_name):
+        return {
+            "status": "skipped",
+            "message": (
+                f"Queue record is assigned to machine '{job.machine_name}', "
+                f"current machine is '{MACHINE_NAME or 'unset'}'"
+            ),
+        }
 
     job.is_processing = True
     job.status = JobQueueStatus.processing
@@ -284,6 +302,26 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
         if job_data:
             job.tenant_id = job_data.get("tenant_id") or job.tenant_id
             job.created_by = job_data.get("created_by") or job.created_by
+            job.machine_name = job_data.get("machine_name") or job.machine_name
+
+        if not _is_job_assigned_to_current_machine(job.machine_name):
+            job.is_processing = False
+            job.status = JobQueueStatus.pending
+            job.updated_at = datetime.utcnow()
+            await job.save()
+            logger.info(
+                "Queue job skipped queue_id=%s assigned_machine=%s current_machine=%s",
+                getattr(job, "id", None),
+                job.machine_name,
+                MACHINE_NAME or "unset",
+            )
+            return {
+                "status": "skipped",
+                "message": (
+                    f"Queue record is assigned to machine '{job.machine_name}', "
+                    f"current machine is '{MACHINE_NAME or 'unset'}'"
+                ),
+            }
 
         job.updated_at = datetime.utcnow()
         await job.save()
@@ -425,6 +463,14 @@ async def _run_pending_jobs_batch() -> None:
     ).to_list()
     logger.info("Queue scheduler found %s pending job(s)", len(pending_jobs))
     for job in pending_jobs:
+        if not _is_job_assigned_to_current_machine(job.machine_name):
+            logger.info(
+                "Queue scheduler ignored queue_id=%s assigned_machine=%s current_machine=%s",
+                getattr(job, "id", None),
+                job.machine_name,
+                MACHINE_NAME or "unset",
+            )
+            continue
         await process_job_queue_document(job)
 
 
