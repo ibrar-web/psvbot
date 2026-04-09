@@ -1,0 +1,2138 @@
+<div class="tabsContainer">
+  <kendo-tabstrip
+    class="ng-tns-c41-39 k-widget k-tabstrip k-floatwrap k-header k-tabstrip-top"
+    dir="ltr"
+    ><!----><!----><!---->
+    <ul
+      class="k-reset k-tabstrip-items ng-tns-c41-39 ng-star-inserted"
+      role="tablist"
+      tabindex="0"
+    >
+      <!---->
+      <li
+        role="tab"
+        class="ng-tns-c41-39 k-item k-state-default ng-star-inserted"
+        id="k-tabstrip-tab-0"
+        aria-selected="false"
+      >
+        <span class="k-link">Account Information<!----></span>
+      </li>
+      <li
+        role="tab"
+        class="ng-tns-c41-39 k-item k-state-default ng-star-inserted k-state-active"
+        id="k-tabstrip-tab-1"
+        aria-selected="true"
+      >
+        <span class="k-link">Job Details<!----></span>
+      </li>
+      <li
+        role="tab"
+        class="ng-tns-c41-39 k-item k-state-default ng-star-inserted"
+        id="k-tabstrip-tab-2"
+        aria-selected="false"
+      >
+        <span class="k-link">Estimate Summary<!----></span>
+      </li>
+      <li
+        role="tab"
+        class="ng-tns-c41-39 k-item k-state-default k-state-disabled ng-star-inserted"
+        id="k-tabstrip-tab-3"
+        aria-disabled="true"
+        aria-selected="false"
+      >
+        <span class="k-link"><!----></span>
+      </li>
+    </ul>
+    <!----><!----><!----><!----><!---->
+
+    <!----><!----><!----><!----><!----><!----><!----><!----><!----><!----></kendo-tabstrip
+  >
+</div>
+
+<!-- complete modal -->
+
+<div _ngcontent-lcf-c12="" class="dot-modal__content">
+  <div
+    _ngcontent-lcf-c73=""
+    class="app-modal-body stock_definition_popup stock_def_popup_scrollArea"
+    id="stock_def_popup"
+    style="max-height: 794px"
+  >
+    <form
+      _ngcontent-lcf-c73=""
+      class="dot-form__horizontal ng-untouched ng-pristine ng-valid"
+      novalidate=""
+    >
+      <div
+        _ngcontent-lcf-c73=""
+        class="dot-formgroup margin-bottom-0"
+        id="stock_filter_container"
+      >
+        <div _ngcontent-lcf-c73="" class="row stock_picker_header">
+          <label
+            _ngcontent-lcf-c73=""
+            class="dot-form__label"
+            name="group_label"
+            >Group</label
+          >
+          <div _ngcontent-lcf-c73="" class="col-2">
+            <kendo-dropdownlist
+              _ngcontent-lcf-c73=""
+              name="stock_group_dropdown"
+              class="k-widget k-dropdown k-header"
+              ><span
+                role="listbox"
+                unselectable="on"
+                class="k-dropdown-wrap k-state-default"
+                id="7da7d6a4-7174-4467-a1d8-ed4fc3b9bc99"
+                dir="ltr"
+                readonly="false"
+                tabindex="0"
+                aria-disabled="false"
+                aria-readonly="false"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-owns="25615927-21c4-4435-a1c9-3d382d932f6d"
+                aria-activedescendant="7b2abd12-e10a-4be1-a2af-8e3f40e15466-"
+                ><span unselectable="on" class="k-input"><!----><!----></span
+                ><span unselectable="on" class="k-select"
+                  ><span class="k-i-arrow-s k-icon"></span></span
+                ><!----></span
+              ><!----><!----></kendo-dropdownlist
+            >
+          </div>
+          <label _ngcontent-lcf-c73="" class="dot-form__label" name="type_label"
+            >Type</label
+          >
+          <div _ngcontent-lcf-c73="" class="col-2">
+            <kendo-dropdownlist
+              _ngcontent-lcf-c73=""
+              name="stock_type_dropdown"
+              class="k-widget k-dropdown k-header"
+              ><span
+                role="listbox"
+                unselectable="on"
+                class="k-dropdown-wrap k-state-default"
+                id="a3873d7b-ad55-4d1c-9135-9c4bb97a8f7f"
+                dir="ltr"
+                readonly="false"
+                tabindex="0"
+                aria-disabled="false"
+                aria-readonly="false"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-owns="a16d783b-236a-4fd3-a94f-db22b5847adc"
+                aria-activedescendant="658feec5-9d91-4fb4-842d-f56cbc86e38a-"
+                ><span unselectable="on" class="k-input"><!----><!----></span
+                ><span unselectable="on" class="k-select"
+                  ><span class="k-i-arrow-s k-icon"></span></span
+                ><!----></span
+              ><!----><!----></kendo-dropdownlist
+            >
+          </div>
+          <button
+            _ngcontent-lcf-c73=""
+            class="dot-button dot-button__tertiary"
+            name="showAdvFilter"
+          >
+            <span
+              _ngcontent-lcf-c73=""
+              class="dot-icon dot-down-arrow-icon"
+            ></span
+            ><span
+              _ngcontent-lcf-c73=""
+              class="dot-icon dot-up-arrow-icon"
+              hidden=""
+            ></span
+            ><span _ngcontent-lcf-c73="">Advance Filter</span></button
+          ><span
+            _ngcontent-lcf-c73=""
+            class="vertical_separator dot-button dot-button__tertiary"
+          ></span
+          ><button
+            _ngcontent-lcf-c73=""
+            class="dot-button dot-button__tertiary"
+          >
+            <span _ngcontent-lcf-c73="" class="dot-icon dot-revert-icon"></span
+            ><span _ngcontent-lcf-c73="">Reset</span></button
+          ><!----><button
+            _ngcontent-lcf-c73=""
+            class="dot-button dot-button__tertiary ng-star-inserted"
+          >
+            <span _ngcontent-lcf-c73="" class="dot-icon dot-revert-icon"></span
+            ><span _ngcontent-lcf-c73="">Special Order</span></button
+          ><span
+            _ngcontent-lcf-c73=""
+            class="vertical_separator dot-button dot-button__tertiary"
+          ></span>
+          <div _ngcontent-lcf-c73="" class="col-2 pos-rel align-center">
+            <div
+              _ngcontent-lcf-c73=""
+              class="row no-gutters custom-dropdown w-100"
+            >
+              <div _ngcontent-lcf-c73="" class="col-12">
+                <button
+                  _ngcontent-lcf-c73=""
+                  class="dot-button dot-button__tertiary"
+                >
+                  Customize Columns
+                </button>
+              </div>
+              <div _ngcontent-lcf-c73="" class="col-12">
+                <p-overlaypanel
+                  _ngcontent-lcf-c73=""
+                  appendto="body"
+                  baezindex="10005"
+                  styleclass=""
+                  class="ng-tns-c30-31"
+                  ><!----></p-overlaypanel
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          _ngcontent-lcf-c73=""
+          class="row padding-top-10 advanced_filter"
+          id="advanced_filter"
+          hidden=""
+        >
+          <div _ngcontent-lcf-c73="" class="col-4 row no-gutters dot-formgroup">
+            <label
+              _ngcontent-lcf-c73=""
+              class="dot-form__label col-4"
+              name="size_filter_label"
+              >Size</label
+            >
+            <div _ngcontent-lcf-c73="" class="col-8">
+              <div
+                _ngcontent-lcf-c73=""
+                class="dot-formgroup group-input row no-gutters"
+              >
+                <div _ngcontent-lcf-c73="" class="col-6">
+                  <input
+                    _ngcontent-lcf-c73=""
+                    class="dot-formcontrol"
+                    name="min_size_value"
+                    placeholder="Min"
+                    type="text"
+                  />
+                </div>
+                <div _ngcontent-lcf-c73="" class="col-6">
+                  <input
+                    _ngcontent-lcf-c73=""
+                    class="dot-formcontrol"
+                    name="max_size_value"
+                    placeholder="Max"
+                    type="text"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div _ngcontent-lcf-c73="" class="col-4 row no-gutters dot-formgroup">
+            <label
+              _ngcontent-lcf-c73=""
+              class="dot-form__label col-4"
+              name="weight_filter_label"
+              >Weight</label
+            >
+            <div
+              _ngcontent-lcf-c73=""
+              class="dot-formgroup group-input col-8 row no-gutters"
+            >
+              <div _ngcontent-lcf-c73="" class="col-6">
+                <input
+                  _ngcontent-lcf-c73=""
+                  class="dot-formcontrol"
+                  name="min_weight_value"
+                  placeholder="Min"
+                  type="text"
+                />
+              </div>
+              <div _ngcontent-lcf-c73="" class="col-6">
+                <input
+                  _ngcontent-lcf-c73=""
+                  class="dot-formcontrol"
+                  name="mix_weight_value"
+                  placeholder="Max"
+                  type="text"
+                />
+              </div>
+            </div>
+          </div>
+          <div _ngcontent-lcf-c73="" class="col-4 row no-gutters dot-formgroup">
+            <label
+              _ngcontent-lcf-c73=""
+              class="dot-form__label col-4"
+              name="ctw_filter_label"
+              >CWT</label
+            >
+            <div
+              _ngcontent-lcf-c73=""
+              class="dot-formgroup group-input col-8 row no-gutters"
+            >
+              <div _ngcontent-lcf-c73="" class="col-6">
+                <input
+                  _ngcontent-lcf-c73=""
+                  class="dot-formcontrol"
+                  name="min_ctw_value"
+                  placeholder="Min"
+                  type="text"
+                />
+              </div>
+              <div _ngcontent-lcf-c73="" class="col-6">
+                <input
+                  _ngcontent-lcf-c73=""
+                  class="dot-formcontrol"
+                  name="min_ctw_value"
+                  placeholder="Max"
+                  type="text"
+                />
+              </div>
+            </div>
+          </div>
+          <div _ngcontent-lcf-c73="" class="col-4 row no-gutters dot-formgroup">
+            <label
+              _ngcontent-lcf-c73=""
+              class="dot-form__label col-4"
+              name="price_filter_label"
+              >Price</label
+            >
+            <div
+              _ngcontent-lcf-c73=""
+              class="dot-formgroup group-input col-8 row no-gutters"
+            >
+              <div _ngcontent-lcf-c73="" class="col-6">
+                <input
+                  _ngcontent-lcf-c73=""
+                  class="dot-formcontrol"
+                  name="min_price_value"
+                  placeholder="Min"
+                  type="text"
+                />
+              </div>
+              <div _ngcontent-lcf-c73="" class="col-6">
+                <input
+                  _ngcontent-lcf-c73=""
+                  class="dot-formcontrol"
+                  name="max_price_value"
+                  placeholder="Max"
+                  type="text"
+                />
+              </div>
+            </div>
+          </div>
+          <div _ngcontent-lcf-c73="" class="col-4 row no-gutters dot-formgroup">
+            <label
+              _ngcontent-lcf-c73=""
+              class="dot-form__label col-4"
+              name="qoh_filter_label"
+              >Qty on Hand</label
+            >
+            <div
+              _ngcontent-lcf-c73=""
+              class="dot-formgroup group-input col-8 row no-gutters"
+            >
+              <div _ngcontent-lcf-c73="" class="col-6">
+                <input
+                  _ngcontent-lcf-c73=""
+                  class="dot-formcontrol"
+                  name="min_qoh_value"
+                  placeholder="Min"
+                  type="text"
+                />
+              </div>
+              <div _ngcontent-lcf-c73="" class="col-6">
+                <input
+                  _ngcontent-lcf-c73=""
+                  class="dot-formcontrol"
+                  name="max_qoh_value"
+                  placeholder="Max"
+                  type="text"
+                />
+              </div>
+            </div>
+          </div>
+          <div _ngcontent-lcf-c73="" class="col-3 dot-formgroup">
+            <div _ngcontent-lcf-c73="">
+              <label
+                _ngcontent-lcf-c73=""
+                class="dot-switch"
+                name="qoh_filter_label"
+                ><input _ngcontent-lcf-c73="" type="checkbox" />
+                <div
+                  _ngcontent-lcf-c73=""
+                  class="dot-switch-slider round"
+                ></div>
+                <span _ngcontent-lcf-c73=""></span
+                ><span _ngcontent-lcf-c73=""
+                  >Show Inventorized Stock</span
+                ></label
+              >
+            </div>
+            <div _ngcontent-lcf-c73="">
+              <label
+                _ngcontent-lcf-c73=""
+                class="dot-switch"
+                name="qoh_filter_label"
+                ><input _ngcontent-lcf-c73="" type="checkbox" />
+                <div
+                  _ngcontent-lcf-c73=""
+                  class="dot-switch-slider round"
+                ></div>
+                <span _ngcontent-lcf-c73=""></span
+                ><span _ngcontent-lcf-c73=""
+                  >Show Shells (Account All)</span
+                ></label
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <label
+        _ngcontent-lcf-c73=""
+        class="dot-form__label staticPosition"
+        name="stock_label"
+        ><span _ngcontent-lcf-c73="">Stocks</span
+        ><span _ngcontent-lcf-c73="" name="stock_count">(11951)</span></label
+      >
+      <div _ngcontent-lcf-c73="" class="row no-gutters stock_grid_container">
+        <div
+          _ngcontent-lcf-c73=""
+          id="stock_grid_container"
+          name="stock_grid_container"
+        >
+          <kendo-grid
+            _ngcontent-lcf-c73=""
+            class="stock_grid k-widget k-grid k-grid-no-scrollbar"
+            id="stock_grid"
+            name="stock_grid"
+            dir="ltr"
+            ><!----><!----><!---->
+            <div
+              class="k-grid-aria-root"
+              role="grid"
+              aria-rowcount="11952"
+              aria-colcount="13"
+            >
+              <!----><!---->
+              <div
+                class="k-grid-header ng-star-inserted"
+                role="presentation"
+                style="padding: 0px"
+              >
+                <!---->
+                <div
+                  class="k-grid-header-wrap"
+                  data-scrollable=""
+                  role="presentation"
+                >
+                  <table role="presentation">
+                    <colgroup kendogridcolgroup="" role="presentation">
+                      <!----><!----><!----><!---->
+                      <col class="ng-star-inserted" style="width: 399px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <col class="ng-star-inserted" style="width: 100px" />
+                      <!---->
+                    </colgroup>
+                    <thead
+                      kendogridheader=""
+                      role="presentation"
+                      _nghost-lcf-c48=""
+                    >
+                      <!----><!---->
+                      <tr
+                        _ngcontent-lcf-c48=""
+                        kendogridlogicalrow=""
+                        role="row"
+                        aria-rowindex="1"
+                        class="ng-star-inserted"
+                      >
+                        <!----><!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="0"
+                          aria-sort="ascending"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="1"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Stock Name<span
+                              _ngcontent-lcf-c48=""
+                              class="k-icon k-i-sort-asc-sm"
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                            >Sorted Ascending</span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="2"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Color<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="3"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Generic Color<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="4"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Grade<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="5"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->CWT<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="6"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Vendor<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="7"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Product ID<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="8"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Qty on Hand<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="9"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Committed<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="10"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Ordered<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="11"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Shell<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="12"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Price<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!----><!---->
+                        <th
+                          _ngcontent-lcf-c48=""
+                          aria-selected="false"
+                          kendodraggablecolumn=""
+                          kendodroptarget=""
+                          kendogriddraggable=""
+                          kendogridlogicalcell=""
+                          role="columnheader"
+                          tabindex="-1"
+                          class="k-header ng-star-inserted"
+                          rowspan="1"
+                          colspan="1"
+                          aria-colindex="13"
+                        >
+                          <!----><!----><!----><!----><a
+                            _ngcontent-lcf-c48=""
+                            class="k-link ng-star-inserted"
+                            href="#"
+                            tabindex="-1"
+                            ><!----><!---->Price Expires<span
+                              _ngcontent-lcf-c48=""
+                              aria-label="Sortable"
+                            ></span
+                            ><!----></a
+                          ><span
+                            _ngcontent-lcf-c48=""
+                            class="k-sort-status ng-star-inserted"
+                            role="status"
+                            style="position: absolute; left: -10000px"
+                          ></span
+                          ><!----><!----><span
+                            _ngcontent-lcf-c48=""
+                            class="k-column-resizer ng-star-inserted"
+                            kendogridcolumnhandle=""
+                            kendogriddraggable=""
+                            style="display: block; right: 0px"
+                          ></span>
+                        </th>
+                        <!----><!---->
+                      </tr>
+                      <!---->
+                      <tr
+                        _ngcontent-lcf-c48=""
+                        kendogridfilterrow=""
+                        kendogridlogicalrow=""
+                        role="row"
+                        aria-rowindex="2"
+                        class="k-filter-row ng-star-inserted"
+                      >
+                        <!----><!----><!---->
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="1"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><input
+                                class="k-textbox ng-untouched ng-pristine ng-valid"
+                                kendofilterinput=""
+                                kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="2"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><input
+                                class="k-textbox ng-untouched ng-pristine ng-valid"
+                                kendofilterinput=""
+                                kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="3"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><input
+                                class="k-textbox ng-untouched ng-pristine ng-valid"
+                                kendofilterinput=""
+                                kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="4"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><input
+                                class="k-textbox ng-untouched ng-pristine ng-valid"
+                                kendofilterinput=""
+                                kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="5"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-numeric-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><kendo-numerictextbox
+                                kendofilterinput=""
+                                kendogridfocusable=""
+                                dir="ltr"
+                                class="k-widget k-numerictextbox"
+                                ><!----><span class="k-numeric-wrap"
+                                  ><input
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    class="k-input k-formatted-value"
+                                    role="spinbutton"
+                                    id="k-49f3bc1e-a307-52ff-66e1-aa2b959b0e40"
+                                    title=""
+                                    tabindex="0" /><!----><span
+                                    class="k-select ng-star-inserted"
+                                    ><span
+                                      class="k-link k-link-increase"
+                                      aria-label="Increase value"
+                                      title="Increase value"
+                                      ><span
+                                        class="k-icon k-i-arrow-n"
+                                      ></span></span
+                                    ><span
+                                      class="k-link k-link-decrease"
+                                      aria-label="Decrease value"
+                                      title="Decrease value"
+                                      ><span
+                                        class="k-icon k-i-arrow-s"
+                                      ></span></span></span></span></kendo-numerictextbox
+                              ><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-numeric-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="6"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><input
+                                class="k-textbox ng-untouched ng-pristine ng-valid"
+                                kendofilterinput=""
+                                kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="7"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-numeric-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><kendo-numerictextbox
+                                kendofilterinput=""
+                                kendogridfocusable=""
+                                dir="ltr"
+                                class="k-widget k-numerictextbox"
+                                ><!----><span class="k-numeric-wrap"
+                                  ><input
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    class="k-input k-formatted-value"
+                                    role="spinbutton"
+                                    id="k-5ea04594-b43f-15cd-92b5-f0dbdd95cd57"
+                                    title=""
+                                    tabindex="0" /><!----><span
+                                    class="k-select ng-star-inserted"
+                                    ><span
+                                      class="k-link k-link-increase"
+                                      aria-label="Increase value"
+                                      title="Increase value"
+                                      ><span
+                                        class="k-icon k-i-arrow-n"
+                                      ></span></span
+                                    ><span
+                                      class="k-link k-link-decrease"
+                                      aria-label="Decrease value"
+                                      title="Decrease value"
+                                      ><span
+                                        class="k-icon k-i-arrow-s"
+                                      ></span></span></span></span></kendo-numerictextbox
+                              ><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-numeric-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="8"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-numeric-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><kendo-numerictextbox
+                                kendofilterinput=""
+                                kendogridfocusable=""
+                                dir="ltr"
+                                class="k-widget k-numerictextbox"
+                                ><!----><span class="k-numeric-wrap"
+                                  ><input
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    class="k-input k-formatted-value"
+                                    role="spinbutton"
+                                    id="k-573ff908-3d99-0e81-d6b5-a31ddb747dd5"
+                                    title=""
+                                    tabindex="0" /><!----><span
+                                    class="k-select ng-star-inserted"
+                                    ><span
+                                      class="k-link k-link-increase"
+                                      aria-label="Increase value"
+                                      title="Increase value"
+                                      ><span
+                                        class="k-icon k-i-arrow-n"
+                                      ></span></span
+                                    ><span
+                                      class="k-link k-link-decrease"
+                                      aria-label="Decrease value"
+                                      title="Decrease value"
+                                      ><span
+                                        class="k-icon k-i-arrow-s"
+                                      ></span></span></span></span></kendo-numerictextbox
+                              ><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-numeric-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="9"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-numeric-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><kendo-numerictextbox
+                                kendofilterinput=""
+                                kendogridfocusable=""
+                                dir="ltr"
+                                class="k-widget k-numerictextbox"
+                                ><!----><span class="k-numeric-wrap"
+                                  ><input
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    class="k-input k-formatted-value"
+                                    role="spinbutton"
+                                    id="k-2f5ed927-6dbb-fff4-24fa-615fe3c3dc77"
+                                    title=""
+                                    tabindex="0" /><!----><span
+                                    class="k-select ng-star-inserted"
+                                    ><span
+                                      class="k-link k-link-increase"
+                                      aria-label="Increase value"
+                                      title="Increase value"
+                                      ><span
+                                        class="k-icon k-i-arrow-n"
+                                      ></span></span
+                                    ><span
+                                      class="k-link k-link-decrease"
+                                      aria-label="Decrease value"
+                                      title="Decrease value"
+                                      ><span
+                                        class="k-icon k-i-arrow-s"
+                                      ></span></span></span></span></kendo-numerictextbox
+                              ><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-numeric-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="10"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-numeric-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><kendo-numerictextbox
+                                kendofilterinput=""
+                                kendogridfocusable=""
+                                dir="ltr"
+                                class="k-widget k-numerictextbox"
+                                ><!----><span class="k-numeric-wrap"
+                                  ><input
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    class="k-input k-formatted-value"
+                                    role="spinbutton"
+                                    id="k-79a47612-8005-2ce7-cb36-48f15a66a76a"
+                                    title=""
+                                    tabindex="0" /><!----><span
+                                    class="k-select ng-star-inserted"
+                                    ><span
+                                      class="k-link k-link-increase"
+                                      aria-label="Increase value"
+                                      title="Increase value"
+                                      ><span
+                                        class="k-icon k-i-arrow-n"
+                                      ></span></span
+                                    ><span
+                                      class="k-link k-link-decrease"
+                                      aria-label="Decrease value"
+                                      title="Decrease value"
+                                      ><span
+                                        class="k-icon k-i-arrow-s"
+                                      ></span></span></span></span></kendo-numerictextbox
+                              ><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-numeric-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="11"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-boolean-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell k-filtercell-boolean ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><kendo-dropdownlist
+                                kendofilterinput=""
+                                textfield="text"
+                                valuefield="value"
+                                class="k-widget k-dropdown k-header"
+                                ><span
+                                  role="listbox"
+                                  unselectable="on"
+                                  class="k-dropdown-wrap k-state-default"
+                                  id="7a811f03-b90d-4d16-96bc-efe58728f8f7"
+                                  dir="ltr"
+                                  readonly="false"
+                                  tabindex="0"
+                                  aria-disabled="false"
+                                  aria-readonly="false"
+                                  aria-haspopup="true"
+                                  aria-expanded="false"
+                                  aria-owns="fe9693a0-c4a8-4282-9e98-8efbd30ebb24"
+                                  aria-activedescendant="b273701b-ed15-4626-884c-48ddd93e3bbb-undefined"
+                                  ><span unselectable="on" class="k-input"
+                                    ><!----><!---->(All)</span
+                                  ><span unselectable="on" class="k-select"
+                                    ><span
+                                      class="k-i-arrow-s k-icon"
+                                    ></span></span
+                                  ><!----></span
+                                ><!----><!----></kendo-dropdownlist
+                              ><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-boolean-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="12"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-numeric-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><kendo-numerictextbox
+                                kendofilterinput=""
+                                kendogridfocusable=""
+                                dir="ltr"
+                                class="k-widget k-numerictextbox"
+                                ><!----><span class="k-numeric-wrap"
+                                  ><input
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    class="k-input k-formatted-value"
+                                    role="spinbutton"
+                                    id="k-36dea19e-128c-6492-e138-0d995d7de751"
+                                    title=""
+                                    tabindex="0" /><!----><span
+                                    class="k-select ng-star-inserted"
+                                    ><span
+                                      class="k-link k-link-increase"
+                                      aria-label="Increase value"
+                                      title="Increase value"
+                                      ><span
+                                        class="k-icon k-i-arrow-n"
+                                      ></span></span
+                                    ><span
+                                      class="k-link k-link-decrease"
+                                      aria-label="Decrease value"
+                                      title="Decrease value"
+                                      ><span
+                                        class="k-icon k-i-arrow-s"
+                                      ></span></span></span></span></kendo-numerictextbox
+                              ><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-numeric-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                        <td
+                          kendogridfiltercell=""
+                          kendogridlogicalcell=""
+                          tabindex="-1"
+                          aria-label="Filter"
+                          aria-colindex="13"
+                          class="ng-star-inserted"
+                        >
+                          <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                            _ngcontent-lcf-c73=""
+                            class="k-filtercell ng-star-inserted"
+                            ><kendo-grid-filter-wrapper-cell
+                              class="k-filtercell-wrapper"
+                              ><input
+                                class="k-textbox ng-untouched ng-pristine ng-valid"
+                                kendofilterinput=""
+                                kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                class="k-filtercell-operator"
+                                ><!----><button
+                                  class="k-button k-button-icon"
+                                  kendogridfocusable=""
+                                  title="Clear"
+                                >
+                                  <span
+                                    class="k-icon k-i-filter-clear"
+                                  ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                          ><!----><!----><!---->
+                        </td>
+                      </tr>
+                      <!---->
+                    </thead>
+                  </table>
+                </div>
+              </div>
+              <kendo-grid-list
+                class="k-grid-container ng-star-inserted"
+                role="presentation"
+                ><!---->
+                <div
+                  class="k-grid-content k-virtual-content"
+                  role="presentation"
+                  tabindex="-1"
+                >
+                  <div class="k-grid-table-wrap" role="presentation">
+                    <table
+                      class="k-grid-table"
+                      role="presentation"
+                      style="transform: translateY(0px)"
+                    >
+                      <colgroup kendogridcolgroup="" role="presentation">
+                        <!----><!----><!----><!---->
+                        <col class="ng-star-inserted" style="width: 399px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <col class="ng-star-inserted" style="width: 100px" />
+                        <!---->
+                      </colgroup>
+
+                      <tbody kendogridtablebody="" role="presentation">
+                        <!----><!----><!----><!----><!---->
+                        <tr
+                          kendogridlogicalrow=""
+                          data-kendo-grid-item-index="0"
+                          role="row"
+                          aria-rowindex="3"
+                          class="ng-star-inserted"
+                          style=""
+                        >
+                          <!----><!----><!----><!----><!---->
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="0"
+                            colspan="1"
+                            aria-colindex="1"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!---->
+                            <div _ngcontent-nng-c73="" class="ng-star-inserted">
+                              ][ GPA 12mil Rigid Vinyl
+                            </div>
+                            <div
+                              _ngcontent-nng-c73=""
+                              hidden=""
+                              class="ng-star-inserted"
+                            >
+                              4298780
+                            </div>
+                            <!----><!----><!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="2"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->WHITE<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="3"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->White<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="4"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!----><!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="5"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->639.48<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="6"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->GPA<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="7"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->4298780<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="8"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->999999999<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="9"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->0<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="10"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->0<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="11"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!----><!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="12"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->340<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="13"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!---->
+                            <!----><!----><!----><!----><!---->
+                          </td>
+                        </tr>
+                        <!----><!----><!----><!----><!---->
+                        <tr
+                          kendogridlogicalrow=""
+                          class="k-alt ng-star-inserted highlightedRow highlightedRow"
+                          data-kendo-grid-item-index="1"
+                          role="row"
+                          aria-rowindex="4"
+                          style=""
+                        >
+                          <!----><!----><!----><!----><!---->
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="1"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!---->
+                            <div _ngcontent-nng-c73="" class="ng-star-inserted">
+                              ][ GPA 15mil Rigid Vinyl
+                            </div>
+                            <div
+                              _ngcontent-nng-c73=""
+                              hidden=""
+                              class="ng-star-inserted"
+                            >
+                              4312449
+                            </div>
+                            <!----><!----><!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="2"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->WHITE<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="3"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->White<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="4"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!----><!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="5"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->584.8<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="6"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->GPA<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="7"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->4312449<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="8"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->999999305<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="9"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->0<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="10"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->0<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="11"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!----><!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="12"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!----><!---->325<!----><!----><!---->
+                          </td>
+                          <td
+                            aria-selected="false"
+                            kendogridcell=""
+                            kendogridlogicalcell=""
+                            role="gridcell"
+                            tabindex="-1"
+                            colspan="1"
+                            aria-colindex="13"
+                            class="ng-star-inserted"
+                            style=""
+                          >
+                            <!----><!----><!----><!----><!---->
+                            <!----><!----><!----><!----><!---->
+                          </td>
+                        </tr>
+                        <!----><!----><!---->
+                      </tbody>
+                    </table>
+                    <!---->
+                  </div>
+                  <!---->
+                  <div class="k-height-container" role="presentation">
+                    <div></div>
+                  </div>
+                </div>
+                <!----></kendo-grid-list
+              ><!----><!----><!---->
+            </div>
+            <!----><kendo-pager
+              class="k-pager-wrap k-grid-pager k-widget ng-star-inserted"
+              ><!----><!----><!----><!----><kendo-pager-prev-buttons
+                class="ng-star-inserted"
+                ><a
+                  href="#"
+                  tabindex="-1"
+                  class="k-link k-pager-nav k-state-disabled k-pager-first"
+                  title="Go to the first page"
+                  ><span
+                    class="k-icon k-i-seek-w"
+                    aria-label="Go to the first page"
+                  ></span></a
+                ><a
+                  href="#"
+                  tabindex="-1"
+                  class="k-link k-pager-nav k-state-disabled"
+                  title="Go to the previous page"
+                  ><span
+                    class="k-icon k-i-arrow-w"
+                    aria-label="Go to the previous page"
+                  ></span></a></kendo-pager-prev-buttons
+              ><!----><kendo-pager-numeric-buttons class="ng-star-inserted"
+                ><ul class="k-pager-numbers k-reset">
+                  <!----><!---->
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link k-state-selected"
+                      aria-label="Page 1"
+                    >
+                      1
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 2"
+                    >
+                      2
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 3"
+                    >
+                      3
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 4"
+                    >
+                      4
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 5"
+                    >
+                      5
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 6"
+                    >
+                      6
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 7"
+                    >
+                      7
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 8"
+                    >
+                      8
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 9"
+                    >
+                      9
+                    </a>
+                  </li>
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      href="#"
+                      tabindex="-1"
+                      class="k-link"
+                      aria-label="Page 10"
+                    >
+                      10
+                    </a>
+                  </li>
+                  <!---->
+                  <li class="ng-star-inserted" style="">
+                    <a
+                      class="k-link"
+                      href="#"
+                      tabindex="-1"
+                      aria-label="Page 11"
+                      >...</a
+                    >
+                  </li>
+                </ul></kendo-pager-numeric-buttons
+              ><!----><!----><kendo-pager-next-buttons class="ng-star-inserted"
+                ><a
+                  href="#"
+                  tabindex="-1"
+                  class="k-link k-pager-nav"
+                  title="Go to the next page"
+                  ><span
+                    class="k-icon k-i-arrow-e"
+                    aria-label="Go to the next page"
+                  ></span></a
+                ><a
+                  href="#"
+                  tabindex="-1"
+                  class="k-link k-pager-nav k-pager-last"
+                  title="Go to the last page"
+                  ><span
+                    class="k-icon k-i-seek-e"
+                    aria-label="Go to the last page"
+                  ></span></a></kendo-pager-next-buttons
+              ><!----><kendo-pager-info
+                class="k-pager-info k-label ng-star-inserted"
+                >1 - 20 of 11951 items</kendo-pager-info
+              ><!----><!----></kendo-pager
+            ><!----></kendo-grid
+          >
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- confirm button -->
+<button
+  _ngcontent-yvb-c73=""
+  class="dot-button dot-button__prominent"
+  name="save_stock_details"
+  title=""
+>
+  Confirm
+</button>

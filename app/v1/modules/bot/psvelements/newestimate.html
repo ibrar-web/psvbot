@@ -1,0 +1,1788 @@
+<div _ngcontent-kdd-c12="" class="dot-modal__content">
+  <div
+    class="app-modal-body job_template_popup_scrollArea"
+    id="job_template_popup"
+    style="max-height: 834px"
+  >
+    <form
+      class="dot-form__horizontal newInvoiceModal ng-untouched ng-pristine ng-valid"
+      novalidate=""
+    >
+      <div class="row">
+        <div
+          class="dot-formgroup col-6 row no-gutters padding-right-0 align-center"
+        >
+          <label
+            class="dot-form__label staticPosition text-right margin-bottom-0"
+            name="choose_type"
+            >Choose Customer</label
+          >
+          <div class="col-8 align-center">
+            <kendo-combobox
+              id="auto-focus"
+              name="choose_type_value"
+              class="k-widget k-combobox k-header k-combobox-clearable"
+              dir="ltr"
+              ><span unselectable="on" class="k-dropdown-wrap k-state-default"
+                ><kendo-searchbar class="k-searchbar"
+                  ><input
+                    autocomplete="off"
+                    size="45"
+                    id="auto-focus"
+                    placeholder="Please type at least two characters to search"
+                    class="k-input"
+                    tabindex="0"
+                    dir="ltr"
+                    role="listbox"
+                    aria-disabled="false"
+                    aria-readonly="false"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-owns="633ba352-666b-48e1-bbd0-d72afead3795"
+                    aria-activedescendant="f3293b7c-ae89-455b-8626-753023094c05-undefined" /></kendo-searchbar
+                ><!----><span unselectable="on" class="k-select"
+                  ><span class="k-i-arrow-s k-icon"></span></span
+                ><!----></span
+              ><!----><!----></kendo-combobox
+            ><span style="text-align: center"
+              ><span
+                class="adv_options_dropdown dot-button dot-button__secondary dot-button__icon dot-icon__button__gray padding-0"
+                name="inv_popup_adv_option_parent"
+                ><span class="dot-icon dot-filter-icon" style="top: 6px"></span>
+                <div
+                  class="dot-dropdown advanced_search_options"
+                  name="inv_popup_adv_option_dropdown"
+                >
+                  <div class="dot-dropdown-options">
+                    <div class="border-bottom padding-bottom-0 padding-top-0">
+                      <label class="light-label">Allow search through</label>
+                    </div>
+                    <div class="row no-gutters">
+                      <div class="col-8">
+                        <label
+                          class="dot-switch"
+                          name="inv_popup_acc_n_contact_toggle"
+                          ><input
+                            name="inv_popup_acc_n_contact_input"
+                            type="checkbox"
+                            class="ng-untouched ng-pristine ng-valid"
+                          />
+                          <div class="dot-switch-slider round"></div>
+                          <span
+                            ><span>Account + Contact - </span
+                            ><span class="light-label">(Default)</span></span
+                          ></label
+                        >
+                      </div>
+                      <div class="col-4">
+                        <label
+                          class="dot-switch text-right"
+                          name="inv_popup_prospect_toggle"
+                          ><input
+                            name="inv_popup_prospect_input"
+                            type="checkbox"
+                            class="ng-untouched ng-pristine ng-valid"
+                          />
+                          <div class="dot-switch-slider round"></div>
+                          <span>Prospects</span></label
+                        >
+                      </div>
+                    </div>
+                    <div class="row no-gutters info margin-top-10">
+                      <span class="italics">Note: </span
+                      ><span>
+                        Add below Prefixes to search Customer based on:</span
+                      ><span
+                        ><span>Account No:</span
+                        ><span class="text-bold">"#:"</span
+                        ><span>Phone No: </span
+                        ><span class="text-bold">"ph:"</span>;
+                        <span>Email: </span><span class="text-bold">"e:"</span>;
+                        <span>External Ref No: </span
+                        ><span class="text-bold">"E#:"</span></span
+                      >
+                    </div>
+                  </div>
+                </div></span
+              ></span
+            >
+          </div>
+        </div>
+        <div class="dot-formgroup col-6 no-gutters row align-center">
+          <label
+            class="dot-form__label staticPosition col-4 text-right margin-bottom-0"
+            name="contact_person"
+            >Contact Person</label
+          >
+          <div class="col-8">
+            <kendo-dropdownlist
+              name="contact_person_value"
+              class="k-widget k-dropdown k-header"
+              ><span
+                role="listbox"
+                unselectable="on"
+                class="k-dropdown-wrap k-state-disabled"
+                id="d16f1283-e55e-49f5-870f-5c900f2a6ec6"
+                dir="ltr"
+                readonly="false"
+                aria-disabled="true"
+                aria-readonly="false"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-owns="4cf0ad21-61db-4572-8563-887fb94cc6f6"
+                aria-activedescendant="af788682-0957-4d1c-8185-2e485fc7314e-undefined"
+                ><span unselectable="on" class="k-input"
+                  ><!----><!----><span class="ng-star-inserted"> </span
+                  ><!----><!----></span
+                ><span unselectable="on" class="k-select"
+                  ><span class="k-i-arrow-s k-icon"></span></span
+                ><!----></span
+              ><!----><!----></kendo-dropdownlist
+            >
+          </div>
+        </div>
+      </div>
+      <div class="row no-gutters disabled">
+        <div class="dot-formgroup row no-gutters col-7" style="height: 54px">
+          <label class="dot-form__label staticPosition" name="create_from"
+            >Create From</label
+          >
+          <div class="dot-formgroup margin-bottom-0">
+            <div class="prime-checkbox-container">
+              <!---->
+              <div class="ng-star-inserted">
+                <p-radiobutton
+                  name="groupname"
+                  class="ng-untouched ng-pristine ng-valid"
+                  ><div class="ui-radiobutton ui-widget">
+                    <div class="ui-helper-hidden-accessible">
+                      <input type="radio" name="groupname" value="2" />
+                    </div>
+                    <div class="ui-radiobutton-box ui-widget ui-state-default">
+                      <span class="ui-radiobutton-icon ui-clickable"></span>
+                    </div>
+                  </div>
+                  <!----><label class="ui-radiobutton-label ng-star-inserted"
+                    >Create New Job</label
+                  ></p-radiobutton
+                >
+              </div>
+              <div class="ng-star-inserted">
+                <p-radiobutton
+                  name="groupname"
+                  class="ng-untouched ng-pristine ng-valid"
+                  ><div class="ui-radiobutton ui-widget">
+                    <div class="ui-helper-hidden-accessible">
+                      <input type="radio" name="groupname" value="3" />
+                    </div>
+                    <div class="ui-radiobutton-box ui-widget ui-state-default">
+                      <span class="ui-radiobutton-icon ui-clickable"></span>
+                    </div>
+                  </div>
+                  <!----><label class="ui-radiobutton-label ng-star-inserted"
+                    >Account History</label
+                  ></p-radiobutton
+                >
+              </div>
+              <div class="ng-star-inserted">
+                <p-radiobutton
+                  name="groupname"
+                  class="ng-untouched ng-pristine ng-valid"
+                  ><div class="ui-radiobutton ui-widget">
+                    <div class="ui-helper-hidden-accessible">
+                      <input type="radio" name="groupname" value="5" />
+                    </div>
+                    <div class="ui-radiobutton-box ui-widget ui-state-default">
+                      <span class="ui-radiobutton-icon ui-clickable"></span>
+                    </div>
+                  </div>
+                  <!----><label class="ui-radiobutton-label ng-star-inserted"
+                    >Templates</label
+                  ></p-radiobutton
+                >
+              </div>
+              <div class="row no-gutters margin-bottom-6" style="display: none">
+                <span class="row"
+                  >&nbsp;&nbsp;|&nbsp;
+                  <label class="dot-switch" name="use_temp_label"
+                    ><input
+                      name="use_temp_checkbox"
+                      type="checkbox"
+                      class="ng-untouched ng-pristine ng-valid"
+                    />
+                    <div class="dot-switch-slider round"></div>
+                    <span> &nbsp; clear Account filter </span></label
+                  ></span
+                >
+              </div>
+              <div class="row no-gutters margin-bottom-6" style="display: none">
+                <span class="row"
+                  >&nbsp;&nbsp;|&nbsp;
+                  <label class="dot-switch" name="use_temp_label"
+                    ><input
+                      name="use_temp_checkbox"
+                      type="checkbox"
+                      class="ng-untouched ng-pristine ng-valid"
+                    />
+                    <div class="dot-switch-slider round"></div>
+                    <span> &nbsp; clear Account filter </span></label
+                  ></span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-5" style="display: none">
+          <label
+            class="dot-form__label staticPosition margin-bottom-5"
+            name="account_history"
+            ><span>Account History</span
+            ><span name="account_history_data_count">(0)</span></label
+          >
+          <div class="dot-formgroup row no-gutters">
+            <kendo-buttongroup
+              class="buttons dot-buttons-group dot-buttons-group__left k-button-group"
+              name="est_inv_options"
+              role="radiogroup"
+              dir="ltr"
+              tabindex="0"
+              ><!----><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                dir="ltr"
+                tabindex="0"
+              >
+                Invoices</button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button k-group-end ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                dir="ltr"
+                tabindex="0"
+              >
+                Estimates
+              </button></kendo-buttongroup
+            ><kendo-dropdownlist
+              class="date-range-dropdown k-widget k-dropdown k-header"
+              name="time_frame_options"
+              ><span
+                role="listbox"
+                unselectable="on"
+                class="k-dropdown-wrap k-state-default"
+                id="ed2b490d-b3b8-4e6a-8bdc-576fc0af7b30"
+                dir="ltr"
+                readonly="false"
+                tabindex="0"
+                aria-disabled="false"
+                aria-readonly="false"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-owns="fc24486d-3e97-4080-b47e-353adc4b0386"
+                aria-activedescendant="8d0e2cc8-bdfe-4d51-8318-155dacc5e812-undefined"
+                ><span unselectable="on" class="k-input"><!----><!----></span
+                ><span unselectable="on" class="k-select"
+                  ><span class="k-i-arrow-s k-icon"></span></span
+                ><!----></span
+              ><!----><!----></kendo-dropdownlist
+            >
+          </div>
+        </div>
+        <div class="col-5" style="display: none">
+          <label
+            class="dot-form__label staticPosition margin-bottom-5"
+            name="templates_count"
+            ><span>Templates</span
+            ><span name="templates_data_count">()</span></label
+          >
+          <div class="dot-formgroup row no-gutters">
+            <kendo-buttongroup
+              class="buttons dot-buttons-group dot-buttons-group__left k-button-group"
+              name="template_est_inv_options"
+              role="radiogroup"
+              dir="ltr"
+              tabindex="0"
+              ><!----><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                dir="ltr"
+                tabindex="0"
+              >
+                Invoices</button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button k-group-end ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                dir="ltr"
+                tabindex="0"
+              >
+                Estimates
+              </button></kendo-buttongroup
+            >
+          </div>
+        </div>
+        <!---->
+        <div
+          class="row no-gutters job_method w-100 ng-star-inserted"
+          style="position: relative"
+        >
+          <label class="dot-form__label staticPosition col-12" name="job_method"
+            >Job Method</label
+          ><!----><a
+            class="button dot-icon dot-back-arrow-icon cursor-pointer ng-star-inserted"
+            href="javascript:;"
+            id="left"
+            hidden=""
+          ></a>
+          <div
+            class="dot-formgroup row no-gutters jobMethod"
+            id="jobMethodIcons"
+          >
+            <!----><kendo-buttongroup
+              class="buttons dot-buttons-group dot-buttons-group__left job_methods_icons k-button-group ng-star-inserted"
+              name="job_method_value"
+              role="radiogroup"
+              dir="ltr"
+              tabindex="0"
+              ><!----><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Signage"
+                dir="ltr"
+                tabindex="0"
+              >
+                <div
+                  class="jobMethod-signage-icon jobMethod-icon-signage-img"
+                ></div>
+                <label>Signage</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Multi-Part"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div class="jobMethod-icon jobMethod-icon-multi-part-img"></div>
+                <label>Multi-Part</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Digital B/W"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div class="jobMethod-icon jobMethod-icon-bw-color-img"></div>
+                <label>Digital B/W</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Digital Color"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div
+                  class="jobMethod-icon jobMethod-icon-digital-color-img"
+                ></div>
+                <label>Digital Color</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Blank Stock"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div
+                  class="jobMethod-icon jobMethod-icon-blank-stock-img"
+                ></div>
+                <label>Blank Stock</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Sublet"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div class="jobMethod-icon jobMethod-icon-out-source-img"></div>
+                <label>Sublet</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Sublet Printing"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div class="jobMethod-icon jobMethod-icon-out-source-img"></div>
+                <label>Sublet Printing</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Sublet Promo"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div class="jobMethod-icon jobMethod-icon-out-source-img"></div>
+                <label>Sublet Promo</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Sublet Signs"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div class="jobMethod-icon jobMethod-icon-out-source-img"></div>
+                <label>Sublet Signs</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Sublet Sign Install"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div class="jobMethod-icon jobMethod-icon-out-source-img"></div>
+                <label>Sublet Sign Install</label></button
+              ><button
+                class="dot-button dot-button__secondary k-group-start k-button ng-star-inserted k-group-end"
+                kendobutton=""
+                role="radio"
+                aria-checked="false"
+                title="Web Order"
+                dir="ltr"
+                tabindex="-1"
+              >
+                <div class="jobMethod-icon jobMethod-icon-out-source-img"></div>
+                <label>Web Order</label>
+              </button></kendo-buttongroup
+            >
+          </div>
+          <!----><a
+            class="button dot-icon dot-next-arrow-icon cursor-pointer ng-star-inserted"
+            href="javascript:;"
+            id="right"
+          ></a>
+        </div>
+        <div class="row no-gutters">
+          <div class="col-md-12" style="display: none">
+            <div class="row no-gutters" style="display: block">
+              <label class="dot-form__label staticPosition" name="product_type"
+                ><span>Product Templates</span
+                ><span name="product_type_data_count">()</span></label
+              >
+              <div class="dot-formgroup row no-gutters">
+                <div class="jobGridContainer">
+                  <p-table
+                    columnresizemode="expand"
+                    datakey="id"
+                    name="product_type_grid"
+                    selectionmode="single"
+                    sortmode="single"
+                    ><div
+                      class="ui-table ui-widget ui-table-resizable ui-table-hoverable-rows"
+                      style="width: 100%"
+                    >
+                      <!----><!----><!----><!----><!----><!---->
+                      <div class="ui-table-scrollable-wrapper ng-star-inserted">
+                        <!---->
+                        <div class="ui-table-scrollable-view">
+                          <div
+                            class="ui-table-scrollable-header ui-widget-header"
+                          >
+                            <div
+                              class="ui-table-scrollable-header-box"
+                              style="margin-right: 0px"
+                            >
+                              <table class="ui-table-scrollable-header-table">
+                                <!---->
+                                <colgroup class="ng-star-inserted">
+                                  <!---->
+                                </colgroup>
+                                <thead class="ui-table-thead">
+                                  <!---->
+                                  <tr class="ng-star-inserted">
+                                    <!---->
+                                  </tr>
+                                  <tr class="ng-star-inserted">
+                                    <!---->
+                                  </tr>
+                                </thead>
+                                <tbody class="ui-table-tbody">
+                                  <!---->
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                          <div
+                            class="ui-table-scrollable-body"
+                            style="max-height: 447px"
+                          >
+                            <table class="ui-table-scrollable-body-table">
+                              <!---->
+                              <colgroup class="ng-star-inserted">
+                                <!---->
+                              </colgroup>
+                              <tbody class="ui-table-tbody">
+                                <!----><!----><!----><!----><!----><!----><!----><!----><!---->
+                              </tbody>
+                            </table>
+                            <!----><!---->
+                          </div>
+                          <!---->
+                        </div>
+                      </div>
+                      <!----><!----><!---->
+                      <div
+                        class="ui-column-resizer-helper ui-state-highlight ng-star-inserted"
+                        style="display: none"
+                      ></div>
+                      <!----><!---->
+                    </div></p-table
+                  ><p-paginator name="prod_type_grid_paginator"
+                    ><!---->
+                    <div
+                      class="ui-paginator ui-widget ui-widget-header ui-unselectable-text ui-helper-clearfix ng-star-inserted"
+                      style="width: 100%"
+                    >
+                      <!---->
+                      <div class="ui-paginator-left-content ng-star-inserted">
+                        <!----><span class="ng-star-inserted"> Showing </span
+                        ><span
+                          class="text-bold ng-star-inserted"
+                          name="po_history_count"
+                          >0 - 0</span
+                        ><span class="ng-star-inserted"> of </span
+                        ><span
+                          class="text-bold ng-star-inserted"
+                          name="po_history_total_count"
+                        ></span
+                        ><span class="ng-star-inserted"> records </span>
+                      </div>
+                      <!----><a
+                        class="ui-paginator-first ui-paginator-element ui-state-default ui-corner-all ui-state-disabled"
+                        tabindex="-1"
+                        ><span
+                          class="ui-paginator-icon pi pi-step-backward"
+                        ></span></a
+                      ><a
+                        class="ui-paginator-prev ui-paginator-element ui-state-default ui-corner-all ui-state-disabled"
+                        tabindex="-1"
+                        ><span
+                          class="ui-paginator-icon pi pi-caret-left"
+                        ></span></a
+                      ><span class="ui-paginator-pages"
+                        ><!----><a
+                          class="ui-paginator-page ui-paginator-element ui-state-default ui-corner-all ui-state-active ng-star-inserted"
+                          tabindex="0"
+                          >1</a
+                        ></span
+                      ><a
+                        class="ui-paginator-next ui-paginator-element ui-state-default ui-corner-all ui-state-disabled"
+                        tabindex="-1"
+                        ><span
+                          class="ui-paginator-icon pi pi-caret-right"
+                        ></span></a
+                      ><a
+                        class="ui-paginator-last ui-paginator-element ui-state-default ui-corner-all ui-state-disabled"
+                        tabindex="-1"
+                        ><span
+                          class="ui-paginator-icon pi pi-step-forward"
+                        ></span></a
+                      ><!----><p-dropdown
+                        class="ng-tns-c28-11 ui-inputwrapper-filled ng-untouched ng-pristine ng-valid ng-star-inserted"
+                        ><div
+                          class="ng-tns-c28-11 ui-dropdown ui-widget ui-state-default ui-corner-all ui-helper-clearfix"
+                        >
+                          <div class="ui-helper-hidden-accessible">
+                            <input
+                              class="ng-tns-c28-11"
+                              aria-haspopup="listbox"
+                              readonly=""
+                              type="text"
+                              aria-label="20"
+                            />
+                          </div>
+                          <!----><label
+                            class="ng-tns-c28-11 ui-dropdown-label ui-inputtext ui-corner-all ng-star-inserted"
+                            ><!----><!---->20<!----></label
+                          ><!----><!----><!---->
+                          <div
+                            class="ui-dropdown-trigger ui-state-default ui-corner-right"
+                          >
+                            <span
+                              class="ui-dropdown-trigger-icon ui-clickable pi pi-chevron-down"
+                            ></span>
+                          </div>
+                          <!---->
+                        </div></p-dropdown
+                      ><!---->
+                    </div></p-paginator
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="row no-gutters" style="display: none">
+              <div class="col-12">
+                <div class="jobGridContainer">
+                  <kendo-grid
+                    name="account_history_grid"
+                    dir="ltr"
+                    class="k-widget k-grid k-grid-no-scrollbar"
+                    style="height: 705px"
+                    ><!----><!----><!---->
+                    <div
+                      class="k-grid-aria-root"
+                      role="grid"
+                      aria-rowcount="1"
+                      aria-colcount="6"
+                    >
+                      <!----><!---->
+                      <div
+                        class="k-grid-header ng-star-inserted"
+                        role="presentation"
+                        style="padding: 0px"
+                      >
+                        <!---->
+                        <div
+                          class="k-grid-header-wrap"
+                          data-scrollable=""
+                          role="presentation"
+                        >
+                          <table role="presentation">
+                            <colgroup kendogridcolgroup="" role="presentation">
+                              <!----><!----><!---->
+                              <col class="k-hierarchy-col ng-star-inserted" />
+                              <!---->
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 150px"
+                              />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 100px"
+                              />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 200px"
+                              />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 100px"
+                              />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 100px"
+                              />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 130px"
+                              />
+                              <!---->
+                            </colgroup>
+                            <thead
+                              kendogridheader=""
+                              role="presentation"
+                              _nghost-kdd-c48=""
+                            >
+                              <!----><!---->
+                              <tr
+                                _ngcontent-kdd-c48=""
+                                kendogridlogicalrow=""
+                                role="row"
+                                aria-rowindex="1"
+                                class="ng-star-inserted"
+                              >
+                                <!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendogridlogicalcell=""
+                                  role="presentation"
+                                  tabindex="0"
+                                  class="k-hierarchy-cell k-header ng-star-inserted"
+                                  aria-colindex="1"
+                                ></th>
+                                <!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="2"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Posted On<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="3"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Invoice #<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="4"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Description<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="5"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Total Cost<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="6"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->PO #<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="7"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Sales Rep<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!---->
+                              </tr>
+                              <!---->
+                              <tr
+                                _ngcontent-kdd-c48=""
+                                kendogridfilterrow=""
+                                kendogridlogicalrow=""
+                                role="row"
+                                aria-rowindex="2"
+                                class="k-filter-row ng-star-inserted"
+                              >
+                                <!----><!---->
+                                <td
+                                  role="presentation"
+                                  class="k-hierarchy-cell ng-star-inserted"
+                                ></td>
+                                <!---->
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="1"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="2"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="3"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="4"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><!----><kendo-grid-numeric-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><kendo-numerictextbox
+                                        kendofilterinput=""
+                                        kendogridfocusable=""
+                                        dir="ltr"
+                                        class="k-widget k-numerictextbox"
+                                        ><!----><span class="k-numeric-wrap"
+                                          ><input
+                                            autocomplete="off"
+                                            autocorrect="off"
+                                            class="k-input k-formatted-value"
+                                            role="spinbutton"
+                                            id="k-ae06aca5-7176-88ae-1ea6-35d02a7489a1"
+                                            title=""
+                                            tabindex="0"
+                                          /><!----></span
+                                        ></kendo-numerictextbox
+                                      ><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-numeric-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="5"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="6"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                              </tr>
+                              <!---->
+                            </thead>
+                          </table>
+                        </div>
+                      </div>
+                      <kendo-grid-list
+                        class="k-grid-container ng-star-inserted"
+                        role="presentation"
+                        ><!---->
+                        <div
+                          class="k-grid-content k-virtual-content"
+                          role="presentation"
+                          tabindex="-1"
+                        >
+                          <div class="k-grid-table-wrap" role="presentation">
+                            <table
+                              class="k-grid-table"
+                              role="presentation"
+                              style="transform: translateY(0px)"
+                            >
+                              <colgroup
+                                kendogridcolgroup=""
+                                role="presentation"
+                              >
+                                <!----><!----><!---->
+                                <col class="k-hierarchy-col ng-star-inserted" />
+                                <!---->
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 150px"
+                                />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 100px"
+                                />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 200px"
+                                />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 100px"
+                                />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 100px"
+                                />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 130px"
+                                />
+                                <!---->
+                              </colgroup>
+                              <tbody kendogridtablebody="" role="presentation">
+                                <!----><!---->
+                                <tr class="k-grid-norecords ng-star-inserted">
+                                  <td colspan="7">
+                                    <!----><!----><!---->
+                                    No records available.
+                                  </td>
+                                </tr>
+                                <!---->
+                              </tbody>
+                            </table>
+                            <!---->
+                          </div>
+                          <!---->
+                          <div class="k-height-container" role="presentation">
+                            <div></div>
+                          </div>
+                        </div>
+                        <!----></kendo-grid-list
+                      ><!----><!----><!---->
+                    </div>
+                    <!----><kendo-pager
+                      class="k-pager-wrap k-grid-pager k-widget ng-star-inserted"
+                      ><!----><!----><!----><!----><kendo-pager-prev-buttons
+                        class="ng-star-inserted"
+                        ><a
+                          href="#"
+                          tabindex="-1"
+                          class="k-link k-pager-nav k-state-disabled k-pager-first"
+                          title="Go to the first page"
+                          ><span
+                            class="k-icon k-i-seek-w"
+                            aria-label="Go to the first page"
+                          ></span></a
+                        ><a
+                          href="#"
+                          tabindex="-1"
+                          class="k-link k-pager-nav k-state-disabled"
+                          title="Go to the previous page"
+                          ><span
+                            class="k-icon k-i-arrow-w"
+                            aria-label="Go to the previous page"
+                          ></span></a></kendo-pager-prev-buttons
+                      ><!----><kendo-pager-numeric-buttons
+                        class="ng-star-inserted"
+                        ><ul class="k-pager-numbers k-reset">
+                          <!----><!----><!---->
+                        </ul></kendo-pager-numeric-buttons
+                      ><!----><!----><kendo-pager-next-buttons
+                        class="ng-star-inserted"
+                        ><a
+                          href="#"
+                          tabindex="-1"
+                          class="k-link k-pager-nav k-state-disabled"
+                          title="Go to the next page"
+                          ><span
+                            class="k-icon k-i-arrow-e"
+                            aria-label="Go to the next page"
+                          ></span></a
+                        ><a
+                          href="#"
+                          tabindex="-1"
+                          class="k-link k-pager-nav k-state-disabled k-pager-last"
+                          title="Go to the last page"
+                          ><span
+                            class="k-icon k-i-seek-e"
+                            aria-label="Go to the last page"
+                          ></span></a></kendo-pager-next-buttons
+                      ><!----><kendo-pager-info
+                        class="k-pager-info k-label ng-star-inserted"
+                        >0 - 0 of 0 items</kendo-pager-info
+                      ><!----><!----></kendo-pager
+                    ><!----></kendo-grid
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="row no-gutters" style="display: none">
+              <div class="col-12">
+                <div class="jobGridContainer">
+                  <kendo-grid
+                    name="invoice_template_grid"
+                    dir="ltr"
+                    class="k-widget k-grid k-grid-no-scrollbar"
+                    style="height: 707px"
+                    ><!----><!----><!---->
+                    <div
+                      class="k-grid-aria-root"
+                      role="grid"
+                      aria-rowcount="1"
+                      aria-colcount="5"
+                    >
+                      <!----><!---->
+                      <div
+                        class="k-grid-header ng-star-inserted"
+                        role="presentation"
+                        style="padding: 0px"
+                      >
+                        <!---->
+                        <div
+                          class="k-grid-header-wrap"
+                          data-scrollable=""
+                          role="presentation"
+                        >
+                          <table role="presentation">
+                            <colgroup kendogridcolgroup="" role="presentation">
+                              <!----><!----><!---->
+                              <col class="k-hierarchy-col ng-star-inserted" />
+                              <!---->
+                              <col class="ng-star-inserted" />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 120px"
+                              />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 120px"
+                              />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 130px"
+                              />
+                              <col
+                                class="ng-star-inserted"
+                                style="width: 150px"
+                              />
+                              <!---->
+                            </colgroup>
+                            <thead
+                              kendogridheader=""
+                              role="presentation"
+                              _nghost-kdd-c48=""
+                            >
+                              <!----><!---->
+                              <tr
+                                _ngcontent-kdd-c48=""
+                                kendogridlogicalrow=""
+                                role="row"
+                                aria-rowindex="1"
+                                class="ng-star-inserted"
+                              >
+                                <!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendogridlogicalcell=""
+                                  role="presentation"
+                                  tabindex="0"
+                                  class="k-hierarchy-cell k-header ng-star-inserted"
+                                  aria-colindex="1"
+                                ></th>
+                                <!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="2"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Name<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="3"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Invoice #<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="4"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Account<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="5"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Created By<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!----><!---->
+                                <th
+                                  _ngcontent-kdd-c48=""
+                                  aria-selected="false"
+                                  kendodraggablecolumn=""
+                                  kendodroptarget=""
+                                  kendogriddraggable=""
+                                  kendogridlogicalcell=""
+                                  role="columnheader"
+                                  tabindex="-1"
+                                  class="k-header ng-star-inserted"
+                                  rowspan="1"
+                                  colspan="1"
+                                  aria-colindex="6"
+                                >
+                                  <!----><!----><!----><!----><a
+                                    _ngcontent-kdd-c48=""
+                                    class="k-link ng-star-inserted"
+                                    href="#"
+                                    tabindex="-1"
+                                    ><!----><!---->Modified Date<span
+                                      _ngcontent-kdd-c48=""
+                                      aria-label="Sortable"
+                                    ></span
+                                    ><!----></a
+                                  ><span
+                                    _ngcontent-kdd-c48=""
+                                    class="k-sort-status ng-star-inserted"
+                                    role="status"
+                                    style="position: absolute; left: -10000px"
+                                  ></span
+                                  ><!----><!---->
+                                </th>
+                                <!----><!---->
+                              </tr>
+                              <!---->
+                              <tr
+                                _ngcontent-kdd-c48=""
+                                kendogridfilterrow=""
+                                kendogridlogicalrow=""
+                                role="row"
+                                aria-rowindex="2"
+                                class="k-filter-row ng-star-inserted"
+                              >
+                                <!----><!---->
+                                <td
+                                  role="presentation"
+                                  class="k-hierarchy-cell ng-star-inserted"
+                                ></td>
+                                <!---->
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="1"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="2"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="3"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="4"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                                <td
+                                  kendogridfiltercell=""
+                                  kendogridlogicalcell=""
+                                  tabindex="-1"
+                                  aria-label="Filter"
+                                  aria-colindex="5"
+                                  class="ng-star-inserted"
+                                >
+                                  <!----><!----><!----><!----><!----><!----><!----><kendo-grid-string-filter-cell
+                                    class="k-filtercell ng-star-inserted"
+                                    ><kendo-grid-filter-wrapper-cell
+                                      class="k-filtercell-wrapper"
+                                      ><input
+                                        class="k-textbox ng-untouched ng-pristine ng-valid"
+                                        kendofilterinput=""
+                                        kendogridfocusable="" /><kendo-grid-filter-cell-operators
+                                        class="k-filtercell-operator"
+                                        ><!----><button
+                                          class="k-button k-button-icon"
+                                          kendogridfocusable=""
+                                          title="Clear"
+                                        >
+                                          <span
+                                            class="k-icon k-i-filter-clear"
+                                          ></span></button></kendo-grid-filter-cell-operators></kendo-grid-filter-wrapper-cell></kendo-grid-string-filter-cell
+                                  ><!----><!----><!---->
+                                </td>
+                              </tr>
+                              <!---->
+                            </thead>
+                          </table>
+                        </div>
+                      </div>
+                      <kendo-grid-list
+                        class="k-grid-container ng-star-inserted"
+                        role="presentation"
+                        ><!---->
+                        <div
+                          class="k-grid-content k-virtual-content"
+                          role="presentation"
+                          tabindex="-1"
+                        >
+                          <div class="k-grid-table-wrap" role="presentation">
+                            <table
+                              class="k-grid-table"
+                              role="presentation"
+                              style="transform: translateY(0px)"
+                            >
+                              <colgroup
+                                kendogridcolgroup=""
+                                role="presentation"
+                              >
+                                <!----><!----><!---->
+                                <col class="k-hierarchy-col ng-star-inserted" />
+                                <!---->
+                                <col class="ng-star-inserted" />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 120px"
+                                />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 120px"
+                                />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 130px"
+                                />
+                                <col
+                                  class="ng-star-inserted"
+                                  style="width: 150px"
+                                />
+                                <!---->
+                              </colgroup>
+                              <tbody kendogridtablebody="" role="presentation">
+                                <!----><!---->
+                                <tr class="k-grid-norecords ng-star-inserted">
+                                  <td colspan="6">
+                                    <!----><!----><!---->
+                                    No records available.
+                                  </td>
+                                </tr>
+                                <!---->
+                              </tbody>
+                            </table>
+                            <!---->
+                          </div>
+                          <!---->
+                          <div class="k-height-container" role="presentation">
+                            <div></div>
+                          </div>
+                        </div>
+                        <!----></kendo-grid-list
+                      ><!----><!----><!---->
+                    </div>
+                    <!----><kendo-pager
+                      class="k-pager-wrap k-grid-pager k-widget ng-star-inserted"
+                      ><!----><!----><!----><!----><kendo-pager-prev-buttons
+                        class="ng-star-inserted"
+                        ><a
+                          href="#"
+                          tabindex="-1"
+                          class="k-link k-pager-nav k-state-disabled k-pager-first"
+                          title="Go to the first page"
+                          ><span
+                            class="k-icon k-i-seek-w"
+                            aria-label="Go to the first page"
+                          ></span></a
+                        ><a
+                          href="#"
+                          tabindex="-1"
+                          class="k-link k-pager-nav k-state-disabled"
+                          title="Go to the previous page"
+                          ><span
+                            class="k-icon k-i-arrow-w"
+                            aria-label="Go to the previous page"
+                          ></span></a></kendo-pager-prev-buttons
+                      ><!----><kendo-pager-numeric-buttons
+                        class="ng-star-inserted"
+                        ><ul class="k-pager-numbers k-reset">
+                          <!----><!----><!---->
+                        </ul></kendo-pager-numeric-buttons
+                      ><!----><!----><kendo-pager-next-buttons
+                        class="ng-star-inserted"
+                        ><a
+                          href="#"
+                          tabindex="-1"
+                          class="k-link k-pager-nav k-state-disabled"
+                          title="Go to the next page"
+                          ><span
+                            class="k-icon k-i-arrow-e"
+                            aria-label="Go to the next page"
+                          ></span></a
+                        ><a
+                          href="#"
+                          tabindex="-1"
+                          class="k-link k-pager-nav k-state-disabled k-pager-last"
+                          title="Go to the last page"
+                          ><span
+                            class="k-icon k-i-seek-e"
+                            aria-label="Go to the last page"
+                          ></span></a></kendo-pager-next-buttons
+                      ><!----><kendo-pager-info
+                        class="k-pager-info k-label ng-star-inserted"
+                        >0 - 0 of 0 items</kendo-pager-info
+                      ><!----><!----></kendo-pager
+                    ><!----></kendo-grid
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!---->
+      </div>
+    </form>
+  </div>
+</div>
+
+<div _ngcontent-kdd-c12="" class="dot-modal__footer">
+  <div class="app-modal-footer">
+    <button
+      class="dot-button dot-button__tertiary"
+      name="cancel_invselection_button"
+      title=""
+    >
+      Cancel</button
+    ><button
+      class="dot-button dot-button__prominent"
+      name="next_step_button"
+      title=""
+      disabled=""
+    >
+      Next
+    </button>
+  </div>
+</div>

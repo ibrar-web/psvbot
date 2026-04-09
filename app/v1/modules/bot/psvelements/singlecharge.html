@@ -1,0 +1,294 @@
+<div _ngcontent-ecs-c59="" class="charges_container">
+  <div
+    _ngcontent-ecs-c59=""
+    class="row no-gutters dot-checkbox-container"
+    style="margin-bottom: 10px"
+  >
+    <div _ngcontent-ecs-c59="" class="checkbox-group">
+      <label _ngcontent-ecs-c59="" class="dot-form__checkbox"
+        ><input
+          _ngcontent-ecs-c59=""
+          id="finished"
+          name="finished"
+          type="checkbox"
+          value="finished"
+        /><span _ngcontent-ecs-c59="">Finished</span></label
+      >
+    </div>
+    <!---->
+    <div _ngcontent-ecs-c59="" class="checkbox-group ng-star-inserted">
+      <label _ngcontent-ecs-c59="" class="dot-form__checkbox"
+        ><input
+          _ngcontent-ecs-c59=""
+          id="taxable"
+          name="taxable"
+          type="checkbox"
+          value="taxable"
+        /><span _ngcontent-ecs-c59="">Taxable</span></label
+      >
+    </div>
+    <div _ngcontent-ecs-c59="" class="checkbox-group">
+      <label _ngcontent-ecs-c59="" class="dot-form__checkbox"
+        ><input
+          _ngcontent-ecs-c59=""
+          id="brokered"
+          name="brokered"
+          type="checkbox"
+          value="brokered"
+        /><span _ngcontent-ecs-c59="">Brokered</span></label
+      >
+    </div>
+    <div _ngcontent-ecs-c59="" class="checkbox-group">
+      <label _ngcontent-ecs-c59="" class="dot-form__checkbox"
+        ><input
+          _ngcontent-ecs-c59=""
+          id="displayQty"
+          name="displayQty"
+          type="checkbox"
+          value="displayQty"
+        /><span _ngcontent-ecs-c59="">Display Quantity</span></label
+      >
+    </div>
+    <div _ngcontent-ecs-c59="" class="checkbox-group">
+      <label _ngcontent-ecs-c59="" class="dot-form__checkbox"
+        ><input
+          _ngcontent-ecs-c59=""
+          id="hidden"
+          name="hidden"
+          type="checkbox"
+          value="hidden"
+        /><span _ngcontent-ecs-c59="">Hidden</span></label
+      >
+    </div>
+    <div _ngcontent-ecs-c59="" class="checkbox-group">
+      <label _ngcontent-ecs-c59="" class="dot-form__checkbox"
+        ><input
+          _ngcontent-ecs-c59=""
+          id="hidePrice"
+          name="hidePrice"
+          type="checkbox"
+          value="hidePrice"
+        /><span _ngcontent-ecs-c59="">Hide Price</span></label
+      >
+    </div>
+  </div>
+  <!---->
+  <div _ngcontent-ecs-c59="" class="row dot-formgroup">
+    <label
+      _ngcontent-ecs-c59=""
+      class="col-2 dot-form__label"
+      name="chargeDesc_input_label"
+    >
+      Description:
+    </label>
+    <div _ngcontent-ecs-c59="" class="col-4">
+      <input
+        _ngcontent-ecs-c59=""
+        class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+        name="chargeDesc"
+        type="text"
+      /><span
+        _ngcontent-ecs-c59=""
+        class="dot-icon dot-info-icon"
+        style="top: 8px; position: absolute; right: -7px"
+        tooltipposition="top"
+      ></span>
+    </div>
+    <label
+      _ngcontent-ecs-c59=""
+      class="col-2 dot-form__label"
+      name="prodduction_location_label"
+    >
+      Production Location:
+    </label>
+    <div _ngcontent-ecs-c59="" class="col-4">
+      <input
+        _ngcontent-ecs-c59=""
+        class="dot-formcontrol ng-untouched ng-pristine"
+        disabled=""
+        name="prodLocation"
+        type="text"
+      />
+    </div>
+  </div>
+  <div _ngcontent-ecs-c59="" class="row dot-formgroup dot-checkbox-container">
+    <label
+      _ngcontent-ecs-c59=""
+      class="col-2 dot-form__label"
+      name="notes_label"
+    >
+      Notes:
+    </label>
+    <div _ngcontent-ecs-c59="" class="col-4">
+      <input
+        _ngcontent-ecs-c59=""
+        class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+        name="chargeNotes"
+        type="text"
+      />
+    </div>
+    <div
+      _ngcontent-ecs-c59=""
+      class="checkbox-group col-3"
+      style="margin-left: -20px"
+    >
+      <label _ngcontent-ecs-c59="" class="dot-form__checkbox"
+        ><input
+          _ngcontent-ecs-c59=""
+          id="showNotes"
+          name="showNotes"
+          type="checkbox"
+          value="showNotes"
+        /><span _ngcontent-ecs-c59="">Show Notes </span></label
+      >
+    </div>
+  </div>
+  <!---->
+  <div _ngcontent-ecs-c59="" class="row no-gutters">
+    <!----><!---->
+    <div _ngcontent-ecs-c59="" class="row col-6 dot-formgroup ng-star-inserted">
+      <label
+        _ngcontent-ecs-c59=""
+        class="col-4 dot-form__label"
+        name="chrg_sets_label"
+      >
+        In sets of:
+      </label>
+      <div _ngcontent-ecs-c59="" class="col-8">
+        <input
+          _ngcontent-ecs-c59=""
+          checkempty="true"
+          class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+          name="preset_insets"
+          number-restrict="decimal"
+          precision="2"
+          type="text"
+        />
+      </div>
+    </div>
+    <!---->
+    <div _ngcontent-ecs-c59="" class="row col-6 dot-formgroup ng-star-inserted">
+      <label
+        _ngcontent-ecs-c59=""
+        class="col-4 dot-form__label"
+        name="preset_quantity_label"
+      >
+        Qty/Set:
+      </label>
+      <div _ngcontent-ecs-c59="" class="col-8">
+        <input
+          _ngcontent-ecs-c59=""
+          allownegative="true"
+          checkempty="true"
+          class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+          name="preset_quantity"
+          number-restrict="decimal"
+          precision="2"
+          type="text"
+        />
+      </div>
+    </div>
+    <!----><!----><!----><!---->
+    <div _ngcontent-ecs-c59="" class="row col-6 dot-formgroup ng-star-inserted">
+      <label
+        _ngcontent-ecs-c59=""
+        class="col-4 dot-form__label"
+        name="preset_rate_label"
+      >
+        Rate:
+      </label>
+      <div _ngcontent-ecs-c59="" class="col-8">
+        <input
+          _ngcontent-ecs-c59=""
+          allownegative="true"
+          checkempty="true"
+          class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+          name="preset_rate"
+          number-restrict="decimal"
+          precision="4"
+          type="text"
+        />
+      </div>
+    </div>
+    <!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!---->
+  </div>
+  <div _ngcontent-ecs-c59="" class="row no-gutters">
+    <div _ngcontent-ecs-c59="" class="row col-6 dot-formgroup">
+      <label
+        _ngcontent-ecs-c59=""
+        class="col-4 dot-form__label"
+        name="chrg_price_label"
+        >Price</label
+      >
+      <div _ngcontent-ecs-c59="" class="col-8">
+        <input
+          _ngcontent-ecs-c59=""
+          allownegative="true"
+          checkempty="true"
+          class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+          name="price"
+          number-restrict="decimal"
+          precision="2"
+          type="text"
+        />
+      </div>
+    </div>
+    <div _ngcontent-ecs-c59="" class="row col-6 dot-formgroup">
+      <label
+        _ngcontent-ecs-c59=""
+        class="dot-form__label col-4"
+        name="tax_table_label"
+        style="padding-right: 16px !important; width: 170px !important"
+        >Tax Table:</label
+      >
+      <div _ngcontent-ecs-c59="" class="col-8">
+        <kendo-dropdownlist
+          _ngcontent-ecs-c59=""
+          id="taxTable"
+          name="taxTable"
+          class="k-widget k-dropdown k-header ng-untouched ng-pristine"
+          ><span
+            role="listbox"
+            unselectable="on"
+            class="k-dropdown-wrap k-state-disabled"
+            id="taxTable"
+            dir="ltr"
+            readonly="false"
+            aria-disabled="true"
+            aria-readonly="false"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-owns="df45e6f4-4b9a-4600-882f-d44572dc3cca"
+            aria-activedescendant="6df7d929-1246-472d-ac27-e9cf20b3e1e9-Use Parent Tax Table"
+            ><span unselectable="on" class="k-input"
+              ><!----><!---->Use Parent Tax Table</span
+            ><span unselectable="on" class="k-select"
+              ><span class="k-i-arrow-s k-icon"></span></span
+            ><!----></span
+          ><!----><!----></kendo-dropdownlist
+        >
+      </div>
+    </div>
+  </div>
+  <div _ngcontent-ecs-c59="" class="app-modal-footer row no-gutters">
+    <!----><!---->
+    <div
+      _ngcontent-ecs-c59=""
+      class="dot-right-section col-12 ng-star-inserted"
+    >
+      <input
+        _ngcontent-ecs-c59=""
+        class="dot-button dot-button__secondary"
+        name="cancel_charge_updates"
+        type="button"
+        value="Cancel"
+      /><input
+        _ngcontent-ecs-c59=""
+        class="dot-button dot-button__prominent"
+        name="save_"
+        type="button"
+        value="Add Charge"
+      />
+    </div>
+  </div>
+</div>

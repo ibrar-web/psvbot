@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+storage/
+app/v1/modules/bot/screenshots/*.png
