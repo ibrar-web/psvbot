@@ -25,11 +25,13 @@ class JobDetailsTab(BasePage):
     STOCK_PICKER_BUTTON = "//a[@ptooltip='Stock Picker']"
     STOCK_CONFIRM_BUTTON = "//button[@name='save_stock_details']"
     STOCK_CANCEL_BUTTON = "//button[@name='cancel_stock_details']"
-    STOCK_ALERT_DIALOG = (
-        "//div[contains(@class,'ui-confirmdialog')]"
-        "[.//span[contains(@class,'ui-confirmdialog-message') and contains(translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'price for this stock expired')]]"
+    WARNING_DIALOG = "//div[contains(@class,'ui-confirmdialog')]"
+    WARNING_MESSAGE = WARNING_DIALOG + "//span[contains(@class,'ui-confirmdialog-message')]"
+    WARNING_OK_BUTTON = WARNING_DIALOG + "//button[.//span[normalize-space()='OK']]"
+    KNOWN_WARNING_MESSAGE_PARTS = (
+        "price for this stock expired",
+        "run size exceeds the maximum size",
     )
-    STOCK_ALERT_OK_BUTTON = STOCK_ALERT_DIALOG + "//button[.//span[normalize-space()='OK']]"
     CHARGES_MODAL = "//div[@id='charges_popup']"
     CHARGES_SEARCH_INPUT = (
         CHARGES_MODAL
@@ -76,6 +78,7 @@ class JobDetailsTab(BasePage):
         self._search_stock(stock_search_term)
         self._select_matching_stock_row(stock_search_term)
         self._confirm_stock_selection()
+        self._drain_warning_dialogs("Post stock confirm warning detected")
 
     def configure_price_breakup(self, data: Mapping[str, str]) -> None:
         quantity = str(data.get("price_breakup_quantity") or "").strip()
@@ -89,6 +92,7 @@ class JobDetailsTab(BasePage):
             element.send_keys(quantity)
             element.send_keys(Keys.ENTER)
             self.wait_for_spinner_to_disappear()
+            self._drain_warning_dialogs("Price breakup warning detected")
             
         self._open_add_new_charges_modal()
         self._add_job_charges(charges)
@@ -275,13 +279,11 @@ class JobDetailsTab(BasePage):
         except ElementClickInterceptedException:
             self.driver.execute_script("arguments[0].click();", confirm_btn)
 
-        if self._is_stock_price_expired_alert_visible():
-            self._acknowledge_stock_price_expired_alert()
+        self._drain_warning_dialogs("Stock confirm warning detected")
 
         # 4️⃣ Wait for spinner triggered by the click to disappear
         self.wait_for_spinner_to_disappear()
-        if self._is_stock_price_expired_alert_visible():
-            self._acknowledge_stock_price_expired_alert()
+        self._drain_warning_dialogs("Stock confirm warning detected")
 
     def _cancel_stock_selection(self) -> None:
         self._debug("Cancelling stock picker because no matching stock was found")
@@ -295,18 +297,59 @@ class JobDetailsTab(BasePage):
             self.driver.execute_script("arguments[0].click();", cancel_btn)
         self.wait_for_spinner_to_disappear()
 
-    def _is_stock_price_expired_alert_visible(self) -> bool:
-        return self.is_visible(By.XPATH, self.STOCK_ALERT_DIALOG)
+    def _is_warning_dialog_visible(self, *message_parts: str) -> bool:
+        if not self.is_visible(By.XPATH, self.WARNING_DIALOG):
+            return False
+        message_text = (
+            self.driver.execute_script(
+                """
+                const node = document.evaluate(
+                  arguments[0],
+                  document,
+                  null,
+                  XPathResult.FIRST_ORDERED_NODE_TYPE,
+                  null
+                ).singleNodeValue;
+                return (node?.innerText || node?.textContent || "").trim().toLowerCase();
+                """,
+                self.WARNING_MESSAGE,
+            )
+            or ""
+        )
+        return all(part.strip().lower() in message_text for part in message_parts if part)
 
-    def _acknowledge_stock_price_expired_alert(self) -> None:
-        self._debug("Stock price expired alert detected; acknowledging and stopping process")
-        self.wait_for_visible(By.XPATH, self.STOCK_ALERT_DIALOG)
+    def _acknowledge_warning_dialog(self, context_message: str, *message_parts: str) -> None:
+        self._debug(f"{context_message}; acknowledging warning dialog")
+        self.wait_for_visible(By.XPATH, self.WARNING_DIALOG)
+        if message_parts and not self._is_warning_dialog_visible(*message_parts):
+            return
         try:
-            self.click(By.XPATH, self.STOCK_ALERT_OK_BUTTON)
+            self.click(By.XPATH, self.WARNING_OK_BUTTON)
         except Exception:
-            ok_button = self.wait_for_visible(By.XPATH, self.STOCK_ALERT_OK_BUTTON)
+            ok_button = self.wait_for_visible(By.XPATH, self.WARNING_OK_BUTTON)
             self.driver.execute_script("arguments[0].click();", ok_button)
         self.wait_for_spinner_to_disappear()
+
+    def _drain_warning_dialogs(self, context_message: str, max_attempts: int = 5) -> int:
+        handled_count = 0
+        for _ in range(max_attempts):
+            matched_message = next(
+                (
+                    message_part
+                    for message_part in self.KNOWN_WARNING_MESSAGE_PARTS
+                    if self._is_warning_dialog_visible(message_part)
+                ),
+                None,
+            )
+            if not matched_message:
+                break
+            self._acknowledge_warning_dialog(context_message, matched_message)
+            handled_count += 1
+        if handled_count:
+            self._debug(
+                f"{context_message}; handled warning dialog count={handled_count}"
+            )
+        return handled_count
         
     def _open_add_new_charges_modal(self) -> None:
         self._debug("Opening Add New Charges modal from Price Breakup")
