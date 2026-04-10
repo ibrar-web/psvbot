@@ -1,9 +1,7 @@
 import logging
-from pathlib import Path
 import time
+from pathlib import Path
 from typing import Any, Dict, Optional
-
-from selenium.webdriver.common.by import By
 
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.config import DEBUG
@@ -18,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 class InvoicePage(BasePage):
-    ACCOUNT_INFORMATION_TAB = "//li[@role='tab' and .//span[normalize-space()='Account Information']]"
-    JOB_DETAILS_TAB = "//li[@role='tab' and .//span[normalize-space()='Job Details']]"
+    ACCOUNT_INFORMATION_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Account Information']]"
+    JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -58,17 +56,12 @@ class InvoicePage(BasePage):
                 "price_breakup_quantity",
                 requirements.get("quantity", ""),
             ),
-            "job_charges": requirements.get(
-                "job_charges",
-                [],
-            ),
+            "job_charges": requirements.get("job_charges", []),
         }
 
         normalized = (resume_from or "auto").strip().lower()
         customer_selection_status = customer_selection_status or {}
-        used_fallback_customer = bool(
-            customer_selection_status.get("used_fallback_customer")
-        )
+        used_fallback_customer = bool(customer_selection_status.get("used_fallback_customer"))
 
         should_start_from_job = normalized == "job"
         if normalized == "auto" and not used_fallback_customer:
@@ -117,13 +110,13 @@ class InvoicePage(BasePage):
 
     def _complete_account_information(self, contact_data: Dict[str, Any]) -> None:
         self._debug("Completing Account Information tab")
-        contact_person_tab = ContactPersonTab(self.driver, self.timeout)
+        contact_person_tab = ContactPersonTab(self.page, self.timeout)
         contact_person_tab.fill_form(contact_data)
         contact_person_tab.switch_to_job_details_tab()
 
     def _complete_job_details(self, job_data: Dict[str, Any]) -> None:
         self._debug("Completing Job Details tab")
-        job_details_tab = JobDetailsTab(self.driver, self.timeout)
+        job_details_tab = JobDetailsTab(self.page, self.timeout)
         job_details_tab.wait_until_active()
         job_details_tab.select_stock_from_picker(job_data)
         job_details_tab.configure_price_breakup(job_data)
@@ -132,7 +125,7 @@ class InvoicePage(BasePage):
         self,
         customer_selection_status: Optional[Dict[str, Any]] = None,
     ) -> Path:
-        estimated_summary_tab = EstimatedSummaryTab(self.driver, self.timeout)
+        estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
         self._debug("Switching to Estimate Summary tab")
         estimated_summary_tab.switch_to_tab()
         self._debug(f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}")
@@ -143,25 +136,20 @@ class InvoicePage(BasePage):
 
     def _switch_to_job_details_tab(self) -> None:
         self.wait_for_spinner_to_disappear()
-        self.wait_for_visible(By.XPATH, self.JOB_DETAILS_TAB)
-        self.click(By.XPATH, self.JOB_DETAILS_TAB)
+        self.wait_for_visible(self.JOB_DETAILS_TAB)
+        self.click(self.JOB_DETAILS_TAB)
         self.wait_for_spinner_to_disappear()
 
     def _is_account_information_complete(self) -> bool:
-        """
-        Heuristic failover check:
-        if the core account/contact fields have non-empty values,
-        we can safely continue from Job Details.
-        """
         return bool(
-            self.driver.execute_script(
-                """
-                const first = document.querySelector("input[name='i_first_name_value']");
-                const email = document.querySelector("input[name='i_email_value']");
-                const company = document.querySelector("input[name='company']");
-                const values = [first?.value || "", email?.value || "", company?.value || ""]
-                  .map(v => (v || "").trim());
-                return values.every(v => v.length > 0);
-                """
+            self.page.evaluate(
+                """() => {
+                    const first = document.querySelector("input[name='i_first_name_value']");
+                    const email = document.querySelector("input[name='i_email_value']");
+                    const company = document.querySelector("input[name='company']");
+                    const values = [first?.value || "", email?.value || "", company?.value || ""]
+                      .map(v => (v || "").trim());
+                    return values.every(v => v.length > 0);
+                }"""
             )
         )

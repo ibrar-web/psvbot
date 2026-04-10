@@ -1,11 +1,13 @@
 name: CI/CD to GCP VM
 
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+# Triggers commented out — workflow will not run automatically
+# on:
+#   pull_request:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
+on: []
 
 env:
   PYTHON_VERSION: "3.11"

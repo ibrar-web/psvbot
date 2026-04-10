@@ -6,14 +6,15 @@ from threading import Lock
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
-from selenium.common.exceptions import TimeoutException, WebDriverException
-from selenium.webdriver.remote.webdriver import WebDriver
+from playwright.sync_api import Browser, BrowserContext, Page
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import sync_playwright
 
 from app.v1.common.storage_service import build_s3_key, generate_presigned_download_url, upload_bytes_to_s3
 from app.v1.core.settings import BUCKET_NAME, QUOTE_SUMMARY_STORAGE_ROOT
 from app.v1.modules.bot.config import DEBUG, DEFAULT_TIMEOUT_SECONDS
 from app.v1.modules.bot.base_page import BasePage
-from app.v1.modules.bot.driver import create_driver
+from app.v1.modules.bot.driver import create_browser_page
 from app.v1.modules.bot.pages.estimate_page import EstimatePage
 from app.v1.modules.bot.pages.invoice_page.invoice_page import InvoicePage
 from app.v1.modules.bot.pages.invoice_page.job_details import InvalidStockSearchError
@@ -99,7 +100,7 @@ def _upload_summary_file(
 
 
 def _login(
-    driver: WebDriver,
+    page: Page,
     *,
     base_url: str,
     username: str,
@@ -107,43 +108,44 @@ def _login(
     company: str,
 ) -> None:
     _debug(f"Opening login page: {base_url}")
-    driver.get(base_url)
+    page.goto(base_url)
 
-    login_page = LoginPage(driver)
+    login_page = LoginPage(page)
     login_page.login(username, password, company)
     login_page.wait_for_login_result()
-    BasePage(driver).wait_for_spinner_to_disappear()
-    _debug(f"Login successful. URL: {driver.current_url}")
+    BasePage(page).wait_for_spinner_to_disappear()
+    _debug(f"Login successful. URL: {page.url}")
 
 
-def _ensure_driver_and_login(
+def _ensure_browser_and_login(
+    playwright,
     *,
     base_url: str,
     username: str,
     password: str,
     company: str,
-) -> WebDriver:
-    _debug("Creating fresh driver and logging in for this request.")
-    driver = create_driver()
+) -> tuple[Browser, BrowserContext, Page]:
+    _debug("Creating fresh Playwright browser and logging in for this request.")
+    browser, context, page = create_browser_page(playwright)
     _login(
-        driver,
+        page,
         base_url=base_url,
         username=username,
         password=password,
         company=company,
     )
-    return driver
+    return browser, context, page
 
 
 def _logout_if_possible(
-    driver: Optional[WebDriver], retries: int = 1
+    page: Optional[Page], retries: int = 1
 ) -> tuple[bool, Optional[str]]:
-    if driver is None:
-        return False, "driver_not_available"
+    if page is None:
+        return False, "page_not_available"
     last_error: Optional[str] = None
     for attempt in range(1, retries + 2):
         try:
-            logout_page = LogoutPage(driver)
+            logout_page = LogoutPage(page)
             logout_page.logout()
             _debug("Logout flow completed")
             return True, None
@@ -158,7 +160,7 @@ def _logout_if_possible(
 def _ensure_within_timeout(started_at: float, step: str) -> None:
     elapsed = time.monotonic() - started_at
     if elapsed > FLOW_TIMEOUT_SECONDS:
-        raise TimeoutException(
+        raise PlaywrightTimeoutError(
             f"PSV bot flow timeout after {int(elapsed)}s at step '{step}'"
         )
 
@@ -185,7 +187,8 @@ def run_estimate_flow(
             "message": "Missing PrintSmith base url",
         }
 
-    driver: Optional[WebDriver] = None
+    browser: Optional[Browser] = None
+    page: Optional[Page] = None
     invoice_path: Optional[Path] = None
     flow_failed = False
     current_step = "starting"
@@ -196,99 +199,103 @@ def run_estimate_flow(
 
     try:
         with _flow_lock:
-            _debug("Starting estimate flow")
-            if quote_record:
-                _debug(
-                    f"Using quote context id={quote_record.get('_id') or quote_record.get('id') or quote_record.get('quote_id')}"
+            with sync_playwright() as playwright:
+                _debug("Starting estimate flow")
+                if quote_record:
+                    _debug(
+                        f"Using quote context id={quote_record.get('_id') or quote_record.get('id') or quote_record.get('quote_id')}"
+                    )
+
+                current_step = "login"
+                _ensure_within_timeout(started_at, current_step)
+                browser, context, page = _ensure_browser_and_login(
+                    playwright,
+                    base_url=base_url,
+                    username=username,
+                    password=password,
+                    company=company,
                 )
-            current_step = "login"
-            _ensure_within_timeout(started_at, current_step)
-            driver = _ensure_driver_and_login(
-                base_url=base_url,
-                username=username,
-                password=password,
-                company=company,
-            )
 
-            current_step = "quick_access"
-            _ensure_within_timeout(started_at, current_step)
-            driver.get(quick_access_url)
-            BasePage(driver).wait_for_spinner_to_disappear()
-            _debug(f"Quick access page loaded. URL: {driver.current_url}")
+                current_step = "quick_access"
+                _ensure_within_timeout(started_at, current_step)
+                page.goto(quick_access_url)
+                BasePage(page).wait_for_spinner_to_disappear()
+                _debug(f"Quick access page loaded. URL: {page.url}")
 
-            current_step = "create_estimate_click"
-            _ensure_within_timeout(started_at, current_step)
-            estimate_page = EstimatePage(driver)
-            estimate_page.click_create_estimate_quick_access()
-            _debug(f"Create Estimate clicked. URL: {driver.current_url}")
+                current_step = "create_estimate_click"
+                _ensure_within_timeout(started_at, current_step)
+                estimate_page = EstimatePage(page)
+                estimate_page.click_create_estimate_quick_access()
+                _debug(f"Create Estimate clicked. URL: {page.url}")
 
-            current_step = "new_estimate_setup"
-            new_estimate_page = NewEstimatePage(driver)
-            for attempt in range(2):
-                try:
-                    _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                    customer_selection_status = new_estimate_page.complete_walk_in_digital_color(
-                        quote_record or {}
-                    )
-                    break
-                except Exception:
-                    logger.exception(
-                        "Step failed: %s attempt %s/2", current_step, attempt + 1
-                    )
-                    if attempt == 0:
-                        _debug("New Estimate setup failed on first attempt; retrying once")
-                        continue
-                    raise
-            _debug(f"New Estimate setup completed. URL: {driver.current_url}")
+                current_step = "new_estimate_setup"
+                new_estimate_page = NewEstimatePage(page)
+                for attempt in range(2):
+                    try:
+                        _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
+                        customer_selection_status = new_estimate_page.complete_walk_in_digital_color(
+                            quote_record or {}
+                        )
+                        break
+                    except Exception:
+                        logger.exception(
+                            "Step failed: %s attempt %s/2", current_step, attempt + 1
+                        )
+                        if attempt == 0:
+                            _debug("New Estimate setup failed on first attempt; retrying once")
+                            continue
+                        raise
+                _debug(f"New Estimate setup completed. URL: {page.url}")
 
-            current_step = "invoice_tabs"
-            invoice_page = InvoicePage(driver)
-            for attempt in range(2):
-                try:
-                    _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                    invoice_path = invoice_page.complete_information_tabs(
-                        resume_from="auto",
-                        quote_record=quote_record,
-                        customer_selection_status=customer_selection_status,
-                    )
-                    break
-                except InvalidStockSearchError:
-                    raise
-                except Exception:
-                    logger.exception(
-                        "Step failed: %s attempt %s/2", current_step, attempt + 1
-                    )
-                    if attempt == 0:
-                        _debug("Invoice tabs flow failed on first attempt; retrying once")
-                        continue
-                    raise
-            _debug(f"Invoice tab flow completed. URL: {driver.current_url}")
+                current_step = "invoice_tabs"
+                invoice_page = InvoicePage(page)
+                for attempt in range(2):
+                    try:
+                        _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
+                        invoice_path = invoice_page.complete_information_tabs(
+                            resume_from="auto",
+                            quote_record=quote_record,
+                            customer_selection_status=customer_selection_status,
+                        )
+                        break
+                    except InvalidStockSearchError:
+                        raise
+                    except Exception:
+                        logger.exception(
+                            "Step failed: %s attempt %s/2", current_step, attempt + 1
+                        )
+                        if attempt == 0:
+                            _debug("Invoice tabs flow failed on first attempt; retrying once")
+                            continue
+                        raise
+                _debug(f"Invoice tab flow completed. URL: {page.url}")
 
-            current_step = "save_summary"
-            _ensure_within_timeout(started_at, current_step)
-            upload_result = _upload_summary_file(invoice_path, quote_record)
+                current_step = "save_summary"
+                _ensure_within_timeout(started_at, current_step)
+                upload_result = _upload_summary_file(invoice_path, quote_record)
 
-            current_step = "logout"
-            logout_succeeded, logout_error = _logout_if_possible(driver, retries=1)
+                current_step = "logout"
+                logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
 
-            return {
-                "status": "success",
-                "message": "Create Estimate flow completed",
-                "step": current_step,
-                "current_url": driver.current_url,
-                "invoice_file": str(invoice_path),
-                "logout_succeeded": logout_succeeded,
-                "logout_error": logout_error,
-                "session_reused": False,
-                "browser_open": False,
-                "customer_selection": customer_selection_status,
-                **upload_result,
-            }
+                return {
+                    "status": "success",
+                    "message": "Create Estimate flow completed",
+                    "step": current_step,
+                    "current_url": page.url,
+                    "invoice_file": str(invoice_path),
+                    "logout_succeeded": logout_succeeded,
+                    "logout_error": logout_error,
+                    "session_reused": False,
+                    "browser_open": False,
+                    "customer_selection": customer_selection_status,
+                    **upload_result,
+                }
 
-    except (TimeoutException, WebDriverException) as exc:
+    except PlaywrightTimeoutError as exc:
         flow_failed = True
-        logout_succeeded, logout_error = _logout_if_possible(driver, retries=1)
-        logger.exception("Estimate flow failed with Selenium error")
+        if page is not None:
+            logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
+        logger.exception("Estimate flow failed with Playwright timeout error")
 
         return {
             "status": "error",
@@ -301,7 +308,8 @@ def run_estimate_flow(
 
     except Exception as exc:
         flow_failed = True
-        logout_succeeded, logout_error = _logout_if_possible(driver, retries=1)
+        if page is not None:
+            logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
         logger.exception("Estimate flow failed")
 
         return {
@@ -319,15 +327,13 @@ def run_estimate_flow(
                 invoice_path.unlink(missing_ok=True)
             except Exception:
                 logger.exception("Failed to delete temporary invoice file")
-        if driver is not None:
-            if not logout_succeeded:
-                logout_succeeded, logout_error = _logout_if_possible(driver, retries=1)
+        if browser is not None:
             try:
-                driver.quit()
-            finally:
+                browser.close()
+            except Exception:
                 pass
             logger.info(
-                "Driver closed (flow_failed=%s, logout_succeeded=%s, logout_error=%s)",
+                "Browser closed (flow_failed=%s, logout_succeeded=%s, logout_error=%s)",
                 flow_failed,
                 logout_succeeded,
                 logout_error,

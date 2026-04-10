@@ -1,14 +1,7 @@
 import logging
 from collections.abc import Mapping
 
-from selenium.common.exceptions import (
-    ElementClickInterceptedException,
-    TimeoutException,
-)
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.config import DEBUG
@@ -21,21 +14,21 @@ class InvalidStockSearchError(Exception):
 
 
 class JobDetailsTab(BasePage):
-    JOB_DETAILS_TAB = "//li[@role='tab' and .//span[normalize-space()='Job Details']]"
-    STOCK_PICKER_BUTTON = "//a[@ptooltip='Stock Picker']"
-    STOCK_CONFIRM_BUTTON = "//button[@name='save_stock_details']"
-    STOCK_CANCEL_BUTTON = "//button[@name='cancel_stock_details']"
-    CHARGES_MODAL = "//div[@id='charges_popup']"
+    JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
+    STOCK_PICKER_BUTTON = "xpath=//a[@ptooltip='Stock Picker']"
+    STOCK_CONFIRM_BUTTON = "xpath=//button[@name='save_stock_details']"
+    STOCK_CANCEL_BUTTON = "xpath=//button[@name='cancel_stock_details']"
+    CHARGES_MODAL = "xpath=//div[@id='charges_popup']"
     CHARGES_SEARCH_INPUT = (
-        CHARGES_MODAL
-        + "//kendo-combobox[@name='search_combo']//input[contains(@class,'k-input')]"
+        "xpath=//div[@id='charges_popup']"
+        "//kendo-combobox[@name='search_combo']//input[contains(@class,'k-input')]"
     )
     ADD_CHARGES_BUTTON = (
-        CHARGES_MODAL + "//input[@name='save_' and @value='Add Charge']"
+        "xpath=//div[@id='charges_popup']//input[@name='save_' and @value='Add Charge']"
     )
-    CHARGES_SAVE_BUTTON = "//input[@name='save_charges' and @value='Done']"
-
-    ADD_JOB_CHARGE_BUTTON = "//a[@name='add_job_charge_btn']"
+    CHARGES_SAVE_BUTTON = "xpath=//input[@name='save_charges' and @value='Done']"
+    ADD_JOB_CHARGE_BUTTON = "xpath=//a[@name='add_job_charge_btn']"
+    QTY_INPUT = "#qty-label-ctext"
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -44,22 +37,17 @@ class JobDetailsTab(BasePage):
 
     def wait_until_active(self) -> None:
         self._debug("Waiting for Job Details tab to become active")
-        self.wait_for_visible(By.XPATH, self.JOB_DETAILS_TAB)
-        WebDriverWait(self.driver, self.timeout).until(
-            lambda d: bool(
-                d.execute_script(
-                    """
-                    const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
-                    const target = tabs.find(t => (t.innerText || "").includes("Job Details"));
-                    return !!target && target.getAttribute("aria-selected") === "true";
-                    """
-                )
-            )
+        self.wait_for_visible(self.JOB_DETAILS_TAB)
+        self.page.wait_for_function(
+            """() => {
+                const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
+                const target = tabs.find(t => (t.innerText || "").includes("Job Details"));
+                return !!target && target.getAttribute("aria-selected") === "true";
+            }""",
+            timeout=self._timeout_ms,
         )
-        WebDriverWait(self.driver, self.timeout).until(
-            lambda d: d.execute_script("return document.readyState") == "complete"
-        )
-        self.wait_for_visible(By.XPATH, self.STOCK_PICKER_BUTTON)
+        self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
+        self.wait_for_visible(self.STOCK_PICKER_BUTTON)
 
     def select_stock_from_picker(self, data: Mapping[str, str]) -> None:
         stock_search_term = (data.get("stock_search_term") or "gpa").strip()
@@ -78,81 +66,78 @@ class JobDetailsTab(BasePage):
 
         if quantity:
             self._debug(f"Setting Price Breakup quantity: {quantity}")
-            element = self.wait_for_visible(By.ID, "qty-label-ctext")
-            element.send_keys(Keys.CONTROL, "a")
-            element.send_keys(Keys.DELETE)
-            element.send_keys(quantity)
-            element.send_keys(Keys.ENTER)
+            qty_loc = self._loc(self.QTY_INPUT).first
+            qty_loc.wait_for(state="visible", timeout=self._timeout_ms)
+            qty_loc.select_text()
+            qty_loc.fill(quantity)
+            qty_loc.press("Enter")
             self.wait_for_spinner_to_disappear()
-            
+
         self._open_add_new_charges_modal()
         self._add_job_charges(charges)
 
+    # ------------------------------------------------------------------
+    # Stock picker internals
+    # ------------------------------------------------------------------
 
     def _open_stock_picker(self) -> None:
         self._debug("Opening Stock Picker modal")
         self.wait_for_spinner_to_disappear()
-        self.click(By.XPATH, self.STOCK_PICKER_BUTTON)
-        self._wait_for_stock_confirm_button()
+        self.click(self.STOCK_PICKER_BUTTON)
+        self._wait_for_stock_confirm_button_visible()
         self._wait_for_stock_name_filter_input()
 
     def _search_stock(self, term: str) -> None:
         self._debug(f"Starting search for stock term: '{term}'")
         self.wait_for_spinner_to_disappear()
-        stock_filter = self._wait_for_stock_name_filter_input()
-        stock_filter.clear()
-        stock_filter.send_keys(term)
-        stock_filter.send_keys(Keys.ENTER)
+        filter_input = self._wait_for_stock_name_filter_input()
+        filter_input.fill("")
+        filter_input.fill(term)
+        filter_input.press("Enter")
         self._debug("Search text entered; waiting for filtered stock rows")
         self.wait_for_spinner_to_disappear()
-        WebDriverWait(self.driver, self.timeout).until(
-            lambda d: bool(
-                d.execute_script(
-                    """
-                    const term = (arguments[0] || "").trim().toLowerCase();
-                    const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
-                      .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
-                    if (!btn) return false;
+        self.page.wait_for_function(
+            """(term) => {
+                const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                  .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                if (!btn) return false;
 
-                    const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
-                    const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"))
-                      .filter(row => {
-                        const style = window.getComputedStyle(row);
-                        return style.display !== "none" && style.visibility !== "hidden" && row.offsetParent !== null;
-                      });
+                const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
+                const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"))
+                  .filter(row => {
+                    const style = window.getComputedStyle(row);
+                    return style.display !== "none" && style.visibility !== "hidden" && row.offsetParent !== null;
+                  });
 
-                    const stockNames = rows
-                      .map(row => {
-                        const cell = row.querySelector("td[aria-colindex='1']");
-                        return (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase();
-                      })
-                      .filter(Boolean);
+                const stockNames = rows
+                  .map(row => {
+                    const cell = row.querySelector("td[aria-colindex='1']");
+                    return (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase();
+                  })
+                  .filter(Boolean);
 
-                    const noDataNode = Array.from(modalRoot.querySelectorAll(
-                      ".k-grid-norecords, .k-no-data, .k-grid-nodata, .k-nodata"
-                    )).find(node => {
-                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
-                      return !text || text.includes("no data") || text.includes("no records");
-                    });
+                const noDataNode = Array.from(modalRoot.querySelectorAll(
+                  ".k-grid-norecords, .k-no-data, .k-grid-nodata, .k-nodata"
+                )).find(node => {
+                  const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                  return !text || text.includes("no data") || text.includes("no records");
+                });
 
-                    if (noDataNode) return true;
-                    if (!stockNames.length) return false;
-                    if (!term) return true;
-                    return stockNames.some(text => text.includes(term));
-                    """,
-                    term,
-                )
-            )
+                if (noDataNode) return true;
+                if (!stockNames.length) return false;
+                if (!term) return true;
+                return stockNames.some(text => text.includes(term));
+            }""",
+            arg=term,
+            timeout=self._timeout_ms,
         )
 
     def _select_matching_stock_row(self, term: str) -> None:
         self._debug(f"Selecting best matching stock row for: {term}")
         self.wait_for_spinner_to_disappear()
         try:
-            selected_text = WebDriverWait(self.driver, self.timeout).until(
-                lambda d: d.execute_script(
-                    """
-                    const term = (arguments[0] || "").trim().toLowerCase();
+            selected_text = self.page.wait_for_function(
+                """(term) => {
                     const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
                       .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
                     if (!btn) return false;
@@ -176,29 +161,25 @@ class JobDetailsTab(BasePage):
                     const entries = rows.map(row => ({
                       node: row,
                       cell: row.querySelector("td[aria-colindex='1']"),
-                      text: (row.querySelector("td[aria-colindex='1']")?.innerText || row.querySelector("td[aria-colindex='1']")?.textContent || "")
-                        .replace(/\\s+/g, " ")
-                        .trim()
+                      text: (row.querySelector("td[aria-colindex='1']")?.innerText
+                        || row.querySelector("td[aria-colindex='1']")?.textContent || "")
+                        .replace(/\\s+/g, " ").trim()
                     })).filter(entry => entry.text);
 
                     let target = entries.find(entry => entry.text.toLowerCase() === term) || null;
-                    if (!target) {
-                      target = entries.find(entry => entry.text.toLowerCase().startsWith(term)) || null;
-                    }
-                    if (!target) {
-                      target = entries.find(entry => entry.text.toLowerCase().includes(term)) || null;
-                    }
+                    if (!target) target = entries.find(entry => entry.text.toLowerCase().startsWith(term)) || null;
+                    if (!target) target = entries.find(entry => entry.text.toLowerCase().includes(term)) || null;
                     if (!target) return "__NO_MATCH__";
 
                     const clickable = target.cell || target.node;
                     clickable.scrollIntoView({ block: "center" });
                     clickable.click();
                     return target.text;
-                    """,
-                    term,
-                )
-            )
-        except TimeoutException:
+                }""",
+                arg=term,
+                timeout=self._timeout_ms,
+            ).json_value()
+        except PlaywrightTimeoutError:
             selected_text = "__NO_MATCH__"
 
         if not selected_text or selected_text == "__NO_MATCH__":
@@ -210,113 +191,87 @@ class JobDetailsTab(BasePage):
 
     def _wait_for_stock_row_selected(self, selected_text: str) -> None:
         normalized_target = " ".join((selected_text or "").split()).strip().lower()
-        WebDriverWait(self.driver, self.timeout).until(
-            lambda d: bool(
-                d.execute_script(
-                    """
-                    const targetText = arguments[0];
-                    const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
-                      .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
-                    if (!btn) return false;
+        self.page.wait_for_function(
+            """(targetText) => {
+                const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                  .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                if (!btn) return false;
 
-                    const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
-                    const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"))
-                      .filter(row => {
-                        const style = window.getComputedStyle(row);
-                        return style.display !== "none" && style.visibility !== "hidden" && row.offsetParent !== null;
-                      });
+                const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
+                const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"))
+                  .filter(row => {
+                    const style = window.getComputedStyle(row);
+                    return style.display !== "none" && style.visibility !== "hidden" && row.offsetParent !== null;
+                  });
 
-                    const selectedRow = rows.find(row => {
-                      const cell = row.querySelector("td[aria-colindex='1']");
-                      const text = (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase();
-                      const isSelected =
-                        row.getAttribute("aria-selected") === "true" ||
-                        row.classList.contains("k-selected") ||
-                        row.classList.contains("k-state-selected") ||
-                        row.classList.contains("highlightedRow") ||
-                        row.querySelector("[aria-selected='true'], .k-selected, .k-state-selected");
-                      return text === targetText && isSelected;
-                    });
+                const selectedRow = rows.find(row => {
+                  const cell = row.querySelector("td[aria-colindex='1']");
+                  const text = (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase();
+                  const isSelected =
+                    row.getAttribute("aria-selected") === "true" ||
+                    row.classList.contains("k-selected") ||
+                    row.classList.contains("k-state-selected") ||
+                    row.classList.contains("highlightedRow") ||
+                    row.querySelector("[aria-selected='true'], .k-selected, .k-state-selected");
+                  return text === targetText && isSelected;
+                });
 
-                    if (selectedRow) return true;
-                    return !btn.disabled && btn.getAttribute("disabled") === null;
-                    """,
-                    normalized_target,
-                )
-            )
+                if (selectedRow) return true;
+                return !btn.disabled && btn.getAttribute("disabled") === null;
+            }""",
+            arg=normalized_target,
+            timeout=self._timeout_ms,
         )
 
     def _confirm_stock_selection(self) -> None:
         self._debug("Confirming stock selection")
-
-        # 1️⃣ Wait until initial spinner is gone
         self.wait_for_spinner_to_disappear()
-
-        # 2️⃣ Wait until the button is enabled & clickable
-        confirm_btn = WebDriverWait(self.driver, self.timeout).until(
-            EC.element_to_be_clickable((By.NAME, "save_stock_details"))
-        )
-
-        # 3️⃣ Click the button safely
-        try:
-            confirm_btn.click()
-        except ElementClickInterceptedException:
-            self.driver.execute_script("arguments[0].click();", confirm_btn)
-
-        # 4️⃣ Wait for spinner triggered by the click to disappear
+        confirm_loc = self._loc(self.STOCK_CONFIRM_BUTTON).first
+        confirm_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        confirm_loc.click(timeout=self._timeout_ms)
         self.wait_for_spinner_to_disappear()
 
     def _cancel_stock_selection(self) -> None:
         self._debug("Cancelling stock picker because no matching stock was found")
         self.wait_for_spinner_to_disappear()
-        cancel_btn = WebDriverWait(self.driver, self.timeout).until(
-            EC.element_to_be_clickable((By.XPATH, self.STOCK_CANCEL_BUTTON))
-        )
-        try:
-            cancel_btn.click()
-        except ElementClickInterceptedException:
-            self.driver.execute_script("arguments[0].click();", cancel_btn)
+        cancel_loc = self._loc(self.STOCK_CANCEL_BUTTON).first
+        cancel_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        cancel_loc.click(timeout=self._timeout_ms)
         self.wait_for_spinner_to_disappear()
-        
+
+    # ------------------------------------------------------------------
+    # Charges modal internals
+    # ------------------------------------------------------------------
+
     def _open_add_new_charges_modal(self) -> None:
         self._debug("Opening Add New Charges modal from Price Breakup")
         self.wait_for_spinner_to_disappear()
-        visible_modals_before = int(
-            self.driver.execute_script(
-                """
-                return Array.from(document.querySelectorAll("div.modal")).filter(m => {
-                  const style = window.getComputedStyle(m);
-                  return style.display !== "none" && style.visibility !== "hidden";
-                }).length;
-                """
-            )
+        visible_modals_before = self.page.evaluate(
+            """() => Array.from(document.querySelectorAll("div.modal")).filter(m => {
+                const style = window.getComputedStyle(m);
+                return style.display !== "none" && style.visibility !== "hidden";
+            }).length"""
         )
-
-        self.click(By.XPATH, self.ADD_JOB_CHARGE_BUTTON)
-        WebDriverWait(self.driver, self.timeout).until(
-            lambda d: int(
-                d.execute_script(
-                    """
-                    return Array.from(document.querySelectorAll("div.modal")).filter(m => {
-                      const style = window.getComputedStyle(m);
-                      return style.display !== "none" && style.visibility !== "hidden";
-                    }).length;
-                    """
-                )
-            )
-            > visible_modals_before
+        self.click(self.ADD_JOB_CHARGE_BUTTON)
+        self.page.wait_for_function(
+            """(before) => Array.from(document.querySelectorAll("div.modal")).filter(m => {
+                const style = window.getComputedStyle(m);
+                return style.display !== "none" && style.visibility !== "hidden";
+            }).length > before""",
+            arg=visible_modals_before,
+            timeout=self._timeout_ms,
         )
-        self.wait_for_visible(By.XPATH, self.CHARGES_MODAL)
+        self.wait_for_visible(self.CHARGES_MODAL)
         self.wait_for_spinner_to_disappear()
-        WebDriverWait(self.driver, self.timeout).until(
-            EC.element_to_be_clickable((By.XPATH, self.CHARGES_SEARCH_INPUT))
+        self._loc(self.CHARGES_SEARCH_INPUT).first.wait_for(
+            state="visible", timeout=self._timeout_ms
         )
 
-    def _add_job_charges(self, charges: list[str]) -> None:
+    def _add_job_charges(self, charges: list) -> None:
         if not charges:
             self._debug("No job charges provided; closing charges modal")
             self.wait_for_spinner_to_disappear()
-            self.click(By.XPATH, self.CHARGES_SAVE_BUTTON)
+            self.click(self.CHARGES_SAVE_BUTTON)
             self.wait_for_spinner_to_disappear()
             return
 
@@ -329,21 +284,20 @@ class JobDetailsTab(BasePage):
 
         self._debug("Saving selected job charges")
         self.wait_for_spinner_to_disappear()
-        self.click(By.XPATH, self.CHARGES_SAVE_BUTTON)
+        self.click(self.CHARGES_SAVE_BUTTON)
         self.wait_for_spinner_to_disappear()
 
     def _select_charge_from_search(self, term: str) -> None:
         print(f"[CHARGE] term={term}")
         self.wait_for_spinner_to_disappear()
-        search_input = self._prepare_charges_search_input()
+        search_input = self._get_ready_charges_search_input()
         print("[CHARGE] input focused")
-        self._clear_input_value(search_input)
-        search_input.send_keys(term)
+        search_input.fill("")
+        search_input.fill(term)
         print("[CHARGE] sending input term")
 
-        visible_items = WebDriverWait(self.driver, self.timeout).until(
-            lambda d: d.execute_script(
-                """
+        self.page.wait_for_function(
+            """(term) => {
                 const items = Array.from(document.querySelectorAll(
                   ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
                 ));
@@ -353,128 +307,74 @@ class JobDetailsTab(BasePage):
                     return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
                   })
                   .map(item => (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim())
-                  .filter(Boolean);
-                """
-            )
+                  .filter(Boolean).length > 0;
+            }""",
+            arg=term,
+            timeout=self._timeout_ms,
         )
-        print(f"[CHARGE] visibleItems={visible_items}")
 
-        selected = WebDriverWait(self.driver, self.timeout).until(
-            lambda d: bool(
-                d.execute_script(
-                    """
-                    const term = (arguments[0] || "").trim().toLowerCase();
-                    if (!term) return false;
-                    const items = Array.from(document.querySelectorAll(
-                      ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
-                    ));
-                    const visibleItems = items.filter(item => {
-                      const style = window.getComputedStyle(item);
-                      return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
-                    });
-                    const normalized = visibleItems.map(item => ({
-                      node: item,
-                      text: (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase()
-                    }));
+        selected = self.page.wait_for_function(
+            """(term) => {
+                if (!term) return false;
+                const items = Array.from(document.querySelectorAll(
+                  ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
+                ));
+                const visibleItems = items.filter(item => {
+                  const style = window.getComputedStyle(item);
+                  return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
+                });
+                const normalized = visibleItems.map(item => ({
+                  node: item,
+                  text: (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase()
+                }));
 
-                    let target = normalized.find(entry => entry.text === term)?.node || null;
-                    if (!target) {
-                      target = normalized.find(entry => entry.text.startsWith(term))?.node || null;
-                    }
-                    if (!target) {
-                      target = normalized.find(entry => entry.text.includes(term))?.node || null;
-                    }
-                    
-                    if (!target) return false;
-                    target.scrollIntoView({ block: "center" });
-                    target.click();
-                    return true;
-                    """,
-                    term,
-                )
-            )
-        )
+                let target = normalized.find(entry => entry.text === term)?.node || null;
+                if (!target) target = normalized.find(entry => entry.text.startsWith(term))?.node || null;
+                if (!target) target = normalized.find(entry => entry.text.includes(term))?.node || null;
+
+                if (!target) return false;
+                target.scrollIntoView({ block: "center" });
+                target.click();
+                return true;
+            }""",
+            arg=term,
+            timeout=self._timeout_ms,
+        ).json_value()
+
         if not selected:
-            raise TimeoutException(f"Could not select charge from search: {term}")
+            raise PlaywrightTimeoutError(f"Could not select charge from search: {term}")
 
         self.wait_for_spinner_to_disappear()
         self._confirm_charge_item(term)
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")
-        confirm_btn = WebDriverWait(self.driver, self.timeout).until(
-            lambda d: next(
-                (
-                    btn
-                    for btn in d.find_elements(By.XPATH, self.ADD_CHARGES_BUTTON)
-                    if btn.is_displayed()
-                    and btn.is_enabled()
-                    and btn.get_attribute("disabled") is None
-                ),
-                None,
-            )
-        )
-        try:
-            confirm_btn.click()
-        except ElementClickInterceptedException:
-            self.wait_for_spinner_to_disappear()
-            self.driver.execute_script("arguments[0].click();", confirm_btn)
+        confirm_loc = self._loc(self.ADD_CHARGES_BUTTON).first
+        confirm_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        confirm_loc.click(timeout=self._timeout_ms)
         self.wait_for_spinner_to_disappear()
 
     def _get_ready_charges_search_input(self):
-        self.wait_for_visible(By.XPATH, self.CHARGES_MODAL)
+        self.wait_for_visible(self.CHARGES_MODAL)
         self.wait_for_spinner_to_disappear()
-        WebDriverWait(self.driver, self.timeout).until(
-            EC.element_to_be_clickable((By.XPATH, self.CHARGES_SEARCH_INPUT))
-        )
-        return self.wait_for_visible(By.XPATH, self.CHARGES_SEARCH_INPUT)
+        search_loc = self._loc(self.CHARGES_SEARCH_INPUT).first
+        search_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        search_loc.click()
+        return search_loc
 
-    def _prepare_charges_search_input(self):
-        search_input = self._get_ready_charges_search_input()
-        self._focus_click_with_retry(search_input)
-        return self._get_ready_charges_search_input()
-
-    def _focus_click_with_retry(self, element, retries: int = 4) -> None:
-        last_exc: Exception | None = None
-        for _ in range(retries):
-            try:
-                self.wait_for_spinner_to_disappear()
-                element.click()
-                return
-            except ElementClickInterceptedException as exc:
-                last_exc = exc
-                self.wait_for_spinner_to_disappear()
-                self.driver.execute_script(
-                    "arguments[0].focus(); arguments[0].click();", element
-                )
-                return
-        if last_exc is not None:
-            raise last_exc
-
-    def _clear_input_value(self, element) -> None:
-        element.send_keys(Keys.CONTROL, "a")
-        element.send_keys(Keys.DELETE)
-        try:
-            element.clear()
-        except Exception:
-            pass
-
-    def _wait_for_stock_confirm_button(self):
-        return WebDriverWait(self.driver, self.timeout).until(
-            lambda d: next(
-                (
-                    b
-                    for b in d.find_elements(By.XPATH, self.STOCK_CONFIRM_BUTTON)
-                    if b.is_displayed()
-                ),
-                None,
-            )
+    def _wait_for_stock_confirm_button_visible(self) -> None:
+        self.page.wait_for_function(
+            """() => {
+                const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                  .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                return !!btn;
+            }""",
+            timeout=self._timeout_ms,
         )
 
     def _wait_for_stock_name_filter_input(self):
-        element = WebDriverWait(self.driver, self.timeout).until(
-            lambda d: d.execute_script(
-                """
+        locator = self.page.wait_for_function(
+            """() => {
                 const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
                   .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
                 if (!btn) return null;
@@ -482,7 +382,7 @@ class JobDetailsTab(BasePage):
 
                 const headers = Array.from(modalRoot.querySelectorAll("th[role='columnheader']"));
                 const stockHeader = headers.find(th =>
-                  (th.innerText || th.textContent || "").replace(/\s+/g, " ").trim().toLowerCase().includes("stock name")
+                  (th.innerText || th.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase().includes("stock name")
                 );
 
                 if (stockHeader) {
@@ -493,7 +393,6 @@ class JobDetailsTab(BasePage):
                     );
                     if (byAria) return byAria;
                   }
-
                   const headerRow = stockHeader.closest("tr");
                   const headerCells = headerRow ? Array.from(headerRow.children) : [];
                   const idx = headerCells.indexOf(stockHeader);
@@ -504,13 +403,12 @@ class JobDetailsTab(BasePage):
                     if (byIdx) return byIdx;
                   }
                 }
-
                 return modalRoot.querySelector("tr.k-filter-row input[kendofilterinput]");
-                """
-            )
+            }""",
+            timeout=self._timeout_ms,
         )
+        # Return a Playwright ElementHandle-backed locator
+        element = locator.as_element()
         if element is None:
-            raise TimeoutException(
-                "Could not find Stock Name filter input in stock modal"
-            )
-        return element
+            raise PlaywrightTimeoutError("Could not find Stock Name filter input in stock modal")
+        return self.page.locator("tr.k-filter-row input[kendofilterinput]").first
