@@ -21,6 +21,8 @@ class EstimatedSummaryTab(BasePage):
         "xpath=//button[@name='create_account_button'"
         " and .//span[contains(normalize-space(),'Create Prospect')]]"
     )
+    CREATE_PROSPECT_LINK = "xpath=//a[@name='create_account_button' and .//span[normalize-space()='Create Prospect']]"
+    THREE_DOTS_BUTTON = "xpath=//div[contains(@class,'dot-more-options-icon')]"
     US685_E_ESTIMATE_BUTTON = (
         "xpath=//div[@name='print_btn_group']//button[@name='print_btn'"
         " and .//span[normalize-space()='US685 E-Estimate']]"
@@ -29,7 +31,7 @@ class EstimatedSummaryTab(BasePage):
     def _debug(self, message: str) -> None:
         if DEBUG:
             print(f"[PrintSmith][EstimatedSummaryTab] {message}")
-            logger.info(message)
+        logger.info(message)
 
     def is_visible(self) -> bool:
         return super().is_visible(self.ESTIMATE_SUMMARY_TAB)
@@ -83,7 +85,20 @@ class EstimatedSummaryTab(BasePage):
     def _create_prospect(self) -> None:
         self._debug("Creating prospect before downloading estimate")
         self.wait_for_spinner_to_disappear()
-        self.click(self.CREATE_PROSPECT_BUTTON)
+
+        # Check if the Create Prospect button is directly visible
+        if super().is_visible(self.CREATE_PROSPECT_BUTTON):
+            self._debug("Create Prospect button found directly; clicking it")
+            self.click(self.CREATE_PROSPECT_BUTTON)
+            self.wait_for_spinner_to_disappear()
+            return
+
+        # Otherwise open the three-dots menu and click the link inside it
+        self._debug("Create Prospect button not found directly; opening three-dots menu")
+        self.wait_for_visible(self.THREE_DOTS_BUTTON)
+        self.click(self.THREE_DOTS_BUTTON)
+        self.wait_for_visible(self.CREATE_PROSPECT_LINK)
+        self.click(self.CREATE_PROSPECT_LINK)
         self.wait_for_spinner_to_disappear()
 
     def _wait_for_download_url(self, new_page) -> str:

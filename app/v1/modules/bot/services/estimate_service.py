@@ -13,6 +13,7 @@ from playwright.sync_api import sync_playwright
 from app.v1.common.storage_service import build_s3_key, generate_presigned_download_url, upload_bytes_to_s3
 from app.v1.core.settings import BUCKET_NAME, QUOTE_SUMMARY_STORAGE_ROOT
 from app.v1.modules.bot.config import DEBUG, DEFAULT_TIMEOUT_SECONDS
+from app.v1.modules.bot import csv_logger
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.driver import create_browser_page
 from app.v1.modules.bot.pages.estimate_page import EstimatePage
@@ -31,7 +32,7 @@ _flow_lock = Lock()
 def _debug(message: str) -> None:
     if DEBUG:
         print(f"[PrintSmith][Service] {message}")
-        logger.info(message)
+    logger.info(message)
 
 
 def _build_quick_access_url(base_url: str) -> str:
@@ -200,6 +201,8 @@ def run_estimate_flow(
     try:
         with _flow_lock:
             with sync_playwright() as playwright:
+                log_path = csv_logger.init()
+                _debug(f"CSV log started: {log_path}")
                 _debug("Starting estimate flow")
                 if quote_record:
                     _debug(

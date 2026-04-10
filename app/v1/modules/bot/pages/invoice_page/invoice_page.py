@@ -22,7 +22,7 @@ class InvoicePage(BasePage):
     def _debug(self, message: str) -> None:
         if DEBUG:
             print(f"[PrintSmith][InvoicePage] {message}")
-            logger.info(message)
+        logger.info(message)
 
     def complete_information_tabs(
         self,

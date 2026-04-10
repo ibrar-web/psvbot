@@ -40,7 +40,7 @@ class ContactPersonTab(BasePage):
     def _debug(self, message: str) -> None:
         if DEBUG:
             print(f"[PrintSmith][ContactPersonTab] {message}")
-            logger.info(message)
+        logger.info(message)
 
     def fill_form(self, data: Mapping[str, str]) -> None:
         self._debug("Waiting for Account Information tab and contact fields")

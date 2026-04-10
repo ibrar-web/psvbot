@@ -1,0 +1,67 @@
+timestamp,source,message
+2026-04-10 20:47:19.911,driver,Launching Playwright Chromium (headless=False)
+2026-04-10 20:47:23.448,login_page,Filling username/password fields
+2026-04-10 20:47:23.566,login_page,Filling company field
+2026-04-10 20:47:23.571,login_page,Clicking login button
+2026-04-10 20:47:28.859,login_page,Post-login URL reached: https://alphagraphics685.myprintdesk.net/PrintSmith/nextgen/en_US/#/
+2026-04-10 20:47:32.520,estimate_page,Waiting for quick access page to finish loading
+2026-04-10 20:47:32.525,estimate_page,Quick access document ready
+2026-04-10 20:47:32.525,estimate_page,Waiting for Create Estimate card to be present
+2026-04-10 20:47:32.532,estimate_page,Create Estimate click attempt 1/4
+2026-04-10 20:47:32.585,estimate_page,"Create Estimate target html: <div _ngcontent-flc-c37="""" class=""qa-access"" draghandle="".qa-access"" pdraggable=""menuItems"" name=""menuitem_1"" draggable=""true""><span _ngcontent-flc-c37="""" class=""qa-icon purple""><!----><span _ngcontent-flc-c37="""" class=""qa-menu-icon-estimate-ficon ng-star-inserted""></span><!----></span><span _ngcontent-flc-c37="""" class=""quick-access-item-text"" name=""menuitem_title"">Create Estimate</span></div>"
+2026-04-10 20:47:32.585,estimate_page,"Click dispatch result: {'clicked': True, 'html': '<div _ngcontent-flc-c37="""" class=""qa-access"" draghandle="".qa-access"" pdraggable=""menuItems"" name=""menuitem_1"" draggable=""true""><span _ngcontent-flc-c37="""" class=""qa-icon purple""><!----><span _ngcontent-flc-c37="""" class=""qa-menu-icon-estimate-ficon ng-star-inserted""></span><!----></span><span _ngcontent-flc-c37="""" class=""quick-access-item-text"" name=""menuitem_title"">Create Estimate</span></div>'}"
+2026-04-10 20:47:34.593,estimate_page,Create Estimate opened invoice page. URL: https://alphagraphics685.myprintdesk.net/PrintSmith/nextgen/en_US/#/invoicing/invoice-page
+2026-04-10 20:47:34.595,new_estimate_page,Waiting for Choose Customer form on invoice page
+2026-04-10 20:47:35.846,new_estimate_page,Typing customer search: john gavin
+2026-04-10 20:47:36.975,new_estimate_page,Selecting 'john gavin' from customer dropdown
+2026-04-10 20:47:37.414,new_estimate_page,Selecting job method: Digital Color
+2026-04-10 20:47:40.465,new_estimate_page,Waiting for invoice page navigation
+2026-04-10 20:47:40.468,invoice_page,Existing customer selected from dropdown; skipping Account Information and moving to Job Details
+2026-04-10 20:47:40.587,invoice_page,Completing Job Details tab
+2026-04-10 20:47:40.587,job_details,Waiting for Job Details tab to become active
+2026-04-10 20:47:40.610,job_details,Opening Stock Picker modal
+2026-04-10 20:47:41.450,job_details,Starting search for stock term: 'gpa'
+2026-04-10 20:47:42.507,job_details,Search text entered; waiting for filtered stock rows
+2026-04-10 20:47:42.518,job_details,Selecting best matching stock row for: gpa
+2026-04-10 20:47:42.606,job_details,Confirming stock selection
+2026-04-10 20:47:43.408,job_details,Setting Price Breakup quantity: 100
+2026-04-10 20:47:44.378,job_details,Opening Add New Charges modal from Price Breakup
+2026-04-10 20:47:45.596,job_details,Adding charge from search: precision cutting
+2026-04-10 20:47:45.596,job_details,Charge search: term=precision cutting
+2026-04-10 20:47:45.721,job_details,Charge search: input focused
+2026-04-10 20:47:45.820,job_details,Charge search: sending input term
+2026-04-10 20:47:45.895,job_details,Charge search: selection function ran
+2026-04-10 20:47:46.615,job_details,Charge search: about to confirm selected charge item
+2026-04-10 20:47:46.615,job_details,Confirming selected charge item: precision cutting
+2026-04-10 20:47:46.766,job_details,Adding charge from search: cover stock
+2026-04-10 20:47:46.766,job_details,Charge search: term=cover stock
+2026-04-10 20:47:46.903,job_details,Charge search: input focused
+2026-04-10 20:47:46.950,job_details,Charge search: sending input term
+2026-04-10 20:47:47.015,job_details,Charge search: selection function ran
+2026-04-10 20:47:48.097,job_details,Charge search: about to confirm selected charge item
+2026-04-10 20:47:48.098,job_details,Confirming selected charge item: cover stock
+2026-04-10 20:47:48.250,job_details,Adding charge from search: Hand folding
+2026-04-10 20:47:48.250,job_details,Charge search: term=Hand folding
+2026-04-10 20:47:48.384,job_details,Charge search: input focused
+2026-04-10 20:47:48.432,job_details,Charge search: sending input term
+2026-04-10 20:47:48.465,job_details,Charge search: selection function ran
+2026-04-10 20:47:49.201,job_details,Charge search: about to confirm selected charge item
+2026-04-10 20:47:49.202,job_details,Confirming selected charge item: Hand folding
+2026-04-10 20:47:49.335,job_details,Adding charge from search: lanyards
+2026-04-10 20:47:49.336,job_details,Charge search: term=lanyards
+2026-04-10 20:47:49.449,job_details,Charge search: input focused
+2026-04-10 20:47:49.499,job_details,Charge search: sending input term
+2026-04-10 20:47:49.532,job_details,Charge search: selection function ran
+2026-04-10 20:47:50.682,job_details,Charge search: about to confirm selected charge item
+2026-04-10 20:47:50.683,job_details,Confirming selected charge item: lanyards
+2026-04-10 20:47:50.841,job_details,Saving selected job charges
+2026-04-10 20:47:51.406,invoice_page,Switching to Estimate Summary tab
+2026-04-10 20:47:52.710,invoice_page,Estimate Summary tab active/visible: True
+2026-04-10 20:47:52.713,invoice_page,Downloading invoice from Estimate Summary
+2026-04-10 20:47:52.717,estimated_summary,Waiting for US685 E-Estimate button on Estimate Summary
+2026-04-10 20:47:52.847,estimated_summary,US685 E-Estimate clicked; waiting for generated document tab
+2026-04-10 20:47:54.205,estimated_summary,Resolved invoice download URL: https://alphagraphics685.myprintdesk.net/PrintSmith/reportservlet?invoiceName=US685%20E-Estimate&reportParameter=5671280
+2026-04-10 20:47:59.937,estimated_summary,Invoice downloaded to: C:\Users\786\AppData\Local\Temp\psv_invoices_rp90xs_3\Estimate_36634.pdf
+2026-04-10 20:47:59.974,logout_page,Opening user options dropdown
+2026-04-10 20:48:00.142,logout_page,Clicking logout
+2026-04-10 20:48:00.250,logout_page,Checking for 'Leave site?' confirmation

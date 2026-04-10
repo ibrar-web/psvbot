@@ -1,0 +1,47 @@
+timestamp,source,message
+2026-04-10 20:41:57.455,InvoicePage,Existing customer selected from dropdown; skipping Account Information and moving to Job Details
+2026-04-10 20:41:57.642,InvoicePage,Completing Job Details tab
+2026-04-10 20:41:57.642,JobDetailsTab,Waiting for Job Details tab to become active
+2026-04-10 20:41:57.694,JobDetailsTab,Opening Stock Picker modal
+2026-04-10 20:41:58.717,JobDetailsTab,Starting search for stock term: 'gpa'
+2026-04-10 20:41:59.837,JobDetailsTab,Search text entered; waiting for filtered stock rows
+2026-04-10 20:41:59.893,JobDetailsTab,Selecting best matching stock row for: gpa
+2026-04-10 20:42:00.042,JobDetailsTab,Confirming stock selection
+2026-04-10 20:42:01.358,JobDetailsTab,Setting Price Breakup quantity: 100
+2026-04-10 20:42:02.140,JobDetailsTab,Opening Add New Charges modal from Price Breakup
+2026-04-10 20:42:03.620,JobDetailsTab,Adding charge from search: precision cutting
+2026-04-10 20:42:03.621,JobDetailsTab,Charge search: term=precision cutting
+2026-04-10 20:42:03.874,JobDetailsTab,Charge search: input focused
+2026-04-10 20:42:04.001,JobDetailsTab,Charge search: sending input term
+2026-04-10 20:42:04.119,JobDetailsTab,Charge search: selection function ran
+2026-04-10 20:42:05.348,JobDetailsTab,Charge search: about to confirm selected charge item
+2026-04-10 20:42:05.351,JobDetailsTab,Confirming selected charge item: precision cutting
+2026-04-10 20:42:05.733,JobDetailsTab,Adding charge from search: cover stock
+2026-04-10 20:42:05.734,JobDetailsTab,Charge search: term=cover stock
+2026-04-10 20:42:06.018,JobDetailsTab,Charge search: input focused
+2026-04-10 20:42:06.087,JobDetailsTab,Charge search: sending input term
+2026-04-10 20:42:06.169,JobDetailsTab,Charge search: selection function ran
+2026-04-10 20:42:07.572,JobDetailsTab,Charge search: about to confirm selected charge item
+2026-04-10 20:42:07.575,JobDetailsTab,Confirming selected charge item: cover stock
+2026-04-10 20:42:07.920,JobDetailsTab,Adding charge from search: Hand folding
+2026-04-10 20:42:07.921,JobDetailsTab,Charge search: term=Hand folding
+2026-04-10 20:42:08.138,JobDetailsTab,Charge search: input focused
+2026-04-10 20:42:08.200,JobDetailsTab,Charge search: sending input term
+2026-04-10 20:42:08.275,JobDetailsTab,Charge search: selection function ran
+2026-04-10 20:42:09.473,JobDetailsTab,Charge search: about to confirm selected charge item
+2026-04-10 20:42:09.475,JobDetailsTab,Confirming selected charge item: Hand folding
+2026-04-10 20:42:09.751,JobDetailsTab,Adding charge from search: lanyards
+2026-04-10 20:42:09.753,JobDetailsTab,Charge search: term=lanyards
+2026-04-10 20:42:09.946,JobDetailsTab,Charge search: input focused
+2026-04-10 20:42:10.014,JobDetailsTab,Charge search: sending input term
+2026-04-10 20:42:10.088,JobDetailsTab,Charge search: selection function ran
+2026-04-10 20:42:11.339,JobDetailsTab,Charge search: about to confirm selected charge item
+2026-04-10 20:42:11.341,JobDetailsTab,Confirming selected charge item: lanyards
+2026-04-10 20:42:11.692,JobDetailsTab,Saving selected job charges
+2026-04-10 20:42:12.692,InvoicePage,Switching to Estimate Summary tab
+2026-04-10 20:42:13.744,InvoicePage,Estimate Summary tab active/visible: True
+2026-04-10 20:42:13.746,InvoicePage,Downloading invoice from Estimate Summary
+2026-04-10 20:42:13.749,EstimatedSummaryTab,Waiting for US685 E-Estimate button on Estimate Summary
+2026-04-10 20:42:13.960,EstimatedSummaryTab,US685 E-Estimate clicked; waiting for generated document tab
+2026-04-10 20:42:15.498,EstimatedSummaryTab,Resolved invoice download URL: https://alphagraphics685.myprintdesk.net/PrintSmith/reportservlet?invoiceName=US685%20E-Estimate&reportParameter=5671260
+2026-04-10 20:42:19.761,EstimatedSummaryTab,Invoice downloaded to: C:\Users\786\AppData\Local\Temp\psv_invoices_tww7sky4\Estimate_36633.pdf

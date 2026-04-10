@@ -33,7 +33,7 @@ class JobDetailsTab(BasePage):
     def _debug(self, message: str) -> None:
         if DEBUG:
             print(f"[PrintSmith][JobDetailsTab] {message}")
-            logger.info(message)
+        logger.info(message)
 
     def wait_until_active(self) -> None:
         self._debug("Waiting for Job Details tab to become active")
@@ -288,13 +288,13 @@ class JobDetailsTab(BasePage):
         self.wait_for_spinner_to_disappear()
 
     def _select_charge_from_search(self, term: str) -> None:
-        print(f"[CHARGE] term={term}")
+        self._debug(f"Charge search: term={term}")
         self.wait_for_spinner_to_disappear()
         search_input = self._get_ready_charges_search_input()
-        print("[CHARGE] input focused")
+        self._debug("Charge search: input focused")
         search_input.fill("")
         search_input.fill(term)
-        print("[CHARGE] sending input term")
+        self._debug("Charge search: sending input term")
 
         self.page.wait_for_function(
             """(term) => {
@@ -328,9 +328,10 @@ class JobDetailsTab(BasePage):
                   text: (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase()
                 }));
 
-                let target = normalized.find(entry => entry.text === term)?.node || null;
-                if (!target) target = normalized.find(entry => entry.text.startsWith(term))?.node || null;
-                if (!target) target = normalized.find(entry => entry.text.includes(term))?.node || null;
+                const termLower = term.toLowerCase();
+                let target = normalized.find(entry => entry.text === termLower)?.node || null;
+                if (!target) target = normalized.find(entry => entry.text.startsWith(termLower))?.node || null;
+                if (!target) target = normalized.find(entry => entry.text.includes(termLower))?.node || null;
 
                 if (!target) return false;
                 target.scrollIntoView({ block: "center" });
@@ -340,11 +341,12 @@ class JobDetailsTab(BasePage):
             arg=term,
             timeout=self._timeout_ms,
         ).json_value()
-
+        self._debug("Charge search: selection function ran")
         if not selected:
             raise PlaywrightTimeoutError(f"Could not select charge from search: {term}")
 
         self.wait_for_spinner_to_disappear()
+        self._debug("Charge search: about to confirm selected charge item")
         self._confirm_charge_item(term)
 
     def _confirm_charge_item(self, term: str) -> None:

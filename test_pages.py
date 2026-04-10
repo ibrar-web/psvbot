@@ -28,13 +28,18 @@ DUMMY_QUOTE = {
     "tenant_id": "test-tenant",
     "account_name": "Test Company",
     "company_name": "Test Company",
-    "contact_person": "john doe",       # use an existing customer name or "walk-in"
+    "contact_person": "test user",       # use an existing customer name or "walk-in"
     "contact_email": "test@example.com",
     "contact_phone": "555-000-1234",
     "requirements": {
         "stock_search_term": "gpa",    # partial name of a stock that exists in PrintSmith
         "price_breakup_quantity": "100",
-        "job_charges": [],             # e.g. ["Design", "Lamination"] or leave empty
+        "job_charges": [
+        "precision cutting",
+        "cover stock",
+        "Hand folding",
+        "lanyards",
+    ],             
     },
 }
 
@@ -88,6 +93,9 @@ def test_login():
 
 
 def test_full_flow():
+    from app.v1.modules.bot import csv_logger
+    log_path = csv_logger.init()
+    print(f"\n  [INFO] CSV log: {log_path}")
     """
     Runs the complete estimate flow end-to-end with DUMMY_QUOTE data:
       1. Login

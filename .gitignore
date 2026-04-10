@@ -3,6 +3,8 @@ __pycache__/
 .env
 .venv/
 venv/
+logs/
+.logs/
 .pytest_cache/
 .mypy_cache/
 .DS_Store
