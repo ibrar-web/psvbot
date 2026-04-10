@@ -16,7 +16,6 @@ from app.v1.core.settings import (
     APP_VERSION,
     CORS_ALLOW_ORIGINS,
     MONGO_DB,
-    QUEUE_POLL_INTERVAL_SECONDS,
 )
 from app.v1.middleware.auth import AuthMiddleware
 from app.v1.routes import api_router
@@ -120,6 +119,7 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup_event() -> None:
         from app.v1.modules.bot.services.queue_service import (
+            get_queue_poll_sleep_seconds,
             recover_incomplete_jobs,
             schedule_queue_poll_if_idle,
         )
@@ -133,7 +133,7 @@ def create_app() -> FastAPI:
         async def _queue_poller() -> None:
             while True:
                 schedule_queue_poll_if_idle()
-                await asyncio.sleep(QUEUE_POLL_INTERVAL_SECONDS)
+                await asyncio.sleep(await get_queue_poll_sleep_seconds())
 
         app.state.queue_poller_task = asyncio.create_task(_queue_poller())
 

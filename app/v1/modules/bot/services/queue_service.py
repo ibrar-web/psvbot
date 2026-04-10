@@ -19,6 +19,8 @@ from app.v1.core.settings import (
     PRINTSMITH_PASSWORD,
     PRINTSMITH_URL,
     PRINTSMITH_USERNAME,
+    QUEUE_BUSY_POLL_INTERVAL_SECONDS,
+    QUEUE_IDLE_POLL_INTERVAL_SECONDS,
 )
 from app.v1.modules.bot.services.estimate_service import run_estimate_flow
 from app.v1.schemas.jobqueuemodel import JobQueueDocument, JobQueueStatus
@@ -512,6 +514,22 @@ async def poll_and_process_pending_jobs() -> Dict[str, Any]:
             "status": "success",
             "message": "Queue poll completed",
         }
+
+
+async def get_queue_poll_sleep_seconds() -> int:
+    processing_job = next(
+        (
+            job
+            for job in await JobQueueDocument.find(
+                JobQueueDocument.is_processing == True
+            ).to_list()
+            if _is_job_assigned_to_current_machine(job.machine_name)
+        ),
+        None,
+    )
+    if processing_job is not None:
+        return QUEUE_BUSY_POLL_INTERVAL_SECONDS
+    return QUEUE_IDLE_POLL_INTERVAL_SECONDS
 
 
 def schedule_queue_poll_if_idle() -> bool:

@@ -13,3 +13,6 @@ if [[ "${1:-}" == "deploy" ]]; then
 fi
 
 uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" --reload
+
+# sudo systemctl daemon-reload
+# sudo systemctl restart psvbot
