@@ -207,7 +207,7 @@ async def _notify_main_server(
         "queue_id": str(job.id),
         "success": result.get("status") == "success",
         "summary_file_name": result.get("summary_file_name"),
-        "summary_file_url": result.get("summary_file_url")
+        "summary_file_url": result.get("summary_folder_prefix")
         or result.get("summary_file_gcs_uri"),
         "error_message": (
             None if result.get("status") == "success" else result.get("message")

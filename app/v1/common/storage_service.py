@@ -66,7 +66,7 @@ def _bucket():
     return _client().bucket(BUCKET_NAME)
 
 
-def build_s3_key(prefix: str, file_name: str) -> str:
+def build_storage_key(prefix: str, file_name: str) -> str:
     clean_name = Path(file_name).name
     clean_prefix = (prefix or "").strip("/ ")
     if clean_prefix:
@@ -74,7 +74,7 @@ def build_s3_key(prefix: str, file_name: str) -> str:
     return f"{uuid4().hex}_{clean_name}"
 
 
-def upload_bytes_to_s3(
+def upload_bytes_to_storage(
     *,
     key: str,
     content: bytes,

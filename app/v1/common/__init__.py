@@ -1,13 +1,13 @@
 from app.v1.common.storage_service import (
-    build_s3_key,
+    build_storage_key,
     extract_storage_key,
     generate_presigned_download_url,
-    upload_bytes_to_s3,
+    upload_bytes_to_storage,
 )
 
 __all__ = [
-    "build_s3_key",
+    "build_storage_key",
     "extract_storage_key",
     "generate_presigned_download_url",
-    "upload_bytes_to_s3",
+    "upload_bytes_to_storage",
 ]

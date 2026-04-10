@@ -9,7 +9,11 @@ from urllib.parse import urlparse
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from app.v1.common.storage_service import build_s3_key, generate_presigned_download_url, upload_bytes_to_s3
+from app.v1.common.storage_service import (
+    build_storage_key,
+    generate_presigned_download_url,
+    upload_bytes_to_storage,
+)
 from app.v1.core.settings import BUCKET_NAME, QUOTE_SUMMARY_STORAGE_ROOT
 from app.v1.modules.bot.config import DEBUG, DEFAULT_TIMEOUT_SECONDS
 from app.v1.modules.bot.base_page import BasePage
@@ -71,8 +75,8 @@ def _upload_summary_file(
     ).strip() or "manual"
 
     folder_prefix = f"{QUOTE_SUMMARY_STORAGE_ROOT}/{tenant_id}/{quote_id}"
-    storage_key = build_s3_key(folder_prefix, summary_file_name)
-    upload_bytes_to_s3(
+    storage_key = build_storage_key(folder_prefix, summary_file_name)
+    upload_bytes_to_storage(
         key=storage_key,
         content=invoice_path.read_bytes(),
         content_type="application/pdf",
@@ -93,6 +97,7 @@ def _upload_summary_file(
     return {
         "summary_file_name": summary_file_name,
         "summary_file_path": None,
+        "summary_folder_prefix": folder_prefix,
         "summary_file_storage_key": storage_key,
         "summary_file_gcs_uri": f"gs://{BUCKET_NAME}/{storage_key}",
         "summary_file_url": generate_presigned_download_url(key=storage_key),
