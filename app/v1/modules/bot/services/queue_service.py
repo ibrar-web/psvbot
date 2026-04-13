@@ -156,6 +156,8 @@ def _build_bot_quote_record(
         "contact_person": quote.get("contact_person", ""),
         "contact_email": quote.get("contact_email", ""),
         "contact_phone": quote.get("contact_phone", ""),
+        "description": quote.get("description", ""),
+        "summary": quote.get("summary", ""),
         "requirements": {
             "stock_search": requirements.get("stock_search", ""),
             "quantity": requirements.get("quantity", ""),

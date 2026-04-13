@@ -22,6 +22,7 @@ class InvalidStockSearchError(Exception):
 
 class JobDetailsTab(BasePage):
     JOB_DETAILS_TAB = "//li[@role='tab' and .//span[normalize-space()='Job Details']]"
+    JOB_DESCRIPTION_INPUT = "//textarea[@name='digital-descriptionField']"
     STOCK_PICKER_BUTTON = "//a[@ptooltip='Stock Picker']"
     STOCK_CONFIRM_BUTTON = "//button[@name='save_stock_details']"
     STOCK_CANCEL_BUTTON = "//button[@name='cancel_stock_details']"
@@ -69,6 +70,7 @@ class JobDetailsTab(BasePage):
         self.wait_for_visible(By.XPATH, self.STOCK_PICKER_BUTTON)
 
     def select_stock_from_picker(self, data: Mapping[str, str]) -> None:
+        self._fill_job_description(data)
         stock_search_term = (data.get("stock_search_term") or "gpa").strip()
         if not stock_search_term:
             self._debug("No stock search term provided; skipping stock picker")
@@ -104,6 +106,19 @@ class JobDetailsTab(BasePage):
         self.click(By.XPATH, self.STOCK_PICKER_BUTTON)
         self._wait_for_stock_confirm_button()
         self._wait_for_stock_name_filter_input()
+
+    def _fill_job_description(self, data: Mapping[str, str]) -> None:
+        description = str(data.get("description") or "").strip()
+        if not description:
+            self._debug("No job description provided; skipping description field")
+            return
+
+        self._debug("Filling job description before opening Stock Picker")
+        self.wait_for_spinner_to_disappear()
+        field = self.wait_for_visible(By.XPATH, self.JOB_DESCRIPTION_INPUT)
+        self._replace_textarea_value(field, description)
+        self._wait_for_textarea_value(description)
+        self.wait_for_spinner_to_disappear()
 
     def _search_stock(self, term: str) -> None:
         self._debug(f"Starting search for stock term: '{term}'")
@@ -530,6 +545,44 @@ class JobDetailsTab(BasePage):
             element.clear()
         except Exception:
             pass
+
+    def _replace_textarea_value(self, element, value: str) -> None:
+        try:
+            element.click()
+        except ElementClickInterceptedException:
+            self.driver.execute_script("arguments[0].click();", element)
+
+        self._clear_input_value(element)
+        if value:
+            element.send_keys(value)
+
+        current = (element.get_attribute("value") or "").strip()
+        expected = (value or "").strip()
+        if current != expected:
+            self.driver.execute_script(
+                """
+                const input = arguments[0];
+                const newValue = arguments[1];
+                input.value = newValue;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                """,
+                element,
+                value or "",
+            )
+
+    def _wait_for_textarea_value(self, expected_value: str) -> None:
+        WebDriverWait(self.driver, self.timeout).until(
+            lambda d: (
+                (
+                    d.find_element(By.XPATH, self.JOB_DESCRIPTION_INPUT).get_attribute(
+                        "value"
+                    )
+                    or ""
+                ).strip()
+                == (expected_value or "").strip()
+            )
+        )
 
     def _wait_for_stock_confirm_button(self):
         return WebDriverWait(self.driver, self.timeout).until(

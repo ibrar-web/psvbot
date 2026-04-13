@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class InvoicePage(BasePage):
-    ACCOUNT_INFORMATION_TAB = "//li[@role='tab' and .//span[normalize-space()='Account Information']]"
+    ACCOUNT_INFORMATION_TAB = (
+        "//li[@role='tab' and .//span[normalize-space()='Account Information']]"
+    )
     JOB_DETAILS_TAB = "//li[@role='tab' and .//span[normalize-space()='Job Details']]"
 
     def _debug(self, message: str) -> None:
@@ -42,7 +44,9 @@ class InvoicePage(BasePage):
         requirements = quote_record.get("requirements") or {}
         contact_data = {
             "account_name": quote_record.get("account_name", ""),
-            "company_name": quote_record.get("company_name", quote_record.get("account_name", "")),
+            "company_name": quote_record.get(
+                "company_name", quote_record.get("account_name", "")
+            ),
             "contact_person": quote_record.get("contact_person", ""),
             "contact_email": quote_record.get("contact_email", ""),
             "contact_phone": quote_record.get("contact_phone", ""),
@@ -50,6 +54,7 @@ class InvoicePage(BasePage):
             "city": quote_record.get("city", ""),
         }
         job_data = {
+            "description": (quote_record.get("description") or ""),
             "stock_search_term": requirements.get(
                 "stock_search_term",
                 requirements.get("stock_search", ""),
@@ -77,7 +82,9 @@ class InvoicePage(BasePage):
             )
             should_start_from_job = True
         elif normalized == "auto" and self._is_account_information_complete():
-            self._debug("Account Information already complete; resuming from Job Details")
+            self._debug(
+                "Account Information already complete; resuming from Job Details"
+            )
             should_start_from_job = True
 
         if not should_start_from_job:
@@ -144,7 +151,9 @@ class InvoicePage(BasePage):
         estimated_summary_tab = EstimatedSummaryTab(self.driver, self.timeout)
         self._debug("Switching to Estimate Summary tab")
         estimated_summary_tab.switch_to_tab()
-        self._debug(f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}")
+        self._debug(
+            f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}"
+        )
         self._debug("Downloading invoice from Estimate Summary")
         return estimated_summary_tab.click_us685_eestimate_and_download(
             customer_selection_status=customer_selection_status,
