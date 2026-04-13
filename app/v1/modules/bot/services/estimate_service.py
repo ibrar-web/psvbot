@@ -11,7 +11,6 @@ from selenium.webdriver.remote.webdriver import WebDriver
 
 from app.v1.common.storage_service import (
     build_storage_key,
-    generate_presigned_download_url,
     upload_bytes_to_storage,
 )
 from app.v1.core.settings import BUCKET_NAME, QUOTE_SUMMARY_STORAGE_ROOT
@@ -63,7 +62,9 @@ def _upload_summary_file(
     quote_record: Optional[Dict[str, Any]],
 ) -> Dict[str, Optional[str]]:
     summary_file_name = invoice_path.name
-    saved_summary_path = _build_summary_output_path(quote_record, summary_file_name)
+    saved_summary_path = _build_summary_output_path(
+        quote_record, summary_file_name
+    )
     shutil.copy2(invoice_path, saved_summary_path)
 
     tenant_id = str((quote_record or {}).get("tenant_id") or "adhoc").strip() or "adhoc"
@@ -99,8 +100,7 @@ def _upload_summary_file(
         "summary_file_path": None,
         "summary_folder_prefix": folder_prefix,
         "summary_file_storage_key": storage_key,
-        "summary_file_gcs_uri": f"gs://{BUCKET_NAME}/{storage_key}",
-        "summary_file_url": generate_presigned_download_url(key=storage_key),
+        "summary_file_url": storage_key,
     }
 
 

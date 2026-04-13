@@ -209,8 +209,7 @@ async def _notify_main_server(
         "queue_id": str(job.id),
         "success": result.get("status") == "success",
         "summary_file_name": result.get("summary_file_name"),
-        "summary_file_url": result.get("summary_folder_prefix")
-        or result.get("summary_file_gcs_uri"),
+        "summary_file_url": result.get("summary_file_url"),
         "error_message": (
             None if result.get("status") == "success" else result.get("message")
         ),
@@ -381,9 +380,7 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
         if result.get("status") == "success":
             job.status = JobQueueStatus.complete
             job.file_name = result.get("summary_file_name")
-            job.file_url = result.get("summary_file_url") or result.get(
-                "summary_file_gcs_uri"
-            )
+            job.file_url = result.get("summary_file_url")
             job.last_error = None
         else:
             job.status = JobQueueStatus.failed
