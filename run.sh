@@ -14,4 +14,13 @@ set -euo pipefail
 #   exit 0
 # fi
 
-uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" --reload
+if [[ ! -x ".venv/bin/python" ]]; then
+  echo "Missing .venv. Create it first with: python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt" >&2
+  exit 1
+fi
+
+source .venv/bin/activate
+exec .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" --reload
+
+# sudo systemctl daemon-reload
+# sudo systemctl restart psvbot

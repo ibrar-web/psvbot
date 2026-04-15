@@ -18,6 +18,7 @@ class JobQueueDocument(Document):
     record_id: Optional[str] = None
     tenant_id: Optional[str] = None
     created_by: Optional[str] = None
+    machine_name: Optional[str] = None
     status: JobQueueStatus = Field(default=JobQueueStatus.pending)
     is_processing: bool = False
     retry_count: int = 0

@@ -14,10 +14,13 @@ from app.v1.modules.bot.config import DEFAULT_TIMEOUT_SECONDS
 from app.v1.core.settings import (
     MAIN_SERVER_API_BASE_URL,
     MAIN_SERVER_API_TOKEN,
+    MACHINE_NAME,
     PRINTSMITH_COMPANY,
     PRINTSMITH_PASSWORD,
     PRINTSMITH_URL,
     PRINTSMITH_USERNAME,
+    QUEUE_BUSY_POLL_INTERVAL_SECONDS,
+    QUEUE_IDLE_POLL_INTERVAL_SECONDS,
 )
 from app.v1.modules.bot.services.estimate_service import run_estimate_flow
 from app.v1.schemas.jobqueuemodel import JobQueueDocument, JobQueueStatus
@@ -68,6 +71,14 @@ def _build_runtime_credentials() -> Dict[str, str]:
         "password": PRINTSMITH_PASSWORD,
         "company": company,
     }
+
+
+def _is_job_assigned_to_current_machine(machine_name: Optional[str]) -> bool:
+    assigned_machine = str(machine_name or "").strip()
+    current_machine = str(MACHINE_NAME or "").strip()
+    if not assigned_machine or not current_machine:
+        return True
+    return assigned_machine.lower() == current_machine.lower()
 
 
 def _normalize_runtime_credentials(data: Optional[Dict[str, Any]]) -> Dict[str, str]:
@@ -145,6 +156,8 @@ def _build_bot_quote_record(
         "contact_person": quote.get("contact_person", ""),
         "contact_email": quote.get("contact_email", ""),
         "contact_phone": quote.get("contact_phone", ""),
+        "description": quote.get("description", ""),
+        "summary": quote.get("summary", ""),
         "requirements": {
             "stock_search": requirements.get("stock_search", ""),
             "quantity": requirements.get("quantity", ""),
@@ -176,6 +189,7 @@ async def sync_job_with_main_server(job: JobQueueDocument) -> Dict[str, Any]:
     if job_data:
         job.tenant_id = job_data.get("tenant_id") or job.tenant_id
         job.created_by = job_data.get("created_by") or job.created_by
+        job.machine_name = job_data.get("machine_name") or job.machine_name
 
     job.updated_at = datetime.utcnow()
     await job.save()
@@ -195,8 +209,7 @@ async def _notify_main_server(
         "queue_id": str(job.id),
         "success": result.get("status") == "success",
         "summary_file_name": result.get("summary_file_name"),
-        "summary_file_url": result.get("summary_file_url")
-        or result.get("summary_file_gcs_uri"),
+        "summary_file_url": result.get("summary_file_url"),
         "error_message": (
             None if result.get("status") == "success" else result.get("message")
         ),
@@ -216,14 +229,25 @@ async def _notify_main_server(
 
 
 async def recover_incomplete_jobs() -> None:
-    stuck_jobs = await JobQueueDocument.find(
-        JobQueueDocument.is_processing == True
-    ).to_list()
+    stuck_jobs = [
+        job
+        for job in await JobQueueDocument.find(
+            JobQueueDocument.is_processing == True
+        ).to_list()
+        if _is_job_assigned_to_current_machine(job.machine_name)
+    ]
     if not stuck_jobs:
-        logger.info("Queue recovery check completed: no stuck jobs found")
+        logger.info(
+            "Queue recovery check completed: no stuck jobs found for current machine=%s",
+            MACHINE_NAME or "unset",
+        )
         return
 
-    logger.warning("Queue recovery found %s stuck job(s)", len(stuck_jobs))
+    logger.warning(
+        "Queue recovery found %s stuck job(s) for current machine=%s",
+        len(stuck_jobs),
+        MACHINE_NAME or "unset",
+    )
     for job in stuck_jobs:
         job.is_processing = False
         job.status = JobQueueStatus.pending
@@ -246,6 +270,14 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
         return {
             "status": "skipped",
             "message": "Queue record is already processing",
+        }
+    if not _is_job_assigned_to_current_machine(job.machine_name):
+        return {
+            "status": "skipped",
+            "message": (
+                f"Queue record is assigned to machine '{job.machine_name}', "
+                f"current machine is '{MACHINE_NAME or 'unset'}'"
+            ),
         }
 
     job.is_processing = True
@@ -284,6 +316,26 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
         if job_data:
             job.tenant_id = job_data.get("tenant_id") or job.tenant_id
             job.created_by = job_data.get("created_by") or job.created_by
+            job.machine_name = job_data.get("machine_name") or job.machine_name
+
+        if not _is_job_assigned_to_current_machine(job.machine_name):
+            job.is_processing = False
+            job.status = JobQueueStatus.pending
+            job.updated_at = datetime.utcnow()
+            await job.save()
+            logger.info(
+                "Queue job skipped queue_id=%s assigned_machine=%s current_machine=%s",
+                getattr(job, "id", None),
+                job.machine_name,
+                MACHINE_NAME or "unset",
+            )
+            return {
+                "status": "skipped",
+                "message": (
+                    f"Queue record is assigned to machine '{job.machine_name}', "
+                    f"current machine is '{MACHINE_NAME or 'unset'}'"
+                ),
+            }
 
         job.updated_at = datetime.utcnow()
         await job.save()
@@ -328,9 +380,7 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
         if result.get("status") == "success":
             job.status = JobQueueStatus.complete
             job.file_name = result.get("summary_file_name")
-            job.file_url = result.get("summary_file_url") or result.get(
-                "summary_file_gcs_uri"
-            )
+            job.file_url = result.get("summary_file_url")
             job.last_error = None
         else:
             job.status = JobQueueStatus.failed
@@ -353,6 +403,10 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             job.status,
         )
         try:
+            logger.info(
+                "Queue step=notify_main_server queue_id=%s after bot upload and logout",
+                getattr(job, "id", None),
+            )
             result["main_server_callback"] = await _notify_main_server(job, result)
         except Exception as exc:
             logger.exception(
@@ -409,11 +463,21 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
 
 async def _run_pending_jobs_batch() -> None:
     logger.info("Queue scheduler checking pending jobs")
-    processing_job = await JobQueueDocument.find_one(JobQueueDocument.is_processing == True)
+    processing_job = next(
+        (
+            job
+            for job in await JobQueueDocument.find(
+                JobQueueDocument.is_processing == True
+            ).to_list()
+            if _is_job_assigned_to_current_machine(job.machine_name)
+        ),
+        None,
+    )
     if processing_job is not None:
         logger.info(
-            "Queue scheduler skipped because queue_id=%s is already processing",
+            "Queue scheduler skipped because queue_id=%s is already processing on current_machine=%s",
             getattr(processing_job, "id", None),
+            MACHINE_NAME or "unset",
         )
         return
     pending_jobs = await JobQueueDocument.find(
@@ -425,6 +489,14 @@ async def _run_pending_jobs_batch() -> None:
     ).to_list()
     logger.info("Queue scheduler found %s pending job(s)", len(pending_jobs))
     for job in pending_jobs:
+        if not _is_job_assigned_to_current_machine(job.machine_name):
+            logger.info(
+                "Queue scheduler ignored queue_id=%s assigned_machine=%s current_machine=%s",
+                getattr(job, "id", None),
+                job.machine_name,
+                MACHINE_NAME or "unset",
+            )
+            continue
         await process_job_queue_document(job)
 
 
@@ -441,6 +513,22 @@ async def poll_and_process_pending_jobs() -> Dict[str, Any]:
             "status": "success",
             "message": "Queue poll completed",
         }
+
+
+async def get_queue_poll_sleep_seconds() -> int:
+    processing_job = next(
+        (
+            job
+            for job in await JobQueueDocument.find(
+                JobQueueDocument.is_processing == True
+            ).to_list()
+            if _is_job_assigned_to_current_machine(job.machine_name)
+        ),
+        None,
+    )
+    if processing_job is not None:
+        return QUEUE_BUSY_POLL_INTERVAL_SECONDS
+    return QUEUE_IDLE_POLL_INTERVAL_SECONDS
 
 
 def schedule_queue_poll_if_idle() -> bool:
