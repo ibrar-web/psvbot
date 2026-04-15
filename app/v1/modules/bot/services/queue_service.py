@@ -20,6 +20,7 @@ from app.v1.core.settings import (
     PRINTSMITH_URL,
     PRINTSMITH_USERNAME,
     QUEUE_BUSY_POLL_INTERVAL_SECONDS,
+    QUEUE_ENFORCE_MACHINE_ASSIGNMENT,
     QUEUE_IDLE_POLL_INTERVAL_SECONDS,
 )
 from app.v1.modules.bot.services.estimate_service import run_estimate_flow
@@ -74,6 +75,8 @@ def _build_runtime_credentials() -> Dict[str, str]:
 
 
 def _is_job_assigned_to_current_machine(machine_name: Optional[str]) -> bool:
+    if not QUEUE_ENFORCE_MACHINE_ASSIGNMENT:
+        return True
     assigned_machine = str(machine_name or "").strip()
     current_machine = str(MACHINE_NAME or "").strip()
     if not assigned_machine or not current_machine:

@@ -37,6 +37,10 @@ QUEUE_BUSY_POLL_INTERVAL_SECONDS = int(
     os.getenv("QUEUE_BUSY_POLL_INTERVAL_SECONDS", str(QUEUE_POLL_INTERVAL_SECONDS))
 )
 MACHINE_NAME = os.getenv("MACHINE_NAME", "").strip()
+QUEUE_ENFORCE_MACHINE_ASSIGNMENT = (
+    os.getenv("QUEUE_ENFORCE_MACHINE_ASSIGNMENT", "true").strip().lower()
+    == "true"
+)
 MAIN_SERVER_API_BASE_URL = os.getenv("MAIN_SERVER_API_BASE_URL", "").strip().rstrip("/")
 MAIN_SERVER_API_TOKEN = os.getenv("MAIN_SERVER_API_TOKEN", "").strip()
 
