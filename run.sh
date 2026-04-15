@@ -20,7 +20,10 @@ if [[ ! -x ".venv/bin/python" ]]; then
 fi
 
 source .venv/bin/activate
+uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" --reload
+
 exec .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" --reload
+
 
 # sudo systemctl daemon-reload
 # sudo systemctl restart psvbot
