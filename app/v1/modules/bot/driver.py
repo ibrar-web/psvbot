@@ -18,10 +18,11 @@ def create_browser_page(playwright: Playwright) -> tuple[Browser, BrowserContext
             "--disable-dev-shm-usage",
             "--disable-extensions",
             "--disable-background-networking",
+            "--window-size=1728,1117",
         ],
     )
     context = browser.new_context(
-        viewport={"width": 1280, "height": 800},
+        viewport={"width": 1728, "height": 1117},
         accept_downloads=True,
     )
     page = context.new_page()
