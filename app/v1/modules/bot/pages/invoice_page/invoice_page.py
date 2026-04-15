@@ -48,6 +48,7 @@ class InvoicePage(BasePage):
             "city": quote_record.get("city", ""),
         }
         job_data = {
+            "description": quote_record.get("description", ""),
             "stock_search_term": requirements.get(
                 "stock_search_term",
                 requirements.get("stock_search", ""),
@@ -126,6 +127,7 @@ class InvoicePage(BasePage):
         self._debug("Completing Job Details tab")
         job_details_tab = JobDetailsTab(self.page, self.timeout)
         job_details_tab.wait_until_active()
+        job_details_tab.fill_job_description(job_data)
         job_details_tab.select_stock_from_picker(job_data)
         job_details_tab.add_size(job_data.get("size",""))
         job_details_tab.add_notes(job_data.get("notes", ""))

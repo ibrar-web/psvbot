@@ -15,6 +15,7 @@ class InvalidStockSearchError(Exception):
 
 class JobDetailsTab(BasePage):
     JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
+    JOB_DESCRIPTION_INPUT = "xpath=//textarea[@name='digital-descriptionField']"
     STOCK_PICKER_BUTTON = "xpath=//a[@ptooltip='Stock Picker']"
     STOCK_CONFIRM_BUTTON = "xpath=//button[@name='save_stock_details']"
     STOCK_CANCEL_BUTTON = "xpath=//button[@name='cancel_stock_details']"
@@ -59,6 +60,30 @@ class JobDetailsTab(BasePage):
         self._search_stock(stock_search_term)
         self._select_matching_stock_row(stock_search_term)
         self._confirm_stock_selection()
+
+    def fill_job_description(self, data: Mapping[str, str]) -> None:
+        description = str(data.get("description") or "").strip()
+        if not description:
+            self._debug("No job description provided; skipping description field")
+            return
+
+        self._debug("Filling job description before opening Stock Picker")
+        self.wait_for_spinner_to_disappear()
+        description_loc = self._loc(self.JOB_DESCRIPTION_INPUT).first
+        description_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        description_loc.fill(description)
+        self.page.evaluate(
+            """(value) => {
+                const field = document.querySelector("textarea[name='digital-descriptionField']");
+                if (!field) return false;
+                field.value = value;
+                field.dispatchEvent(new Event("input", { bubbles: true }));
+                field.dispatchEvent(new Event("change", { bubbles: true }));
+                return true;
+            }""",
+            description,
+        )
+        self.wait_for_spinner_to_disappear()
 
     def configure_price_breakup(self, data: Mapping[str, str]) -> None:
         quantity = str(data.get("price_breakup_quantity") or "").strip()
