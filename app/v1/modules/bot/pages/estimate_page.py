@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 class EstimatePage(BasePage):
     CREATE_ESTIMATE_BUTTON = (
         "xpath=//div[contains(@class,'qa-access') and @name='menuitem_1'"
-        " and .//span[contains(@class,'quick-access-item-text') and normalize-space()='Create Estimate']]"
+        " and .//span[contains(@class,'quick-access-item-text') and contains(normalize-space(),'Create Estimate')]]"
     )
     CREATE_ESTIMATE_TEXT = (
-        ".//span[contains(@class,'quick-access-item-text') and normalize-space()='Create Estimate']"
+        ".//span[contains(@class,'quick-access-item-text') and contains(normalize-space(),'Create Estimate')]"
     )
     INVOICE_PAGE_URL_PART = "#/invoicing/invoice-page"
 
@@ -30,20 +30,32 @@ class EstimatePage(BasePage):
         self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
         self._debug("Quick access document ready")
 
-        self._debug("Waiting for Create Estimate card to be present")
+        self._debug("Waiting for Create Estimate card to be present and visible")
         self.page.wait_for_function(
             """(cardXPath) => {
-                return !!document.evaluate(
+                const node = document.evaluate(
                   cardXPath, document, null,
                   XPathResult.FIRST_ORDERED_NODE_TYPE, null
                 ).singleNodeValue;
+                if (!node) return false;
+                const rect = node.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
             }""",
             arg=self.CREATE_ESTIMATE_BUTTON.replace("xpath=", ""),
             timeout=self._timeout_ms,
         )
+        # Give Angular time to bind event listeners after the node is visible
+        self.page.wait_for_timeout(500)
 
         for attempt in range(1, 5):
             self._debug(f"Create Estimate click attempt {attempt}/4")
+
+            # If Angular already navigated away (card gone = navigation in progress),
+            # just wait for the invoice page URL instead of trying to click again.
+            if self.INVOICE_PAGE_URL_PART in self.page.url:
+                self._debug(f"Already on invoice page at attempt {attempt}. URL: {self.page.url}")
+                return
+
             click_result = self.page.evaluate(
                 """([cardXPath, textXPath]) => {
                     const getNode = (xp, root) => document.evaluate(
@@ -74,8 +86,10 @@ class EstimatePage(BasePage):
                 self._debug(f"Create Estimate target html: {(click_result or {}).get('html', '')}")
             self._debug(f"Click dispatch result: {click_result}")
 
+            # Card not found means Angular already navigated — wait longer for URL to settle
+            timeout = 10 if not (click_result or {}).get("clicked") else 4
             self.wait_for_spinner_to_disappear()
-            if self._wait_for_invoice_page(4):
+            if self._wait_for_invoice_page(timeout):
                 self._debug(f"Create Estimate opened invoice page. URL: {self.page.url}")
                 return
 
@@ -97,9 +111,12 @@ class EstimatePage(BasePage):
         )
 
     def _wait_for_invoice_page(self, timeout_seconds: int) -> bool:
+        if self.INVOICE_PAGE_URL_PART in self.page.url:
+            return True
         try:
-            self.page.wait_for_url(
-                f"**{self.INVOICE_PAGE_URL_PART}**",
+            self.page.wait_for_function(
+                """(urlPart) => window.location.href.includes(urlPart)""",
+                arg=self.INVOICE_PAGE_URL_PART,
                 timeout=timeout_seconds * 1000,
             )
             return True

@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from app.v1.modules.bot.base_page import BasePage
-from app.v1.modules.bot.config import DEBUG
+from app.v1.modules.bot.config import DEBUG, HEADLESS
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,36 @@ class EstimatedSummaryTab(BasePage):
 
         self._debug("Waiting for US685 E-Estimate button on Estimate Summary")
 
-        # Use Playwright's built-in popup/new-page handling
+        if HEADLESS:
+            return self._download_headless(temp_dir)
+        else:
+            return self._download_headed(temp_dir)
+
+    def _download_headless(self, temp_dir: Path) -> Path:
+        download_timeout = max(self._timeout_ms, 120_000)
+
+        with self.page.expect_download(timeout=download_timeout) as download_info:
+            self.click(self.US685_E_ESTIMATE_BUTTON)
+            self._debug("US685 E-Estimate clicked; waiting for download")
+
+        download = download_info.value
+        suggested = download.suggested_filename or f"invoice_{int(time.time())}.pdf"
+        filename = self._sanitize_filename(suggested)
+        target_path = self._unique_path(temp_dir / filename)
+
+        download.save_as(target_path)
+        self._debug(f"Invoice downloaded to: {target_path}")
+
+        failure = download.failure()
+        if failure:
+            raise RuntimeError(f"Download failed: {failure}")
+
+        return target_path
+
+    def _download_headed(self, temp_dir: Path) -> Path:
+        # In headed mode Chromium opens the PDF in a new tab via window.open().
+        # Wait for that tab, grab the URL, download it via urllib, then close
+        # the tab so the flow returns to the main page and can proceed to logout.
         with self.page.context.expect_page(timeout=max(self._timeout_ms, 120_000)) as new_page_info:
             self.click(self.US685_E_ESTIMATE_BUTTON)
             self._debug("US685 E-Estimate clicked; waiting for generated document tab")
@@ -78,7 +107,9 @@ class EstimatedSummaryTab(BasePage):
             return saved_path
         finally:
             try:
+                new_page.wait_for_timeout(5000)
                 new_page.close()
+                self._debug("Closed generated document tab; returning to main page")
             except Exception:
                 pass
 
@@ -86,14 +117,12 @@ class EstimatedSummaryTab(BasePage):
         self._debug("Creating prospect before downloading estimate")
         self.wait_for_spinner_to_disappear()
 
-        # Check if the Create Prospect button is directly visible
         if super().is_visible(self.CREATE_PROSPECT_BUTTON):
             self._debug("Create Prospect button found directly; clicking it")
             self.click(self.CREATE_PROSPECT_BUTTON)
             self.wait_for_spinner_to_disappear()
             return
 
-        # Otherwise open the three-dots menu and click the link inside it
         self._debug("Create Prospect button not found directly; opening three-dots menu")
         self.wait_for_visible(self.THREE_DOTS_BUTTON)
         self.click(self.THREE_DOTS_BUTTON)
@@ -164,6 +193,15 @@ class EstimatedSummaryTab(BasePage):
             filename = Path(urlparse(url).path).name or f"invoice_{int(time.time())}.pdf"
 
         filename = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._") or f"invoice_{int(time.time())}.pdf"
+        if "." not in filename:
+            filename = f"{filename}.pdf"
+        return filename
+
+    def _sanitize_filename(self, filename: str) -> str:
+        filename = unquote(filename)
+        filename = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._")
+        if not filename:
+            filename = f"invoice_{int(time.time())}"
         if "." not in filename:
             filename = f"{filename}.pdf"
         return filename

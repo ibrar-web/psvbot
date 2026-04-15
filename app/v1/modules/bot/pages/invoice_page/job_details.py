@@ -50,7 +50,7 @@ class JobDetailsTab(BasePage):
         self.wait_for_visible(self.STOCK_PICKER_BUTTON)
 
     def select_stock_from_picker(self, data: Mapping[str, str]) -> None:
-        stock_search_term = (data.get("stock_search_term") or "gpa").strip()
+        stock_search_term = " ".join((data.get("stock_search_term") or "gpa").split())
         if not stock_search_term:
             self._debug("No stock search term provided; skipping stock picker")
             return
@@ -75,6 +75,165 @@ class JobDetailsTab(BasePage):
 
         self._open_add_new_charges_modal()
         self._add_job_charges(charges)
+
+    def select_bleed(self) -> None:
+        self._debug("Selecting bleed option via paper-calculator icon")
+        self.wait_for_spinner_to_disappear()
+        self.page.locator("span.dot-paper-calculator-icon").first.click()
+        self.wait_for_spinner_to_disappear()
+
+        self._debug("Activating Bleed slider")
+        self.page.wait_for_function(
+            """() => {
+                const labels = Array.from(document.querySelectorAll("label, span, div"))
+                    .filter(el => (el.innerText || el.textContent || "").trim().toLowerCase() === "bleed");
+                for (const label of labels) {
+                    const container = label.closest("div, li, tr, .dot-form__row") || label.parentElement;
+                    if (!container) continue;
+                    const slider = container.querySelector(".dot-switch-slider");
+                    if (slider) return true;
+                }
+                return false;
+            }""",
+            timeout=self._timeout_ms,
+        )
+        activated = self.page.evaluate(
+            """() => {
+                const labels = Array.from(document.querySelectorAll("label, span, div"))
+                    .filter(el => (el.innerText || el.textContent || "").trim().toLowerCase() === "bleed");
+                for (const label of labels) {
+                    const container = label.closest("div, li, tr, .dot-form__row") || label.parentElement;
+                    if (!container) continue;
+                    const slider = container.querySelector(".dot-switch-slider");
+                    if (!slider) continue;
+                    const toggle = container.querySelector("input[type='checkbox']") || slider.previousElementSibling;
+                    if (toggle && toggle.tagName === "INPUT") {
+                        if (!toggle.checked) toggle.click();
+                    } else {
+                        slider.click();
+                    }
+                    return true;
+                }
+                return false;
+            }"""
+        )
+        if not activated:
+            self._debug("Bleed slider not found; skipping")
+
+        self._debug("Clicking Confirm after enabling bleed")
+        self.wait_for_spinner_to_disappear()
+        confirm_loc = self.page.locator("span", has_text="Confirm").first
+        confirm_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        confirm_loc.click()
+        self.wait_for_spinner_to_disappear()
+
+    def select_sides(self, sides: str) -> None:
+        sides = (sides or "").strip().lower()
+        if sides not in ("single", "double"):
+            self._debug(f"Invalid or missing sides value '{sides}'; skipping")
+            return
+
+        self._debug(f"Selecting sides: {sides}")
+        self.wait_for_spinner_to_disappear()
+
+        if sides == "single":
+            btn = self.page.locator("button[kendobutton] span", has_text="Simplex").first
+        else:
+            btn = self.page.locator("button[kendobutton] span", has_text="Duplex").first
+
+        btn.wait_for(state="visible", timeout=self._timeout_ms)
+        btn.click()
+        self.wait_for_spinner_to_disappear()
+
+    def add_size(self, size: str) -> None:
+        size = (size or "").strip()
+        if not size:
+            self._debug("No size provided; skipping Finish Size field")
+            return
+
+        self._debug(f"Setting Finish Size: {size}")
+        self.wait_for_spinner_to_disappear()
+
+        # Find the k-input that lives in the same row as the "Finish Size" label
+        input_found = self.page.evaluate(
+            """() => {
+                const label = Array.from(document.querySelectorAll("label.dot-form__label"))
+                    .find(el => (el.innerText || el.textContent || "").trim() === "Finish Size");
+                if (!label) return false;
+                const row = label.closest(".dot-form__row, .row, .form-group, div") || label.parentElement;
+                const input = row ? row.querySelector("input.k-input[role='listbox']") : null;
+                return !!input;
+            }"""
+        )
+        if not input_found:
+            self._debug("Finish Size input not found; skipping")
+            return
+
+        # Click and fill the input via Playwright locator
+        size_input = self.page.locator(
+            "label.dot-form__label:has-text('Finish Size') ~ * input.k-input, "
+            "label.dot-form__label:has-text('Finish Size') + * input.k-input"
+        ).first
+        # Fallback: find by proximity using JS handle
+        if not size_input.is_visible():
+            size_input = self.page.evaluate_handle(
+                """() => {
+                    const label = Array.from(document.querySelectorAll("label.dot-form__label"))
+                        .find(el => (el.innerText || el.textContent || "").trim() === "Finish Size");
+                    if (!label) return null;
+                    const row = label.closest(".dot-form__row, .row, .form-group, div") || label.parentElement;
+                    return row ? row.querySelector("input.k-input[role='listbox']") : null;
+                }"""
+            )
+            size_input = self.page.locator("input.k-input[role='listbox']").filter(
+                has=self.page.locator("xpath=ancestor::*[.//label[normalize-space()='Finish Size']]")
+            ).first
+
+        size_input.wait_for(state="visible", timeout=self._timeout_ms)
+        size_input.click()
+        size_input.fill("")
+        size_input.fill(size)
+        size_input.press("Enter")
+        self.wait_for_spinner_to_disappear()
+
+    def add_notes(self, notes: str) -> None:
+        notes = (notes or "").strip()
+        if not notes:
+            self._debug("No notes provided; skipping description field")
+            return
+
+        self._debug(f"Adding notes to Description field: {notes}")
+        appended = self.page.evaluate(
+            """(notes) => {
+                // Find the label with text "Description"
+                const label = Array.from(document.querySelectorAll("label.dot-form__label"))
+                    .find(el => (el.innerText || el.textContent || "").trim() === "Description");
+                if (!label) return false;
+
+                // Look for textarea in the sibling or parent row
+                const row = label.closest(".dot-form__row, .row, .form-group, div") || label.parentElement;
+                const field = row
+                    ? (row.querySelector("textarea") || row.querySelector("input[type='text']"))
+                    : null;
+                if (!field) return false;
+
+                // Append with blank line + "Notes:" heading + notes text
+                const existing = (field.value || "").trimEnd();
+                const separator = existing ? "\\n\\n" : "";
+                field.value = existing + separator + "Notes:\\n" + notes;
+
+                // Trigger Angular/React change detection
+                field.dispatchEvent(new Event("input", { bubbles: true }));
+                field.dispatchEvent(new Event("change", { bubbles: true }));
+                return true;
+            }""",
+            notes,
+        )
+
+        if not appended:
+            self._debug("Description field not found; notes were not added")
+        else:
+            self.wait_for_spinner_to_disappear()
 
     # ------------------------------------------------------------------
     # Stock picker internals
@@ -126,7 +285,8 @@ class JobDetailsTab(BasePage):
                 if (noDataNode) return true;
                 if (!stockNames.length) return false;
                 if (!term) return true;
-                return stockNames.some(text => text.includes(term));
+                const termNorm = term.replace(/\\s+/g, " ").trim().toLowerCase();
+                return stockNames.some(text => text.includes(termNorm));
             }""",
             arg=term,
             timeout=self._timeout_ms,
@@ -166,9 +326,10 @@ class JobDetailsTab(BasePage):
                         .replace(/\\s+/g, " ").trim()
                     })).filter(entry => entry.text);
 
-                    let target = entries.find(entry => entry.text.toLowerCase() === term) || null;
-                    if (!target) target = entries.find(entry => entry.text.toLowerCase().startsWith(term)) || null;
-                    if (!target) target = entries.find(entry => entry.text.toLowerCase().includes(term)) || null;
+                    const termNorm = term.replace(/\\s+/g, " ").trim().toLowerCase();
+                    let target = entries.find(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase() === termNorm) || null;
+                    if (!target) target = entries.find(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase().startsWith(termNorm)) || null;
+                    if (!target) target = entries.find(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase().includes(termNorm)) || null;
                     if (!target) return "__NO_MATCH__";
 
                     const clickable = target.cell || target.node;
@@ -187,6 +348,7 @@ class JobDetailsTab(BasePage):
             raise InvalidStockSearchError(
                 f"Invalid stock search term '{term}': no matching stock found in Stock Picker"
             )
+        self.wait_for_spinner_to_disappear()
         self._wait_for_stock_row_selected(selected_text)
 
     def _wait_for_stock_row_selected(self, selected_text: str) -> None:

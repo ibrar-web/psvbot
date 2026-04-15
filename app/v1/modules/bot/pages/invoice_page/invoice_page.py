@@ -57,6 +57,9 @@ class InvoicePage(BasePage):
                 requirements.get("quantity", ""),
             ),
             "job_charges": requirements.get("job_charges", []),
+            "notes": quote_record.get("notes", requirements.get("notes", "")),
+            "sides": quote_record.get("sides", requirements.get("sides", "")),
+            "size": requirements.get("size", quote_record.get("size", "")),
         }
 
         normalized = (resume_from or "auto").strip().lower()
@@ -73,22 +76,26 @@ class InvoicePage(BasePage):
             self._debug("Account Information already complete; resuming from Job Details")
             should_start_from_job = True
 
-        if not should_start_from_job:
-            self._retry_step(
-                "account_information",
-                lambda: self._complete_account_information(contact_data),
-            )
-        else:
-            self._retry_step(
-                "switch_to_job_details",
-                self._switch_to_job_details_tab,
-            )
+        self.start_warning_auto_dismiss()
+        try:
+            if not should_start_from_job:
+                self._retry_step(
+                    "account_information",
+                    lambda: self._complete_account_information(contact_data),
+                )
+            else:
+                self._retry_step(
+                    "switch_to_job_details",
+                    self._switch_to_job_details_tab,
+                )
 
-        self._retry_step("job_details", lambda: self._complete_job_details(job_data))
-        return self._retry_step(
-            "estimate_summary_download",
-            lambda: self._download_from_estimate_summary(customer_selection_status),
-        )
+            self._retry_step("job_details", lambda: self._complete_job_details(job_data))
+            return self._retry_step(
+                "estimate_summary_download",
+                lambda: self._download_from_estimate_summary(customer_selection_status),
+            )
+        finally:
+            self.stop_warning_auto_dismiss()
 
     def _retry_step(self, step_name: str, callback, retries: int = 1):
         attempts = retries + 1
@@ -97,7 +104,8 @@ class InvoicePage(BasePage):
             try:
                 if attempt > 1:
                     self._debug(f"Retrying step '{step_name}' ({attempt}/{attempts})")
-                return callback()
+                result = callback()
+                return result
             except Exception as exc:
                 last_exc = exc
                 self._debug(f"Step '{step_name}' failed ({attempt}/{attempts}): {exc}")
@@ -119,6 +127,10 @@ class InvoicePage(BasePage):
         job_details_tab = JobDetailsTab(self.page, self.timeout)
         job_details_tab.wait_until_active()
         job_details_tab.select_stock_from_picker(job_data)
+        job_details_tab.add_size(job_data.get("size",""))
+        job_details_tab.add_notes(job_data.get("notes", ""))
+        job_details_tab.select_bleed()
+        job_details_tab.select_sides(job_data.get("sides", ""))
         job_details_tab.configure_price_breakup(job_data)
 
     def _download_from_estimate_summary(

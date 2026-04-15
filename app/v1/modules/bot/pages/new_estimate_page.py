@@ -181,10 +181,18 @@ class NewEstimatePage(BasePage):
 
     def _wait_for_invoice_page(self) -> None:
         self._debug("Waiting for invoice page navigation")
-        self.page.wait_for_url(
-            f"**{self.INVOICE_PAGE_URL_PART}**",
+        if self.INVOICE_PAGE_URL_PART in self.page.url:
+            self._debug("Already on invoice page, skipping wait")
+            return
+        # Use wait_for_function instead of wait_for_url because Angular uses
+        # hash-based routing (#/...) which does not trigger a real navigation
+        # event — wait_for_url hangs indefinitely in headless/container mode.
+        self.page.wait_for_function(
+            """(urlPart) => window.location.href.includes(urlPart)""",
+            arg=self.INVOICE_PAGE_URL_PART,
             timeout=self._timeout_ms,
         )
+        self._debug(f"Invoice page URL confirmed: {self.page.url}")
 
     def _is_invoice_page(self) -> bool:
         return self.INVOICE_PAGE_URL_PART in (self.page.url or "")

@@ -32,15 +32,17 @@ DUMMY_QUOTE = {
     "contact_email": "test@example.com",
     "contact_phone": "555-000-1234",
     "requirements": {
-        "stock_search_term": "gpa",    # partial name of a stock that exists in PrintSmith
-        "price_breakup_quantity": "100",
+        "stock_search_term": "Kelly Digital Silk 370/Ctn Cover",    # partial name of a stock that exists in PrintSmith
+        "price_breakup_quantity": "183",
         "job_charges": [
-        "precision cutting",
-        "cover stock",
-        "Hand folding",
+        "Magnetic badge clips",
+        "mail merge",
         "lanyards",
-    ],             
+    ],
+    "size" : "4 x 3"              
     },
+    "notes" : "Require with in the thirty days",
+    "sides" : "double"
 }
 
 
@@ -195,10 +197,6 @@ def test_full_flow():
                 print("         (not deleted — inspect it manually)")
             browser.close()
 
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     results = {
