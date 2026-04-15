@@ -12,7 +12,6 @@ from playwright.sync_api import sync_playwright
 
 from app.v1.common.storage_service import (
     build_storage_key,
-    generate_presigned_download_url,
     upload_bytes_to_storage,
 )
 from app.v1.core.settings import BUCKET_NAME, QUOTE_SUMMARY_STORAGE_ROOT
@@ -55,16 +54,8 @@ def _build_quick_access_url(base_url: str) -> str:
 
 def _build_summary_output_path(quote_record: Optional[Dict[str, Any]], summary_file_name: str) -> Path:
     root = Path(QUOTE_SUMMARY_STORAGE_ROOT)
-    tenant_id = str((quote_record or {}).get("tenant_id") or "adhoc").strip() or "adhoc"
-    quote_id = str(
-        (quote_record or {}).get("_id")
-        or (quote_record or {}).get("id")
-        or (quote_record or {}).get("quote_id")
-        or "manual"
-    ).strip() or "manual"
-    target_dir = root / tenant_id / quote_id
-    target_dir.mkdir(parents=True, exist_ok=True)
-    return target_dir / summary_file_name
+    root.mkdir(parents=True, exist_ok=True)
+    return root / summary_file_name
 
 
 def _upload_summary_file(
@@ -83,7 +74,7 @@ def _upload_summary_file(
         or "manual"
     ).strip() or "manual"
 
-    folder_prefix = f"{QUOTE_SUMMARY_STORAGE_ROOT}/{tenant_id}/quotations/{quote_id}"
+    folder_prefix = f"{QUOTE_SUMMARY_STORAGE_ROOT}/{tenant_id}/{quote_id}"
     storage_key = build_storage_key(folder_prefix, summary_file_name)
     upload_bytes_to_storage(
         key=storage_key,
@@ -95,12 +86,20 @@ def _upload_summary_file(
         },
     )
 
+    try:
+        saved_summary_path.unlink(missing_ok=True)
+    except Exception:
+        logger.exception(
+            "Failed to remove local summary copy after GCS upload: %s",
+            saved_summary_path,
+        )
+
     return {
         "summary_file_name": summary_file_name,
-        "summary_file_path": str(saved_summary_path),
+        "summary_file_path": None,
+        "summary_folder_prefix": folder_prefix,
         "summary_file_storage_key": storage_key,
-        "summary_file_gcs_uri": f"gs://{BUCKET_NAME}/{storage_key}",
-        "summary_file_url": generate_presigned_download_url(key=storage_key),
+        "summary_file_url": storage_key,
     }
 
 
@@ -168,6 +167,23 @@ def _ensure_within_timeout(started_at: float, step: str) -> None:
         raise PlaywrightTimeoutError(
             f"PSV bot flow timeout after {int(elapsed)}s at step '{step}'"
         )
+
+
+def _cleanup_local_invoice_file(invoice_path: Optional[Path]) -> None:
+    if invoice_path is None:
+        return
+    try:
+        invoice_path.unlink(missing_ok=True)
+    except Exception:
+        logger.exception("Failed to delete temporary invoice file")
+        return
+
+    try:
+        parent = invoice_path.parent
+        if parent.exists() and not any(parent.iterdir()):
+            parent.rmdir()
+    except Exception:
+        logger.exception("Failed to delete temporary invoice directory")
 
 
 def run_estimate_flow(
@@ -329,11 +345,7 @@ def run_estimate_flow(
         }
 
     finally:
-        if invoice_path is not None:
-            try:
-                invoice_path.unlink(missing_ok=True)
-            except Exception:
-                logger.exception("Failed to delete temporary invoice file")
+        _cleanup_local_invoice_file(invoice_path)
         if browser is not None:
             try:
                 browser.close()
