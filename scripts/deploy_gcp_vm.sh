@@ -76,6 +76,7 @@ setup_venv() {
     . "${VENV_DIR}/bin/activate"
     python -m pip install --upgrade pip
     python -m pip install -r "${APP_DIR}/requirements.txt"
+    python -m playwright install chromium
 
     if [ ! -x "${VENV_DIR}/bin/uvicorn" ]; then
         echo "uvicorn is not installed in ${VENV_DIR}"
