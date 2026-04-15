@@ -19,9 +19,8 @@ if [[ ! -x ".venv/bin/python" ]]; then
   exit 1
 fi
 
-source .venv/bin/activate
-uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" --reload
 
+source .venv/bin/activate
 exec .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" --reload
 
 
