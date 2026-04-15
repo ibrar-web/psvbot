@@ -94,6 +94,8 @@ class NewEstimatePage(BasePage):
         locator.wait_for(state="visible", timeout=self._timeout_ms)
         locator.click()
         locator.fill(value, timeout=self._timeout_ms)
+        # Give the dropdown a moment to open and populate after typing
+        self.page.wait_for_timeout(3500)
         # Trigger Angular/Kendo change detection if fill alone is not enough
         current = locator.input_value()
         if (current or "").strip() != (value or "").strip():
@@ -115,6 +117,7 @@ class NewEstimatePage(BasePage):
                     value or "",
                 ],
             )
+            self.page.wait_for_timeout(3500)
 
     def _select_customer_dropdown_option(self, search_text: str) -> str:
         try:
@@ -129,19 +132,18 @@ class NewEstimatePage(BasePage):
                       const text = (node.innerText || node.textContent || "").trim().toLowerCase();
                       return text.includes("no data found");
                     });
+                    if (noDataNode) return "no_data_found";
+                    if (nodes.length === 0) return false;
                     const target = nodes.find(node => {
                       const text = (node.innerText || node.textContent || "").trim().toLowerCase();
-                      return normalizedSearch && text.includes(normalizedSearch);
+                      return normalizedSearch && text === normalizedSearch;
                     });
                     if (target) {
                       target.scrollIntoView({ block: "center" });
                       target.click();
                       return "selected";
                     }
-                    if (noDataNode || (normalizedSearch && nodes.length === 0)) {
-                      return "no_data_found";
-                    }
-                    return false;
+                    return "no_exact_match";
                 }""",
                 arg=search_text.strip().lower(),
                 timeout=self._timeout_ms,
