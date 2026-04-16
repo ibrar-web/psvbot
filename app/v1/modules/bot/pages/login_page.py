@@ -28,6 +28,10 @@ class LoginPage(BasePage):
     )
     INVALID_LOGIN_TEXT = "Invalid Login ID or Password: Please try again."
     INVALID_LOGIN_FRAGMENT = "invalid login id or password"
+    INVALID_LOGIN_USER_MESSAGE = (
+        "PrintSmith login failed because the stored PSV credentials are invalid. "
+        "Update the store's PSV credentials with valid values before trying again."
+    )
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -91,7 +95,7 @@ class LoginPage(BasePage):
         while time.monotonic() < deadline:
             invalid_login_message = self._read_invalid_login_message()
             if invalid_login_message:
-                raise InvalidLoginCredentialsError(invalid_login_message)
+                raise InvalidLoginCredentialsError(self.INVALID_LOGIN_USER_MESSAGE)
 
             if _logged_in(self.page.url):
                 self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
