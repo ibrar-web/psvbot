@@ -14,6 +14,7 @@ class InvalidStockSearchError(Exception):
 
 
 class JobDetailsTab(BasePage):
+    CHARGE_SEARCH_TIMEOUT_MS = 3000
     JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
     JOB_DESCRIPTION_INPUT = "xpath=//textarea[@name='digital-descriptionField']"
     STOCK_PICKER_BUTTON = "xpath=//a[@ptooltip='Stock Picker']"
@@ -486,56 +487,51 @@ class JobDetailsTab(BasePage):
         self._debug("Charge search: sending input term")
 
         try:
-            self.page.wait_for_function(
+            selection_result = self.page.wait_for_function(
                 """(term) => {
+                    const normalizedTerm = (term || "").trim().toLowerCase();
+                    if (!normalizedTerm) return "__NO_MATCH__";
+
                     const items = Array.from(document.querySelectorAll(
                       ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
                     ));
-                    return items
-                      .filter(item => {
+                    const visibleItems = items.filter(item => {
                         const style = window.getComputedStyle(item);
                         return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
-                      })
-                      .map(item => (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim())
-                      .filter(Boolean).length > 0;
+                    });
+
+                    const noDataNode = Array.from(document.querySelectorAll(
+                      ".k-animation-container .k-nodata, .k-list .k-nodata, .k-no-data, .k-list-nodata"
+                    )).find(node => {
+                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                      return !text || text.includes("no data") || text.includes("no records");
+                    });
+                    if (noDataNode) return "__NO_MATCH__";
+
+                    if (!visibleItems.length) return false;
+
+                    const normalized = visibleItems.map(item => ({
+                      node: item,
+                      text: (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase()
+                    }));
+
+                    let target = normalized.find(entry => entry.text === normalizedTerm)?.node || null;
+                    if (!target) target = normalized.find(entry => entry.text.startsWith(normalizedTerm))?.node || null;
+                    if (!target) target = normalized.find(entry => entry.text.includes(normalizedTerm))?.node || null;
+
+                    if (!target) return "__NO_MATCH__";
+                    target.scrollIntoView({ block: "center" });
+                    target.click();
+                    return "__SELECTED__";
                 }""",
                 arg=term,
-                timeout=self._timeout_ms,
-            )
+                timeout=min(self._timeout_ms, self.CHARGE_SEARCH_TIMEOUT_MS),
+            ).json_value()
         except PlaywrightTimeoutError:
-            self._debug(f"Charge search dropdown empty; skipping charge: {term}")
-            return False
+            selection_result = "__NO_MATCH__"
 
-        selected = self.page.wait_for_function(
-            """(term) => {
-                if (!term) return false;
-                const items = Array.from(document.querySelectorAll(
-                  ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
-                ));
-                const visibleItems = items.filter(item => {
-                  const style = window.getComputedStyle(item);
-                  return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
-                });
-                const normalized = visibleItems.map(item => ({
-                  node: item,
-                  text: (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase()
-                }));
-
-                const termLower = term.toLowerCase();
-                let target = normalized.find(entry => entry.text === termLower)?.node || null;
-                if (!target) target = normalized.find(entry => entry.text.startsWith(termLower))?.node || null;
-                if (!target) target = normalized.find(entry => entry.text.includes(termLower))?.node || null;
-
-                if (!target) return false;
-                target.scrollIntoView({ block: "center" });
-                target.click();
-                return true;
-            }""",
-            arg=term,
-            timeout=self._timeout_ms,
-        ).json_value()
-        self._debug("Charge search: selection function ran")
-        if not selected:
+        self._debug(f"Charge search: selection result={selection_result}")
+        if selection_result != "__SELECTED__":
             self._debug(f"Charge search found no matching item; skipping charge: {term}")
             return False
 
