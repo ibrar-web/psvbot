@@ -271,42 +271,48 @@ class JobDetailsTab(BasePage):
         filter_input.press("Enter")
         self._debug("Search text entered; waiting for filtered stock rows")
         self.wait_for_spinner_to_disappear()
-        self.page.wait_for_function(
-            """(term) => {
-                const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
-                  .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
-                if (!btn) return false;
+        try:
+            self.page.wait_for_function(
+                """(term) => {
+                    const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                      .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                    if (!btn) return false;
 
-                const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
-                const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"))
-                  .filter(row => {
-                    const style = window.getComputedStyle(row);
-                    return style.display !== "none" && style.visibility !== "hidden" && row.offsetParent !== null;
-                  });
+                    const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
+                    const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"))
+                      .filter(row => {
+                        const style = window.getComputedStyle(row);
+                        return style.display !== "none" && style.visibility !== "hidden" && row.offsetParent !== null;
+                      });
 
-                const stockNames = rows
-                  .map(row => {
-                    const cell = row.querySelector("td[aria-colindex='1']");
-                    return (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase();
-                  })
-                  .filter(Boolean);
+                    const stockNames = rows
+                      .map(row => {
+                        const cell = row.querySelector("td[aria-colindex='1']");
+                        return (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase();
+                      })
+                      .filter(Boolean);
 
-                const noDataNode = Array.from(modalRoot.querySelectorAll(
-                  ".k-grid-norecords, .k-no-data, .k-grid-nodata, .k-nodata"
-                )).find(node => {
-                  const text = (node.innerText || node.textContent || "").trim().toLowerCase();
-                  return !text || text.includes("no data") || text.includes("no records");
-                });
+                    const noDataNode = Array.from(modalRoot.querySelectorAll(
+                      ".k-grid-norecords, .k-no-data, .k-grid-nodata, .k-nodata"
+                    )).find(node => {
+                      const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                      return !text || text.includes("no data") || text.includes("no records");
+                    });
 
-                if (noDataNode) return true;
-                if (!stockNames.length) return false;
-                if (!term) return true;
-                const termNorm = term.replace(/\\s+/g, " ").trim().toLowerCase();
-                return stockNames.some(text => text.includes(termNorm));
-            }""",
-            arg=term,
-            timeout=self._timeout_ms,
-        )
+                    if (noDataNode) return true;
+                    if (!stockNames.length) return false;
+                    if (!term) return true;
+                    const termNorm = term.replace(/\\s+/g, " ").trim().toLowerCase();
+                    return stockNames.some(text => text.includes(termNorm));
+                }""",
+                arg=term,
+                timeout=self._timeout_ms,
+            )
+        except PlaywrightTimeoutError as exc:
+            logger.error("Timed out waiting for stock rows for '%s' — closing modal", term)
+            self._cancel_stock_selection()
+            raise Exception("The Entered stock doesn't match any row")
+
 
     def _select_matching_stock_row(self, term: str) -> None:
         self._debug(f"Selecting best matching stock row for: {term}")
