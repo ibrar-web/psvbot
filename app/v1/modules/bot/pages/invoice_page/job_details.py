@@ -467,14 +467,16 @@ class JobDetailsTab(BasePage):
             if not term:
                 continue
             self._debug(f"Adding charge from search: {term}")
-            self._select_charge_from_search(term)
+            selected = self._select_charge_from_search(term)
+            if not selected:
+                self._debug(f"Skipping unmatched or empty charge search result: {term}")
 
         self._debug("Saving selected job charges")
         self.wait_for_spinner_to_disappear()
         self.click(self.CHARGES_SAVE_BUTTON)
         self.wait_for_spinner_to_disappear()
 
-    def _select_charge_from_search(self, term: str) -> None:
+    def _select_charge_from_search(self, term: str) -> bool:
         self._debug(f"Charge search: term={term}")
         self.wait_for_spinner_to_disappear()
         search_input = self._get_ready_charges_search_input()
@@ -483,22 +485,26 @@ class JobDetailsTab(BasePage):
         search_input.fill(term)
         self._debug("Charge search: sending input term")
 
-        self.page.wait_for_function(
-            """(term) => {
-                const items = Array.from(document.querySelectorAll(
-                  ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
-                ));
-                return items
-                  .filter(item => {
-                    const style = window.getComputedStyle(item);
-                    return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
-                  })
-                  .map(item => (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim())
-                  .filter(Boolean).length > 0;
-            }""",
-            arg=term,
-            timeout=self._timeout_ms,
-        )
+        try:
+            self.page.wait_for_function(
+                """(term) => {
+                    const items = Array.from(document.querySelectorAll(
+                      ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
+                    ));
+                    return items
+                      .filter(item => {
+                        const style = window.getComputedStyle(item);
+                        return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
+                      })
+                      .map(item => (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim())
+                      .filter(Boolean).length > 0;
+                }""",
+                arg=term,
+                timeout=self._timeout_ms,
+            )
+        except PlaywrightTimeoutError:
+            self._debug(f"Charge search dropdown empty; skipping charge: {term}")
+            return False
 
         selected = self.page.wait_for_function(
             """(term) => {
@@ -530,11 +536,13 @@ class JobDetailsTab(BasePage):
         ).json_value()
         self._debug("Charge search: selection function ran")
         if not selected:
-            raise PlaywrightTimeoutError(f"Could not select charge from search: {term}")
+            self._debug(f"Charge search found no matching item; skipping charge: {term}")
+            return False
 
         self.wait_for_spinner_to_disappear()
         self._debug("Charge search: about to confirm selected charge item")
         self._confirm_charge_item(term)
+        return True
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")
