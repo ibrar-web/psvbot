@@ -174,51 +174,41 @@ class JobDetailsTab(BasePage):
     def add_size(self, size: str) -> None:
         size = (size or "").strip()
         if not size:
-            self._debug("No size provided; skipping Finish Size field")
+            self._debug("No size provided; skipping Finish Size field set default value of PSV")
             return
 
         self._debug(f"Setting Finish Size: {size}")
         self.wait_for_spinner_to_disappear()
 
-        # Find the k-input that lives in the same row as the "Finish Size" label
-        input_found = self.page.evaluate(
-            """() => {
+
+        typed = self.page.evaluate(
+            """(size) => {
                 const label = Array.from(document.querySelectorAll("label.dot-form__label"))
                     .find(el => (el.innerText || el.textContent || "").trim() === "Finish Size");
                 if (!label) return false;
                 const row = label.closest(".dot-form__row, .row, .form-group, div") || label.parentElement;
-                const input = row ? row.querySelector("input.k-input[role='listbox']") : null;
-                return !!input;
-            }"""
+                const input = row ? row.querySelector("input.k-input") : null;
+                if (!input) return false;
+                input.focus();
+                input.value = "";
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+                input.value = size;
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+                input.dispatchEvent(new Event("change", { bubbles: true }));
+                return true;
+            }""",
+            size,
         )
-        if not input_found:
+
+        if not typed:
             self._debug("Finish Size input not found; skipping")
             return
 
-        # Click and fill the input via Playwright locator
+        # Press Enter on the input to confirm without selecting from dropdown
         size_input = self.page.locator(
             "label.dot-form__label:has-text('Finish Size') ~ * input.k-input, "
             "label.dot-form__label:has-text('Finish Size') + * input.k-input"
         ).first
-        # Fallback: find by proximity using JS handle
-        if not size_input.is_visible():
-            size_input = self.page.evaluate_handle(
-                """() => {
-                    const label = Array.from(document.querySelectorAll("label.dot-form__label"))
-                        .find(el => (el.innerText || el.textContent || "").trim() === "Finish Size");
-                    if (!label) return null;
-                    const row = label.closest(".dot-form__row, .row, .form-group, div") || label.parentElement;
-                    return row ? row.querySelector("input.k-input[role='listbox']") : null;
-                }"""
-            )
-            size_input = self.page.locator("input.k-input[role='listbox']").filter(
-                has=self.page.locator("xpath=ancestor::*[.//label[normalize-space()='Finish Size']]")
-            ).first
-
-        size_input.wait_for(state="visible", timeout=self._timeout_ms)
-        size_input.click()
-        size_input.fill("")
-        size_input.fill(size)
         size_input.press("Enter")
         self.wait_for_spinner_to_disappear()
 
