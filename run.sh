@@ -26,3 +26,5 @@ exec .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port "${PORT:-8001}" 
 
 # sudo systemctl daemon-reload
 # sudo systemctl restart psvbot
+
+# sudo journalctl -u psvbot -f
