@@ -26,12 +26,10 @@ def _parse_log_date(path: Path) -> date | None:
     if not stem.startswith("bot_log_"):
         return None
 
-    parts = stem.split("_")
-    if len(parts) < 3:
-        return None
-
-    raw_date = parts[2]
-    if len(raw_date) != 8 or not raw_date.isdigit():
+    suffix = stem[len("bot_log_") :]
+    if len(suffix) >= 8 and suffix[:8].isdigit():
+        raw_date = suffix[:8]
+    else:
         return None
 
     try:

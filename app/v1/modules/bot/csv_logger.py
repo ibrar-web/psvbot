@@ -11,8 +11,9 @@ class CSVHandler(logging.Handler):
         super().__init__()
         self._path = path
         self._lock = threading.Lock()
-        with self._path.open("w", newline="", encoding="utf-8") as f:
-            csv.writer(f).writerow(["timestamp", "source", "message"])
+        if not self._path.exists() or self._path.stat().st_size == 0:
+            with self._path.open("w", newline="", encoding="utf-8") as f:
+                csv.writer(f).writerow(["timestamp", "source", "message"])
 
     def emit(self, record: logging.LogRecord) -> None:
         timestamp = datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
@@ -29,13 +30,12 @@ _csv_handler: CSVHandler | None = None
 
 def init(log_dir: str = "logs") -> Path:
     """
-    Create a timestamped CSV log file and attach a CSVHandler to the bot's
-    root logger. Call once at startup — all logger.info() calls across every
-    bot module will flow here automatically.
+    Attach a CSVHandler to the bot logger that appends to the current day's
+    CSV file. All logger.info() calls across every bot module flow here.
     """
     global _csv_path, _csv_handler
     Path(log_dir).mkdir(parents=True, exist_ok=True)
-    filename = datetime.now().strftime("bot_log_%Y%m%d_%H%M%S.csv")
+    filename = datetime.now().strftime("bot_log_%Y%m%d.csv")
     _csv_path = Path(log_dir) / filename
 
     shutdown()
