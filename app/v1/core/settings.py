@@ -41,6 +41,10 @@ QUEUE_ENFORCE_MACHINE_ASSIGNMENT = (
     os.getenv("QUEUE_ENFORCE_MACHINE_ASSIGNMENT", "true").strip().lower()
     == "true"
 )
+BOT_LOG_LOCAL_DIR = os.getenv("BOT_LOG_LOCAL_DIR", "logs").strip() or "logs"
+BOT_LOG_STORAGE_ROOT = os.getenv("BOT_LOG_STORAGE_ROOT", "logs").strip() or "logs"
+BOT_LOG_ARCHIVE_RUN_HOUR = int(os.getenv("BOT_LOG_ARCHIVE_RUN_HOUR", "0"))
+BOT_LOG_ARCHIVE_RUN_MINUTE = int(os.getenv("BOT_LOG_ARCHIVE_RUN_MINUTE", "10"))
 MAIN_SERVER_API_BASE_URL = os.getenv("MAIN_SERVER_API_BASE_URL", "").strip().rstrip("/")
 MAIN_SERVER_API_TOKEN = os.getenv("MAIN_SERVER_API_TOKEN", "").strip()
 

@@ -35,6 +35,7 @@ def create_app() -> FastAPI:
     mongo_client = get_client()
     app.state.mongo_client = mongo_client
     app.state.queue_poller_task = None
+    app.state.log_archive_task = None
     allow_origins = (
         ["*"]
         if CORS_ALLOW_ORIGINS.strip() == "*"
@@ -123,12 +124,20 @@ def create_app() -> FastAPI:
             recover_incomplete_jobs,
             schedule_queue_poll_if_idle,
         )
+        from app.v1.modules.bot.services.log_archive_service import (
+            archive_previous_day_logs,
+            run_daily_log_archive_forever,
+        )
 
         await init_beanie(
             database=mongo_client[MONGO_DB],
             document_models=[JobQueueDocument],
         )
         await recover_incomplete_jobs()
+        try:
+            await asyncio.to_thread(archive_previous_day_logs)
+        except Exception:
+            logging.getLogger(__name__).exception("Initial bot log archive run failed")
 
         async def _queue_poller() -> None:
             while True:
@@ -136,6 +145,7 @@ def create_app() -> FastAPI:
                 await asyncio.sleep(await get_queue_poll_sleep_seconds())
 
         app.state.queue_poller_task = asyncio.create_task(_queue_poller())
+        app.state.log_archive_task = asyncio.create_task(run_daily_log_archive_forever())
 
     @app.on_event("shutdown")
     async def shutdown_event() -> None:
@@ -144,6 +154,11 @@ def create_app() -> FastAPI:
             queue_poller_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await queue_poller_task
+        log_archive_task = getattr(app.state, "log_archive_task", None)
+        if log_archive_task is not None:
+            log_archive_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await log_archive_task
         mongo_client.close()
 
     return app

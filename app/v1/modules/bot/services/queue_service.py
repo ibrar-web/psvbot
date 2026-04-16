@@ -41,7 +41,10 @@ def _flush_log_handlers() -> None:
 
 
 def _cleanup_after_job() -> None:
+    from app.v1.modules.bot import csv_logger
+
     _flush_log_handlers()
+    csv_logger.shutdown()
     gc.collect()
 
 

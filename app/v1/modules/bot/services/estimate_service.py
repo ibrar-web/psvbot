@@ -22,7 +22,7 @@ from app.v1.modules.bot.driver import create_browser_page
 from app.v1.modules.bot.pages.estimate_page import EstimatePage
 from app.v1.modules.bot.pages.invoice_page.invoice_page import InvoicePage
 from app.v1.modules.bot.pages.invoice_page.job_details import InvalidStockSearchError
-from app.v1.modules.bot.pages.login_page import LoginPage
+from app.v1.modules.bot.pages.login_page import InvalidLoginCredentialsError, LoginPage
 from app.v1.modules.bot.pages.logout_page import LogoutPage
 from app.v1.modules.bot.pages.new_estimate_page import NewEstimatePage
 
@@ -314,6 +314,18 @@ def run_estimate_flow(
                     **upload_result,
                 }
 
+    except InvalidLoginCredentialsError as exc:
+        flow_failed = True
+        logger.warning("Estimate flow stopped due to invalid login credentials")
+        return {
+            "status": "error",
+            "message": str(exc),
+            "step": current_step,
+            "logout_succeeded": False,
+            "logout_error": None,
+            "customer_selection": customer_selection_status,
+        }
+
     except PlaywrightTimeoutError as exc:
         flow_failed = True
         if page is not None:
@@ -346,6 +358,7 @@ def run_estimate_flow(
 
     finally:
         _cleanup_local_invoice_file(invoice_path)
+        csv_logger.shutdown()
         if browser is not None:
             try:
                 browser.close()
