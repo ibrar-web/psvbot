@@ -155,14 +155,14 @@ class JobDetailsTab(BasePage):
 
     def select_sides(self, sides: str) -> None:
         sides = (sides or "").strip().lower()
-        if sides not in ("single", "double"):
+        if sides not in ("simplex", "duplex"):
             self._debug(f"Invalid or missing sides value '{sides}'; skipping")
             return
 
         self._debug(f"Selecting sides: {sides}")
         self.wait_for_spinner_to_disappear()
 
-        if sides == "single":
+        if sides == "simplex":
             btn = self.page.locator("button[kendobutton] span", has_text="Simplex").first
         else:
             btn = self.page.locator("button[kendobutton] span", has_text="Duplex").first
