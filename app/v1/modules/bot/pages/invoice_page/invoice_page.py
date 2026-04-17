@@ -42,6 +42,8 @@ class InvoicePage(BasePage):
         """
         quote_record = quote_record or {}
         requirements = quote_record.get("requirements") or {}
+        self._debug(f"Invoice flow quote_record={quote_record}")
+        self._debug(f"Invoice flow requirements={requirements}")
         contact_data = {
             "account_name": quote_record.get("account_name", ""),
             "company_name": quote_record.get(
@@ -68,6 +70,7 @@ class InvoicePage(BasePage):
             "sides": requirements.get("sides", ""),
             "size": requirements.get("size", quote_record.get("size", "")),
         }
+        self._debug(f"Invoice flow job_data={job_data}")
 
         normalized = (resume_from or "auto").strip().lower()
         customer_selection_status = customer_selection_status or {}
