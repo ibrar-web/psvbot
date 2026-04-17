@@ -154,12 +154,14 @@ class JobDetailsTab(BasePage):
         self.wait_for_spinner_to_disappear()
 
     def select_sides(self, sides: str) -> None:
-        sides = (sides or "").strip().lower()
+        raw_sides = "" if sides is None else str(sides)
+        self._debug(f"Sides: user provided value='{raw_sides}'")
+        sides = raw_sides.strip().lower()
         if sides not in ("simplex", "duplex"):
-            self._debug(f"Invalid or missing sides value '{sides}'; skipping")
+            self._debug(f"Sides: invalid or empty normalized value='{sides}'; skipping")
             return
 
-        self._debug(f"Selecting sides: {sides}")
+        self._debug(f"Sides: selecting normalized value='{sides}'")
         self.wait_for_spinner_to_disappear()
 
         if sides == "simplex":
@@ -168,8 +170,10 @@ class JobDetailsTab(BasePage):
             btn = self.page.locator("button[kendobutton] span", has_text="Duplex").first
 
         btn.wait_for(state="visible", timeout=self._timeout_ms)
+        self._debug(f"Sides: button visible for value='{sides}', clicking")
         btn.click()
         self.wait_for_spinner_to_disappear()
+        self._debug(f"Sides: completed for value='{sides}'")
 
     def add_size(self, size: str) -> None:
         size = (size or "").strip()

@@ -16,8 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class InvoicePage(BasePage):
-    ACCOUNT_INFORMATION_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Account Information']]"
-    JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
+    ACCOUNT_INFORMATION_TAB = (
+        "xpath=//li[@role='tab' and .//span[normalize-space()='Account Information']]"
+    )
+    JOB_DETAILS_TAB = (
+        "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
+    )
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -40,7 +44,9 @@ class InvoicePage(BasePage):
         requirements = quote_record.get("requirements") or {}
         contact_data = {
             "account_name": quote_record.get("account_name", ""),
-            "company_name": quote_record.get("company_name", quote_record.get("account_name", "")),
+            "company_name": quote_record.get(
+                "company_name", quote_record.get("account_name", "")
+            ),
             "contact_person": quote_record.get("contact_person", ""),
             "contact_email": quote_record.get("contact_email", ""),
             "contact_phone": quote_record.get("contact_phone", ""),
@@ -65,7 +71,9 @@ class InvoicePage(BasePage):
 
         normalized = (resume_from or "auto").strip().lower()
         customer_selection_status = customer_selection_status or {}
-        used_fallback_customer = bool(customer_selection_status.get("used_fallback_customer"))
+        used_fallback_customer = bool(
+            customer_selection_status.get("used_fallback_customer")
+        )
 
         should_start_from_job = normalized == "job"
         if normalized == "auto" and not used_fallback_customer:
@@ -74,7 +82,9 @@ class InvoicePage(BasePage):
             )
             should_start_from_job = True
         elif normalized == "auto" and self._is_account_information_complete():
-            self._debug("Account Information already complete; resuming from Job Details")
+            self._debug(
+                "Account Information already complete; resuming from Job Details"
+            )
             should_start_from_job = True
 
         self.start_warning_auto_dismiss()
@@ -90,7 +100,9 @@ class InvoicePage(BasePage):
                     self._switch_to_job_details_tab,
                 )
 
-            self._retry_step("job_details", lambda: self._complete_job_details(job_data))
+            self._retry_step(
+                "job_details", lambda: self._complete_job_details(job_data)
+            )
             return self._retry_step(
                 "estimate_summary_download",
                 lambda: self._download_from_estimate_summary(customer_selection_status),
@@ -129,7 +141,7 @@ class InvoicePage(BasePage):
         job_details_tab.wait_until_active()
         job_details_tab.fill_job_description(job_data)
         job_details_tab.select_stock_from_picker(job_data)
-        job_details_tab.add_size(job_data.get("size",""))
+        job_details_tab.add_size(job_data.get("size", ""))
         job_details_tab.add_notes(job_data.get("notes", ""))
         job_details_tab.select_bleed()
         job_details_tab.select_sides(job_data.get("sides", ""))
@@ -142,7 +154,9 @@ class InvoicePage(BasePage):
         estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
         self._debug("Switching to Estimate Summary tab")
         estimated_summary_tab.switch_to_tab()
-        self._debug(f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}")
+        self._debug(
+            f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}"
+        )
         self._debug("Downloading invoice from Estimate Summary")
         return estimated_summary_tab.click_us685_eestimate_and_download(
             customer_selection_status=customer_selection_status,
