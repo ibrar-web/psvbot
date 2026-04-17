@@ -15,12 +15,10 @@ class JobQueueStatus(str, Enum):
 
 class JobQueueDocument(Document):
     quotation_id: str
-    record_id: Optional[str] = None
     tenant_id: Optional[str] = None
     created_by: Optional[str] = None
     machine_name: Optional[str] = None
     status: JobQueueStatus = Field(default=JobQueueStatus.pending)
-    is_processing: bool = False
     retry_count: int = 0
     file_name: Optional[str] = None
     file_url: Optional[str] = None
