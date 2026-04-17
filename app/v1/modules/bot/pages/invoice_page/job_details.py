@@ -180,35 +180,14 @@ class JobDetailsTab(BasePage):
         self._debug(f"Setting Finish Size: {size}")
         self.wait_for_spinner_to_disappear()
 
-
-        typed = self.page.evaluate(
-            """(size) => {
-                const label = Array.from(document.querySelectorAll("label.dot-form__label"))
-                    .find(el => (el.innerText || el.textContent || "").trim() === "Finish Size");
-                if (!label) return false;
-                const row = label.closest(".dot-form__row, .row, .form-group, div") || label.parentElement;
-                const input = row ? row.querySelector("input.k-input") : null;
-                if (!input) return false;
-                input.focus();
-                input.value = "";
-                input.dispatchEvent(new Event("input", { bubbles: true }));
-                input.value = size;
-                input.dispatchEvent(new Event("input", { bubbles: true }));
-                input.dispatchEvent(new Event("change", { bubbles: true }));
-                return true;
-            }""",
-            size,
-        )
-
-        if not typed:
-            self._debug("Finish Size input not found; skipping")
-            return
-
-        # Press Enter on the input to confirm without selecting from dropdown
         size_input = self.page.locator(
             "label.dot-form__label:has-text('Finish Size') ~ * input.k-input, "
             "label.dot-form__label:has-text('Finish Size') + * input.k-input"
         ).first
+        size_input.wait_for(state="visible", timeout=self._timeout_ms)
+        size_input.click()
+        size_input.fill("")
+        size_input.fill(size)
         size_input.press("Enter")
         self.wait_for_spinner_to_disappear()
 
@@ -483,18 +462,16 @@ class JobDetailsTab(BasePage):
         self._debug("Charge search: sending input term")
 
         try:
-            selection_result = self.page.wait_for_function(
+            target_index = self.page.wait_for_function(
                 """(term) => {
-                    const normalizedTerm = (term || "").trim().toLowerCase();
-                    if (!normalizedTerm) return "__NO_MATCH__";
-
-                    const items = Array.from(document.querySelectorAll(
-                      ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
-                    ));
-                    const visibleItems = items.filter(item => {
-                        const style = window.getComputedStyle(item);
-                        return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
-                    });
+                    const normalize = str => (str || "")
+                        .normalize("NFKD")
+                        .replace(/[\\u0300-\\u036f]/g, "")
+                        .replace(/\\s+/g, " ")
+                        .trim()
+                        .toLowerCase();
+                    const normalizedTerm = normalize(term);
+                    if (!normalizedTerm) return -2;
 
                     const noDataNode = Array.from(document.querySelectorAll(
                       ".k-animation-container .k-nodata, .k-list .k-nodata, .k-no-data, .k-list-nodata"
@@ -502,39 +479,53 @@ class JobDetailsTab(BasePage):
                       const text = (node.innerText || node.textContent || "").trim().toLowerCase();
                       return !text || text.includes("no data") || text.includes("no records");
                     });
-                    if (noDataNode) return "__NO_MATCH__";
+                    if (noDataNode) return -2;
+
+                    const allItems = Array.from(document.querySelectorAll(
+                      ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
+                    ));
+                    const visibleItems = allItems.filter(item => {
+                        const style = window.getComputedStyle(item);
+                        return style.display !== "none" && style.visibility !== "hidden" && item.offsetParent !== null;
+                    });
 
                     if (!visibleItems.length) return false;
 
-                    const normalized = visibleItems.map(item => ({
-                      node: item,
-                      text: (item.innerText || item.textContent || "").replace(/\\s+/g, " ").trim().toLowerCase()
+                    const entries = visibleItems.map((node, idx) => ({
+                      idx,
+                      text: normalize(node.innerText || node.textContent || "")
                     }));
 
-                    let target = normalized.find(entry => entry.text === normalizedTerm)?.node || null;
-                    if (!target) target = normalized.find(entry => entry.text.startsWith(normalizedTerm))?.node || null;
-                    if (!target) target = normalized.find(entry => entry.text.includes(normalizedTerm))?.node || null;
+                    const match = entries.find(e => e.text === normalizedTerm)
+                               ?? entries.find(e => e.text.startsWith(normalizedTerm))
+                               ?? entries.find(e => e.text.includes(normalizedTerm))
+                               ?? null;
 
-                    if (!target) return "__NO_MATCH__";
-                    target.scrollIntoView({ block: "center" });
-                    target.click();
-                    return "__SELECTED__";
+                    if (!match) return -2;
+                    visibleItems[match.idx].scrollIntoView({ block: "nearest" });
+                    return match.idx;
                 }""",
                 arg=term,
-                timeout=min(self._timeout_ms, self.CHARGE_SEARCH_TIMEOUT_MS),
+                timeout=self._timeout_ms,
             ).json_value()
         except PlaywrightTimeoutError:
-            selection_result = "__NO_MATCH__"
+            target_index = -2
 
-        self._debug(f"Charge search: selection result={selection_result}")
-        if selection_result != "__SELECTED__":
+        self._debug(f"Charge search: target_index={target_index}")
+        if target_index == -2:
             self._debug(f"Charge search found no matching item; skipping charge: {term}")
             return False
+
+        item_locator = self.page.locator(
+            ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
+        ).filter(has=self.page.locator("visible=true")).nth(target_index)
+        item_locator.click(timeout=self._timeout_ms)
 
         self.wait_for_spinner_to_disappear()
         self._debug("Charge search: about to confirm selected charge item")
         self._confirm_charge_item(term)
         return True
+
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")
