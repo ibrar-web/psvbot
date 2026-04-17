@@ -68,7 +68,7 @@ class InvoicePage(BasePage):
             "job_charges": requirements.get("job_charges", []),
             "notes": quote_record.get("notes", requirements.get("notes", "")),
             "sides": requirements.get("sides", ""),
-            "size": requirements.get("size", quote_record.get("size", "")),
+            "size": requirements.get("size", ""),
         }
         self._debug(f"Invoice flow job_data={job_data}")
 

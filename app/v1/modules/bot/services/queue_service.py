@@ -167,6 +167,8 @@ def _build_bot_quote_record(
             "stock_search": requirements.get("stock_search", ""),
             "quantity": requirements.get("quantity", ""),
             "job_charges": requirements.get("job_charges", []),
+            "size": requirements.get("size", ""),
+            "sides": requirements.get("sides", ""),
         },
     }
 
