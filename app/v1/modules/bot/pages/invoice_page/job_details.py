@@ -526,10 +526,22 @@ class JobDetailsTab(BasePage):
         item_locator.click(timeout=self._timeout_ms)
 
         self.wait_for_spinner_to_disappear()
+
+        if term == "Set up and run mail merge:  First TWO variable data":
+            self._add_mail_merge_quantity()
+
         self._debug("Charge search: about to confirm selected charge item")
         self._confirm_charge_item(term)
         return True
 
+    def _add_mail_merge_quantity(self) -> None:
+        self._debug("Mail merge: setting quantity to 1")
+        qty_input = self.page.locator("input[name='preset_quantity']").first
+        qty_input.wait_for(state="visible", timeout=self._timeout_ms)
+        qty_input.click()
+        qty_input.fill("1")
+        qty_input.press("Enter")
+        self.wait_for_spinner_to_disappear()
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")
