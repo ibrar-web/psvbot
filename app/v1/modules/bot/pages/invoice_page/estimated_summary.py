@@ -70,6 +70,7 @@ class EstimatedSummaryTab(BasePage):
 
     def click_add_job(self) -> None:
         self._debug("Opening Add menu on Estimate Summary and selecting Add Job")
+        self.switch_to_tab()
         self.wait_for_spinner_to_disappear()
         self.wait_for_visible(self.ADD_BUTTON)
         self.click(self.ADD_BUTTON)
