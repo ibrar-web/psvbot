@@ -143,34 +143,52 @@ def _build_bot_quote_record(
     payload: Dict[str, Any], job: JobQueueDocument
 ) -> Dict[str, Any]:
     quote = payload.get("quote") or {}
-    requirements = payload.get("requirements") or quote.get("requirements") or {}
+    raw_requirements = payload.get("requirements") or []
+    tenant_credentials = payload.get("tenant_credentials") or {}
 
     quote_id = str(
-        quote.get("_id")
-        or quote.get("id")
-        or quote.get("quote_id")
-        or job.quotation_id
+        quote.get("_id") or quote.get("id") or quote.get("quote_id") or job.quotation_id
     )
 
-    return {
+    if isinstance(raw_requirements, dict):
+        raw_requirements = [raw_requirements]
+
+    requirements = []
+    for requirement in raw_requirements:
+        if not isinstance(requirement, dict):
+            continue
+        requirements.append(
+            {
+                "stock_search": requirement.get("stock_search", ""),
+                "quantity": requirement.get("quantity", ""),
+                "size": requirement.get("size", ""),
+                "sides": requirement.get("sides", ""),
+                "description": requirement.get("description", ""),
+                "job_method": requirement.get("job_method", ""),
+                "job_charges": requirement.get("job_charges", []),
+                "other_charges": requirement.get("other_charges", []),
+            }
+        )
+
+    record = {
         "_id": quote_id,
         "quote_id": quote_id,
         "tenant_id": quote.get("tenant_id"),
         "user_email": quote.get("user_email", ""),
+        "printsmith_url": tenant_credentials.get("printsmith_url") or "",
+        "printsmith_username": tenant_credentials.get("printsmith_username") or "",
+        "printsmith_password": tenant_credentials.get("printsmith_password") or "",
+        "printsmith_company": tenant_credentials.get("printsmith_company") or "",
         "account_name": quote.get("account_name", ""),
         "contact_person": quote.get("contact_person", ""),
         "contact_email": quote.get("contact_email", ""),
         "contact_phone": quote.get("contact_phone", ""),
-        "description": quote.get("description", ""),
-        "summary": quote.get("summary", ""),
-        "requirements": {
-            "stock_search": requirements.get("stock_search", ""),
-            "quantity": requirements.get("quantity", ""),
-            "job_charges": requirements.get("job_charges", []),
-            "size": requirements.get("size", ""),
-            "sides": requirements.get("sides", ""),
-        },
+        "requirements": requirements,
     }
+
+    logger.info("Normalized bot quote record: %s", record)
+    print(f"[PSV][QueueService] Normalized bot quote record: {record}")
+    return record
 
 
 async def sync_job_with_main_server(job: JobQueueDocument) -> Dict[str, Any]:
@@ -290,12 +308,23 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
     )
 
     try:
-        logger.info("Queue step=fetch_main_record queue_id=%s", getattr(job, "id", None))
+        logger.info(
+            "Queue step=fetch_main_record queue_id=%s", getattr(job, "id", None)
+        )
         payload = await fetch_main_server_record(str(job.id))
         quote = payload.get("quote") or {}
         job_data = payload.get("job") or {}
-        psv_credentials = payload.get("psv_credentials") or {}
         quote_record = _build_bot_quote_record(payload, job)
+        psv_credentials = (
+            payload.get("tenant_credentials")
+            or payload.get("psv_credentials")
+            or {
+                "printsmith_url": quote_record.get("printsmith_url", ""),
+                "printsmith_username": quote_record.get("printsmith_username", ""),
+                "printsmith_password": quote_record.get("printsmith_password", ""),
+                "printsmith_company": quote_record.get("printsmith_company", ""),
+            }
+        )
 
         if quote:
             job.quotation_id = str(
@@ -524,7 +553,9 @@ def schedule_queue_poll_if_idle() -> bool:
     global _active_poll_task
 
     if _active_poll_task is not None and not _active_poll_task.done():
-        logger.info("Queue scheduler tick skipped because previous batch is still running")
+        logger.info(
+            "Queue scheduler tick skipped because previous batch is still running"
+        )
         return False
 
     _active_poll_task = asyncio.create_task(poll_and_process_pending_jobs())

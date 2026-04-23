@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 class EstimatedSummaryTab(BasePage):
     ESTIMATE_SUMMARY_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Estimate Summary']]"
+    ADD_BUTTON = "xpath=//div[@name='add_btn_group']//button"
+    ADD_JOB_BUTTON = "xpath=//a[@name='add_job_btn']"
     CREATE_PROSPECT_BUTTON = (
         "xpath=//button[@name='create_account_button'"
         " and .//span[contains(normalize-space(),'Create Prospect')]]"
@@ -65,6 +67,15 @@ class EstimatedSummaryTab(BasePage):
             return self._download_headless(temp_dir)
         else:
             return self._download_headed(temp_dir)
+
+    def click_add_job(self) -> None:
+        self._debug("Opening Add menu on Estimate Summary and selecting Add Job")
+        self.wait_for_spinner_to_disappear()
+        self.wait_for_visible(self.ADD_BUTTON)
+        self.click(self.ADD_BUTTON)
+        self.wait_for_visible(self.ADD_JOB_BUTTON)
+        self.click(self.ADD_JOB_BUTTON)
+        self.wait_for_spinner_to_disappear()
 
     def _download_headless(self, temp_dir: Path) -> Path:
         download_timeout = max(self._timeout_ms, 120_000)

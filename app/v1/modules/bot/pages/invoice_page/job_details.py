@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Mapping
+from typing import Any
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -88,7 +89,7 @@ class JobDetailsTab(BasePage):
 
     def configure_price_breakup(self, data: Mapping[str, str]) -> None:
         quantity = str(data.get("price_breakup_quantity") or "").strip()
-        charges = data.get("job_charges") or []
+        job_charges = data.get("job_charges") or []
 
         if quantity:
             self._debug(f"Setting Price Breakup quantity: {quantity}")
@@ -99,8 +100,16 @@ class JobDetailsTab(BasePage):
             qty_loc.press("Enter")
             self.wait_for_spinner_to_disappear()
 
+        if not job_charges:
+            self._debug("No charges provided; skipping charges modal")
+            return
+
         self._open_add_new_charges_modal()
-        self._add_job_charges(charges)
+        self._add_job_charges(job_charges)
+        self._debug("Saving selected charges")
+        self.wait_for_spinner_to_disappear()
+        self.click(self.CHARGES_SAVE_BUTTON)
+        self.wait_for_spinner_to_disappear()
 
     def select_bleed(self) -> None:
         self._debug("Selecting bleed option via paper-calculator icon")
@@ -436,25 +445,21 @@ class JobDetailsTab(BasePage):
 
     def _add_job_charges(self, charges: list) -> None:
         if not charges:
-            self._debug("No job charges provided; closing charges modal")
-            self.wait_for_spinner_to_disappear()
-            self.click(self.CHARGES_SAVE_BUTTON)
-            self.wait_for_spinner_to_disappear()
+            self._debug("No job charges provided")
             return
 
         for charge in charges:
-            term = (charge or "").strip()
+            charge_data = self._normalize_charge(charge)
+            term = charge_data["charge_name"]
             if not term:
                 continue
             self._debug(f"Adding charge from search: {term}")
             selected = self._select_charge_from_search(term)
             if not selected:
                 self._debug(f"Skipping unmatched or empty charge search result: {term}")
-
-        self._debug("Saving selected job charges")
-        self.wait_for_spinner_to_disappear()
-        self.click(self.CHARGES_SAVE_BUTTON)
-        self.wait_for_spinner_to_disappear()
+                continue
+            self._fill_charge_fields(quantity=charge_data.get("quantity"))
+            self._confirm_charge_item(term)
 
     def _select_charge_from_search(self, term: str) -> bool:
         self._debug(f"Charge search: term={term}")
@@ -526,16 +531,91 @@ class JobDetailsTab(BasePage):
         item_locator.click(timeout=self._timeout_ms)
 
         self.wait_for_spinner_to_disappear()
-        self._debug("Charge search: about to confirm selected charge item")
-        self._confirm_charge_item(term)
         return True
+
+    def _fill_charge_fields(
+        self,
+        *,
+        quantity: Any = None,
+        price: Any = None,
+        description: str | None = None,
+        notes: str | None = None,
+    ) -> None:
+        self.wait_for_spinner_to_disappear()
+        self._fill_charge_input("input[name='preset_quantity']", quantity)
+        self._fill_charge_input("input[name='price']", price)
+        self._fill_charge_input("input[name='chargeDesc']", description)
+        self._fill_charge_input("input[name='chargeNotes']", notes)
+
+    def _fill_charge_input(self, selector: str, value: Any) -> None:
+        if value is None:
+            return
+        text = str(value).strip()
+        if not text:
+            return
+
+        locator = self.page.locator(f"div#charges_popup {selector}").last
+        if locator.count() == 0:
+            return
+        locator.wait_for(state="visible", timeout=self._timeout_ms)
+        locator.click()
+        locator.fill("")
+        locator.fill(text)
+        locator.press("Tab")
+        locator.evaluate(
+            """(el, newValue) => {
+                el.value = newValue;
+                el.dispatchEvent(new Event("input", { bubbles: true }));
+                el.dispatchEvent(new Event("change", { bubbles: true }));
+                el.dispatchEvent(new Event("blur", { bubbles: true }));
+            }""",
+            text,
+        )
+        self.wait_for_spinner_to_disappear()
+
+    def _normalize_charge(self, charge: Any) -> dict[str, Any]:
+        if isinstance(charge, Mapping):
+            return {
+                "charge_name": str(
+                    charge.get("charge_name")
+                    or charge.get("name")
+                    or charge.get("charge")
+                    or ""
+                ).strip(),
+                "quantity": charge.get("quantity"),
+                "price": charge.get("price"),
+                "description": str(charge.get("description") or "").strip(),
+            }
+        return {
+            "charge_name": str(charge or "").strip(),
+            "quantity": None,
+            "price": None,
+            "description": "",
+        }
 
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")
-        confirm_loc = self._loc(self.ADD_CHARGES_BUTTON).first
+        self.wait_for_spinner_to_disappear()
+        confirm_loc = self.page.locator(
+            "div#charges_popup input[name='save_'][value='Add Charge']:visible"
+        ).last
         confirm_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        self.page.wait_for_function(
+            """() => {
+                const buttons = Array.from(
+                    document.querySelectorAll("div#charges_popup input[name='save_'][value='Add Charge']")
+                ).filter(node => {
+                    const style = window.getComputedStyle(node);
+                    return style.display !== "none" && style.visibility !== "hidden";
+                });
+                if (!buttons.length) return false;
+                return !buttons[buttons.length - 1].disabled;
+            }""",
+            timeout=self._timeout_ms,
+        )
         confirm_loc.click(timeout=self._timeout_ms)
+        self.page.wait_for_timeout(500)
         self.wait_for_spinner_to_disappear()
 
     def _get_ready_charges_search_input(self):

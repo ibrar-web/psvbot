@@ -19,11 +19,6 @@ class NewEstimatePage(BasePage):
         "xpath=//kendo-combobox[@name='choose_type_value']//input"
         " | //label[@name='choose_type']/following::kendo-combobox[1]//input"
     )
-    DIGITAL_COLOR_BUTTON = (
-        "xpath=//kendo-buttongroup[@name='job_method_value']//button["
-        "@title='Digital Color' or .//label[normalize-space()='Digital Color']"
-        "]"
-    )
     NEXT_STEP_BUTTON = "xpath=//button[@name='next_step_button']"
 
     def _debug(self, message: str) -> None:
@@ -31,15 +26,32 @@ class NewEstimatePage(BasePage):
             print(f"[PrintSmith][NewEstimatePage] {message}")
             logger.info(message)
 
-    def complete_walk_in_digital_color(
+    def complete_walk_in_job_method(
         self,
-        data: Mapping[str, str] | None = None,
+        data: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         self._wait_for_modal_ready()
-        selection_status = self._select_walk_in_customer(data or {})
-        self._select_digital_color()
+        payload = data or {}
+        requirements = payload.get("requirements") or []
+        first_requirement = requirements[0] if isinstance(requirements, list) and requirements else {}
+        if not isinstance(first_requirement, Mapping):
+            first_requirement = {}
+        selection_status = self._select_walk_in_customer(payload)
+        self._select_job_method(
+            str(
+                payload.get("job_method")
+                or first_requirement.get("job_method")
+                or "Digital Color"
+            )
+        )
         self._wait_for_invoice_page()
         return selection_status
+
+    def complete_walk_in_digital_color(
+        self,
+        data: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return self.complete_walk_in_job_method(data)
 
     def _wait_for_modal_ready(self) -> None:
         self._debug("Waiting for Choose Customer form on invoice page")
@@ -169,9 +181,38 @@ class NewEstimatePage(BasePage):
             timeout=self._timeout_ms,
         )
 
-    def _select_digital_color(self) -> None:
-        self._debug("Selecting job method: Digital Color")
-        self.click(self.DIGITAL_COLOR_BUTTON)
+    def _select_job_method(self, job_method: str) -> None:
+        normalized_job_method = " ".join((job_method or "").split()).strip()
+        if not normalized_job_method:
+            normalized_job_method = "Digital Color"
+
+        self._debug(f"Selecting job method: {normalized_job_method}")
+        selected = self.page.evaluate(
+            """(jobMethod) => {
+                const normalize = value => (value || "")
+                    .replace(/\\s+/g, " ")
+                    .trim()
+                    .toLowerCase();
+                const target = normalize(jobMethod);
+                const buttons = Array.from(
+                    document.querySelectorAll("kendo-buttongroup[name='job_method_value'] button")
+                );
+                const button = buttons.find(node => {
+                    const title = normalize(node.getAttribute("title"));
+                    const label = normalize(
+                        node.querySelector("label")?.innerText || node.innerText || node.textContent || ""
+                    );
+                    return title === target || label === target;
+                });
+                if (!button) return false;
+                button.scrollIntoView({ block: "center" });
+                button.click();
+                return true;
+            }""",
+            normalized_job_method,
+        )
+        if not selected:
+            raise ValueError(f"Unable to find job method button: {normalized_job_method}")
         self.wait_for_spinner_to_disappear()
 
         # Click Next only if the button is present and enabled
