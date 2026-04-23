@@ -460,7 +460,14 @@ class JobDetailsTab(BasePage):
                 continue
             quantity = charge_data.get("quantity")
             if str(quantity or "").strip():
-                self._fill_charge_fields(quantity=quantity)
+                quantity_filled = self._fill_charge_input(
+                    "input[name='preset_quantity']",
+                    quantity,
+                )
+                if not quantity_filled:
+                    self._debug(
+                        f"Charge '{term}' does not expose a quantity field; ignoring provided quantity"
+                    )
             else:
                 self._debug(
                     f"No quantity provided for charge '{term}'; skipping quantity entry"
@@ -558,17 +565,17 @@ class JobDetailsTab(BasePage):
         modal.wait_for(state="visible", timeout=self._timeout_ms)
         return modal
 
-    def _fill_charge_input(self, selector: str, value: Any) -> None:
+    def _fill_charge_input(self, selector: str, value: Any) -> bool:
         if value is None:
-            return
+            return False
         text = str(value).strip()
         if not text:
-            return
+            return False
 
         modal = self._visible_charges_modal()
         locator = modal.locator(f"{selector}:visible").first
         if locator.count() == 0:
-            return
+            return False
         locator.wait_for(state="visible", timeout=self._timeout_ms)
         locator.click()
         locator.fill("")
@@ -584,6 +591,7 @@ class JobDetailsTab(BasePage):
             text,
         )
         self.wait_for_spinner_to_disappear()
+        return True
 
     def _normalize_charge(self, charge: Any) -> dict[str, Any]:
         if isinstance(charge, Mapping):
