@@ -6,7 +6,7 @@ from app.v1.modules.bot.config import HEADLESS
 
 logger = logging.getLogger(__name__)
 
-MACBOOK_PRO_14_VIEWPORT = {"width": 1505, "height": 982}
+MACBOOK_PRO_14_VIEWPORT = {"width": 1500, "height": 982}
 
 
 def create_browser_page(playwright: Playwright) -> tuple[Browser, BrowserContext, Page]:

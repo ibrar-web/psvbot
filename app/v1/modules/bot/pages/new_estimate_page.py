@@ -47,6 +47,21 @@ class NewEstimatePage(BasePage):
         self._wait_for_invoice_page()
         return selection_status
 
+    def complete_existing_customer_job_method(
+        self,
+        job_method: str | None = None,
+    ) -> dict[str, Any]:
+        self._debug("Continuing new estimate with existing selected customer")
+        self.wait_for_spinner_to_disappear()
+        self._select_job_method(str(job_method or "Digital Color"))
+        self._wait_for_invoice_page()
+        return {
+            "used_fallback_customer": False,
+            "requested_customer_name": None,
+            "selected_customer_name": None,
+            "fallback_reason": None,
+        }
+
     def complete_walk_in_digital_color(
         self,
         data: Mapping[str, Any] | None = None,

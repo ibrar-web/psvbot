@@ -77,11 +77,10 @@ class InvoicePage(BasePage):
                     requirement_customer_status = self._retry_step(
                         f"add_job_{index + 2}",
                         lambda: self._add_job_and_prepare_requirement(
-                            contact_data,
                             next_requirement,
                         ),
                     )
-                    normalized = "auto"
+                    normalized = "job"
             return self._retry_step(
                 "estimate_summary_download",
                 lambda: self._download_from_estimate_summary(requirement_customer_status),
@@ -170,19 +169,17 @@ class InvoicePage(BasePage):
 
     def _add_job_and_prepare_requirement(
         self,
-        contact_data: Dict[str, Any],
         requirement: Dict[str, Any],
     ) -> Dict[str, Any]:
         estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
         estimated_summary_tab.click_add_job()
-
         new_estimate_page = NewEstimatePage(self.page, self.timeout)
-        return new_estimate_page.complete_walk_in_job_method(
-            {
-                **contact_data,
-                "job_method": requirement.get("job_method", ""),
-            }
+        selection_status = new_estimate_page.complete_existing_customer_job_method(
+            requirement.get("job_method", "")
         )
+        self.wait_for_spinner_to_disappear()
+        self._switch_to_job_details_tab()
+        return selection_status
 
     def _retry_step(self, step_name: str, callback, retries: int = 1):
         attempts = retries + 1
