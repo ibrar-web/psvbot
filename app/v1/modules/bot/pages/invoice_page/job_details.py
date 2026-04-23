@@ -460,10 +460,7 @@ class JobDetailsTab(BasePage):
                 continue
             quantity = charge_data.get("quantity")
             if str(quantity or "").strip():
-                quantity_filled = self._fill_charge_input(
-                    "input[name='preset_quantity']",
-                    quantity,
-                )
+                quantity_filled = self._try_fill_optional_charge_quantity(quantity)
                 if not quantity_filled:
                     self._debug(
                         f"Charge '{term}' does not expose a quantity field; ignoring provided quantity"
@@ -565,6 +562,58 @@ class JobDetailsTab(BasePage):
         modal.wait_for(state="visible", timeout=self._timeout_ms)
         return modal
 
+    def _charge_field_is_visible(self, selector: str) -> bool:
+        modal = self._visible_charges_modal()
+        return bool(
+            modal.evaluate(
+                """(node, cssSelector) => {
+                    const field = node.querySelector(cssSelector);
+                    if (!field) return false;
+                    const style = window.getComputedStyle(field);
+                    return (
+                        style.display !== "none" &&
+                        style.visibility !== "hidden" &&
+                        field.offsetParent !== null
+                    );
+                }""",
+                selector,
+            )
+        )
+
+    def _try_fill_optional_charge_quantity(self, value: Any) -> bool:
+        text = str(value or "").strip()
+        if not text:
+            return False
+
+        try:
+            modal = self._visible_charges_modal()
+            field_exists = bool(
+                modal.evaluate(
+                    """(node) => {
+                        const field = node.querySelector("input[name='preset_quantity']");
+                        if (!field) return false;
+                        const style = window.getComputedStyle(field);
+                        return (
+                            style.display !== "none" &&
+                            style.visibility !== "hidden" &&
+                            field.offsetParent !== null
+                        );
+                    }"""
+                )
+            )
+            if not field_exists:
+                return False
+
+            locator = modal.locator("input[name='preset_quantity']").first
+            locator.click(timeout=1500)
+            locator.fill("", timeout=1500)
+            locator.fill(text, timeout=1500)
+            locator.press("Tab", timeout=1500)
+            self.wait_for_spinner_to_disappear()
+            return True
+        except Exception:
+            return False
+
     def _fill_charge_input(self, selector: str, value: Any) -> bool:
         if value is None:
             return False
@@ -573,9 +622,9 @@ class JobDetailsTab(BasePage):
             return False
 
         modal = self._visible_charges_modal()
-        locator = modal.locator(f"{selector}:visible").first
-        if locator.count() == 0:
+        if not self._charge_field_is_visible(selector):
             return False
+        locator = modal.locator(selector).first
         locator.wait_for(state="visible", timeout=self._timeout_ms)
         locator.click()
         locator.fill("")
