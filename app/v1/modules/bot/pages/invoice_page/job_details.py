@@ -458,7 +458,13 @@ class JobDetailsTab(BasePage):
             if not selected:
                 self._debug(f"Skipping unmatched or empty charge search result: {term}")
                 continue
-            self._fill_charge_fields(quantity=charge_data.get("quantity"))
+            quantity = charge_data.get("quantity")
+            if str(quantity or "").strip():
+                self._fill_charge_fields(quantity=quantity)
+            else:
+                self._debug(
+                    f"No quantity provided for charge '{term}'; skipping quantity entry"
+                )
             self._confirm_charge_item(term)
 
     def _select_charge_from_search(self, term: str) -> bool:
@@ -547,6 +553,11 @@ class JobDetailsTab(BasePage):
         self._fill_charge_input("input[name='chargeDesc']", description)
         self._fill_charge_input("input[name='chargeNotes']", notes)
 
+    def _visible_charges_modal(self):
+        modal = self.page.locator("div#charges_popup:visible").last
+        modal.wait_for(state="visible", timeout=self._timeout_ms)
+        return modal
+
     def _fill_charge_input(self, selector: str, value: Any) -> None:
         if value is None:
             return
@@ -554,7 +565,8 @@ class JobDetailsTab(BasePage):
         if not text:
             return
 
-        locator = self.page.locator(f"div#charges_popup {selector}").last
+        modal = self._visible_charges_modal()
+        locator = modal.locator(f"{selector}:visible").first
         if locator.count() == 0:
             return
         locator.wait_for(state="visible", timeout=self._timeout_ms)
@@ -597,14 +609,19 @@ class JobDetailsTab(BasePage):
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")
         self.wait_for_spinner_to_disappear()
-        confirm_loc = self.page.locator(
-            "div#charges_popup input[name='save_'][value='Add Charge']:visible"
-        ).last
+        modal = self._visible_charges_modal()
+        confirm_loc = modal.locator("input[name='save_'][value='Add Charge']:visible").last
         confirm_loc.wait_for(state="visible", timeout=self._timeout_ms)
         self.page.wait_for_function(
             """() => {
+                const modals = Array.from(document.querySelectorAll("div#charges_popup")).filter(node => {
+                    const style = window.getComputedStyle(node);
+                    return style.display !== "none" && style.visibility !== "hidden" && node.offsetParent !== null;
+                });
+                if (!modals.length) return false;
+                const modal = modals[modals.length - 1];
                 const buttons = Array.from(
-                    document.querySelectorAll("div#charges_popup input[name='save_'][value='Add Charge']")
+                    modal.querySelectorAll("input[name='save_'][value='Add Charge']")
                 ).filter(node => {
                     const style = window.getComputedStyle(node);
                     return style.display !== "none" && style.visibility !== "hidden";
@@ -619,9 +636,11 @@ class JobDetailsTab(BasePage):
         self.wait_for_spinner_to_disappear()
 
     def _get_ready_charges_search_input(self):
-        self.wait_for_visible(self.CHARGES_MODAL)
+        modal = self._visible_charges_modal()
         self.wait_for_spinner_to_disappear()
-        search_loc = self._loc(self.CHARGES_SEARCH_INPUT).first
+        search_loc = modal.locator(
+            "kendo-combobox[name='search_combo'] input.k-input:visible"
+        ).first
         search_loc.wait_for(state="visible", timeout=self._timeout_ms)
         search_loc.click()
         return search_loc
