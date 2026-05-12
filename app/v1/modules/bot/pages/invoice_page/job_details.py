@@ -16,6 +16,12 @@ class InvalidStockSearchError(Exception):
 
 class JobDetailsTab(BasePage):
     CHARGE_SEARCH_TIMEOUT_MS = 3000
+    LAMINATE_COPY_QUANTITY_CHARGES = (
+        "Laminate 12 x 18",
+        "Laminate 8.5 x 11",
+        "Laminate 8.5 x 14",
+        "Laminate 11 x 17",
+    )
     JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
     JOB_DESCRIPTION_INPUT = "xpath=//textarea[@name='digital-descriptionField']"
     STOCK_PICKER_BUTTON = "xpath=//a[@ptooltip='Stock Picker']"
@@ -90,6 +96,7 @@ class JobDetailsTab(BasePage):
     def configure_price_breakup(self, data: Mapping[str, str]) -> None:
         quantity = str(data.get("price_breakup_quantity") or "").strip()
         job_charges = data.get("job_charges") or []
+        copies_quantity = self._quantity_text(data.get("copies_quantity"))
 
         if quantity:
             self._debug(f"Setting Price Breakup quantity: {quantity}")
@@ -105,7 +112,7 @@ class JobDetailsTab(BasePage):
             return
 
         self._open_add_new_charges_modal()
-        self._add_job_charges(job_charges)
+        self._add_job_charges(job_charges, copies_quantity=copies_quantity)
         self._debug("Saving selected charges")
         self.wait_for_spinner_to_disappear()
         self.click(self.CHARGES_SAVE_BUTTON)
@@ -183,6 +190,51 @@ class JobDetailsTab(BasePage):
         btn.click()
         self.wait_for_spinner_to_disappear()
         self._debug(f"Sides: completed for value='{sides}'")
+
+    def get_copies_quantity(self) -> str:
+        self._debug("Reading Copies quantity from Job Details")
+        self.wait_for_spinner_to_disappear()
+        try:
+            copies = self.page.evaluate(
+                """() => {
+                    const isVisible = el => {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        return (
+                            style.display !== "none" &&
+                            style.visibility !== "hidden" &&
+                            el.getClientRects().length > 0
+                        );
+                    };
+                    const labelText = node => (
+                        node?.innerText || node?.textContent || ""
+                    ).replace(/\\s+/g, " ").trim().toLowerCase();
+                    const inputs = Array.from(document.querySelectorAll("input[name='copies']"))
+                        .filter(isVisible);
+                    if (!inputs.length) return "";
+
+                    let target = inputs.find(input => input.classList.contains("for-copies-press"));
+                    if (!target) {
+                        target = inputs.find(input => {
+                            const row = input.closest(".row, .dot-formgroup, .dot-form__row");
+                            return !!row && Array.from(row.querySelectorAll("label"))
+                                .some(label => labelText(label) === "copies");
+                        });
+                    }
+                    target = target || inputs[0];
+                    return target.value || target.getAttribute("value") || "";
+                }"""
+            )
+        except Exception as exc:
+            self._debug(f"Copies quantity field could not be read; skipping: {exc}")
+            return ""
+
+        copies_text = self._quantity_text(copies)
+        if copies_text:
+            self._debug(f"Copies quantity captured: {copies_text}")
+        else:
+            self._debug("Copies quantity is empty or unavailable")
+        return copies_text
 
     def add_size(self, size: str) -> None:
         size = (size or "").strip()
@@ -443,11 +495,13 @@ class JobDetailsTab(BasePage):
             state="visible", timeout=self._timeout_ms
         )
 
-    def _add_job_charges(self, charges: list) -> None:
+    def _add_job_charges(self, charges: list, *, copies_quantity: Any = None) -> None:
         if not charges:
             self._debug("No job charges provided")
             return
 
+        copies_quantity_text = self._quantity_text(copies_quantity)
+       
         for charge in charges:
             charge_data = self._normalize_charge(charge)
             term = charge_data["charge_name"]
@@ -459,6 +513,17 @@ class JobDetailsTab(BasePage):
                 self._debug(f"Skipping unmatched or empty charge search result: {term}")
                 continue
             quantity = charge_data.get("quantity")
+            if self._is_laminate_copy_quantity_charge(term):
+                if copies_quantity_text:
+                    print('copies_quantity_text:,f{copies_quantity_text}')
+                    quantity = copies_quantity_text
+                    self._debug(
+                        f"Using Copies quantity '{copies_quantity_text}' for laminate charge '{term}'"
+                    )
+                else:
+                    self._debug(
+                        f"Charge '{term}' requires Copies quantity, but no Copies value was captured"
+                    )
             if str(quantity or "").strip():
                 quantity_filled = self._try_fill_optional_charge_quantity(quantity)
                 if not quantity_filled:
@@ -662,6 +727,20 @@ class JobDetailsTab(BasePage):
             "description": "",
         }
 
+    def _is_laminate_copy_quantity_charge(self, charge_name: str) -> bool:
+        charge_key = self._charge_match_key(charge_name)
+        return any(
+            self._charge_match_key(laminate_charge) in charge_key
+            for laminate_charge in self.LAMINATE_COPY_QUANTITY_CHARGES
+        )
+
+    def _charge_match_key(self, value: Any) -> str:
+        return "".join(str(value or "").replace("×", "x").lower().split())
+
+    def _quantity_text(self, value: Any) -> str:
+        if value is None:
+            return ""
+        return str(value).strip()
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")

@@ -145,9 +145,10 @@ def _build_bot_quote_record(
     quote = payload.get("quote") or {}
     raw_requirements = payload.get("requirements") or []
     tenant_credentials = payload.get("tenant_credentials") or {}
-
+    print(f'tenant_credentials: f{tenant_credentials}')
     quote_id = str(
-        quote.get("_id") or quote.get("id") or quote.get("quote_id") or job.quotation_id
+        quote.get("_id") or quote.get("id") or quote.get(
+            "quote_id") or job.quotation_id
     )
 
     if isinstance(raw_requirements, dict):
@@ -230,7 +231,8 @@ async def _notify_main_server(
         "summary_file_name": result.get("summary_file_name"),
         "summary_file_url": result.get("summary_file_url"),
         "error_message": (
-            None if result.get("status") == "success" else result.get("message")
+            None if result.get(
+                "status") == "success" else result.get("message")
         ),
     }
 
@@ -279,7 +281,8 @@ async def recover_incomplete_jobs() -> None:
         )
         job.updated_at = datetime.utcnow()
         await job.save()
-        logger.info("Recovered stuck queue job queue_id=%s", getattr(job, "id", None))
+        logger.info("Recovered stuck queue job queue_id=%s",
+                    getattr(job, "id", None))
 
 
 async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
@@ -309,7 +312,8 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
 
     try:
         logger.info(
-            "Queue step=fetch_main_record queue_id=%s", getattr(job, "id", None)
+            "Queue step=fetch_main_record queue_id=%s", getattr(
+                job, "id", None)
         )
         payload = await fetch_main_server_record(str(job.id))
         quote = payload.get("quote") or {}
@@ -394,7 +398,8 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
         )
 
         ended_at = datetime.utcnow()
-        total_time_used_seconds = round((ended_at - started_at).total_seconds(), 3)
+        total_time_used_seconds = round(
+            (ended_at - started_at).total_seconds(), 3)
         job.updated_at = ended_at
 
         if result.get("status") == "success":
@@ -430,7 +435,8 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             result["main_server_callback"] = await _notify_main_server(job, result)
         except Exception as exc:
             logger.exception(
-                "Failed to notify main server for queue_id=%s", getattr(job, "id", None)
+                "Failed to notify main server for queue_id=%s", getattr(
+                    job, "id", None)
             )
             result["main_server_callback"] = {
                 "status": "error",
@@ -452,7 +458,8 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             }
         )
         ended_at = datetime.utcnow()
-        total_time_used_seconds = round((ended_at - started_at).total_seconds(), 3)
+        total_time_used_seconds = round(
+            (ended_at - started_at).total_seconds(), 3)
         job.updated_at = ended_at
         await job.save()
         logger.info(
@@ -472,7 +479,8 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             )
         except Exception:
             logger.exception(
-                "Failed to notify main server for queue_id=%s", getattr(job, "id", None)
+                "Failed to notify main server for queue_id=%s", getattr(
+                    job, "id", None)
             )
         return error_result
     finally:
