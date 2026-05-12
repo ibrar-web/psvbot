@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from typing import Any
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -107,6 +107,12 @@ class JobDetailsTab(BasePage):
             qty_loc.press("Enter")
             self.wait_for_spinner_to_disappear()
 
+            captured_copies_quantity = self.get_copies_quantity()
+            if captured_copies_quantity:
+                copies_quantity = captured_copies_quantity
+                if isinstance(data, MutableMapping):
+                    data["copies_quantity"] = captured_copies_quantity
+
         if not job_charges:
             self._debug("No charges provided; skipping charges modal")
             return
@@ -196,31 +202,59 @@ class JobDetailsTab(BasePage):
         self.wait_for_spinner_to_disappear()
 
         try:
-            # wait until field has non-empty value
-            self.page.wait_for_function(
-                """
-                () => {
-                    const el = document.querySelector(
-                        "input[name='copies'].for-copies-press"
-                    );
-                    return el && el.value !== "";
-                }
-                """,
-                timeout=5000
-            )
-
-            copies = self.page.evaluate(
+            copies = self.page.wait_for_function(
                 """() => {
-                    const input = document.querySelector(
-                        "input[name='copies'].for-copies-press"
+                    const normalizeText = node => (
+                        node?.innerText || node?.textContent || ""
+                    ).replace(/\\s+/g, " ").trim().toLowerCase();
+
+                    const isVisible = el => {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        return (
+                            style.display !== "none" &&
+                            style.visibility !== "hidden" &&
+                            el.getClientRects().length > 0
+                        );
+                    };
+
+                    const normalizeValue = value => String(value || "").replace(/,/g, "").trim();
+                    const valueFor = input => normalizeValue(
+                        input.value ||
+                        input.getAttribute("value") ||
+                        input.getAttribute("ng-reflect-model") ||
+                        input.getAttribute("data-value") ||
+                        ""
+                    );
+                    const isPositiveQuantity = value => {
+                        const normalized = normalizeValue(value);
+                        if (!normalized) return false;
+                        const numeric = Number(normalized);
+                        return Number.isFinite(numeric) && numeric > 0;
+                    };
+
+                    const rows = Array.from(document.querySelectorAll(".row, .dot-formgroup, .dot-form__row"))
+                        .filter(row => Array.from(row.querySelectorAll("label"))
+                            .some(label => normalizeText(label) === "copies"));
+
+                    const rowInputs = rows.flatMap(row => Array.from(
+                        row.querySelectorAll("input[name='copies'].for-copies-press, input[name='copies']")
+                    ));
+                    const fallbackInputs = Array.from(document.querySelectorAll(
+                        "input[name='copies'].for-copies-press, input[name='copies']"
+                    ));
+
+                    const candidates = [...rowInputs, ...fallbackInputs].filter((input, index, inputs) =>
+                        inputs.indexOf(input) === index && isVisible(input)
                     );
 
-                    if (!input) return "";
+                    const positiveInput = candidates.find(input => isPositiveQuantity(valueFor(input)));
+                    if (!positiveInput) return false;
 
-                    return (input.value || "").trim();
-                }"""
-            )
-
+                    return valueFor(positiveInput);
+                }""",
+                timeout=10000,
+            ).json_value()
         except Exception as exc:
             self._debug(f"Copies quantity field could not be read; skipping: {exc}")
             return ""
@@ -499,7 +533,7 @@ class JobDetailsTab(BasePage):
             return
 
         copies_quantity_text = self._quantity_text(copies_quantity)
-       
+
         for charge in charges:
             charge_data = self._normalize_charge(charge)
             term = charge_data["charge_name"]
@@ -513,7 +547,6 @@ class JobDetailsTab(BasePage):
             quantity = charge_data.get("quantity")
             if self._is_laminate_copy_quantity_charge(term):
                 if copies_quantity_text:
-                    print('copies_quantity_text:,f{copies_quantity_text}')
                     quantity = copies_quantity_text
                     self._debug(
                         f"Using Copies quantity '{copies_quantity_text}' for laminate charge '{term}'"

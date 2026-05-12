@@ -215,10 +215,6 @@ class InvoicePage(BasePage):
         job_details_tab.add_size(job_data.get("size", ""))
         job_details_tab.add_notes(job_data.get("notes", ""))
         job_details_tab.select_bleed()
-        copies_quantity = job_details_tab.get_copies_quantity()
-        print('copies_quantity :f {copies_quantity}')
-        if copies_quantity:
-            job_data["copies_quantity"] = copies_quantity
         job_details_tab.select_sides(job_data.get("sides", ""))
         job_details_tab.configure_price_breakup(job_data)
 
