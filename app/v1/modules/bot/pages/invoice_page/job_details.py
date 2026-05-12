@@ -194,46 +194,44 @@ class JobDetailsTab(BasePage):
     def get_copies_quantity(self) -> str:
         self._debug("Reading Copies quantity from Job Details")
         self.wait_for_spinner_to_disappear()
+
         try:
+            # wait until field has non-empty value
+            self.page.wait_for_function(
+                """
+                () => {
+                    const el = document.querySelector(
+                        "input[name='copies'].for-copies-press"
+                    );
+                    return el && el.value !== "";
+                }
+                """,
+                timeout=5000
+            )
+
             copies = self.page.evaluate(
                 """() => {
-                    const isVisible = el => {
-                        if (!el) return false;
-                        const style = window.getComputedStyle(el);
-                        return (
-                            style.display !== "none" &&
-                            style.visibility !== "hidden" &&
-                            el.getClientRects().length > 0
-                        );
-                    };
-                    const labelText = node => (
-                        node?.innerText || node?.textContent || ""
-                    ).replace(/\\s+/g, " ").trim().toLowerCase();
-                    const inputs = Array.from(document.querySelectorAll("input[name='copies']"))
-                        .filter(isVisible);
-                    if (!inputs.length) return "";
+                    const input = document.querySelector(
+                        "input[name='copies'].for-copies-press"
+                    );
 
-                    let target = inputs.find(input => input.classList.contains("for-copies-press"));
-                    if (!target) {
-                        target = inputs.find(input => {
-                            const row = input.closest(".row, .dot-formgroup, .dot-form__row");
-                            return !!row && Array.from(row.querySelectorAll("label"))
-                                .some(label => labelText(label) === "copies");
-                        });
-                    }
-                    target = target || inputs[0];
-                    return target.value || target.getAttribute("value") || "";
+                    if (!input) return "";
+
+                    return (input.value || "").trim();
                 }"""
             )
+
         except Exception as exc:
             self._debug(f"Copies quantity field could not be read; skipping: {exc}")
             return ""
 
         copies_text = self._quantity_text(copies)
+
         if copies_text:
             self._debug(f"Copies quantity captured: {copies_text}")
         else:
             self._debug("Copies quantity is empty or unavailable")
+
         return copies_text
 
     def add_size(self, size: str) -> None:
