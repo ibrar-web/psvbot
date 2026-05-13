@@ -38,6 +38,9 @@ class JobDetailsTab(BasePage):
     CHARGES_SAVE_BUTTON = "xpath=//input[@name='save_charges' and @value='Done']"
     ADD_JOB_CHARGE_BUTTON = "xpath=//a[@name='add_job_charge_btn']"
     QTY_INPUT = "#qty-label-ctext"
+    CHARGES_ONLY_DESCRIPTION_INPUT = "xpath=//textarea[@name='charges-descriptionField']"
+    CHARGES_ONLY_PRICE_INPUT = "xpath=//input[@name='price-label-text']"
+    CHARGES_ONLY_QTY_INPUT = "xpath=//input[@name='qty-label-ctext']"
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -57,6 +60,42 @@ class JobDetailsTab(BasePage):
         )
         self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
         self.wait_for_visible(self.STOCK_PICKER_BUTTON)
+
+    def wait_until_charges_only_active(self) -> None:
+        self._debug("Waiting for Charges Only Job Details tab to become active")
+        self.wait_for_visible(self.JOB_DETAILS_TAB)
+        self.page.wait_for_function(
+            """() => {
+                const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
+                const target = tabs.find(t => (t.innerText || "").includes("Job Details"));
+                return !!target && target.getAttribute("aria-selected") === "true";
+            }""",
+            timeout=self._timeout_ms,
+        )
+        self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
+        self.wait_for_visible(self.CHARGES_ONLY_DESCRIPTION_INPUT)
+        self.wait_for_visible(self.CHARGES_ONLY_PRICE_INPUT)
+        self.wait_for_visible(self.CHARGES_ONLY_QTY_INPUT)
+
+    def fill_charges_only_job(self, charge: Any) -> None:
+        charge_data = self._normalize_other_charge(charge)
+        self._debug(f"Filling Charges Only job: {charge_data}")
+
+        self._fill_charges_only_field(
+            self.CHARGES_ONLY_DESCRIPTION_INPUT,
+            charge_data["charge_name"],
+            "description",
+        )
+        self._fill_charges_only_field(
+            self.CHARGES_ONLY_PRICE_INPUT,
+            charge_data["price"],
+            "price",
+        )
+        self._fill_charges_only_field(
+            self.CHARGES_ONLY_QTY_INPUT,
+            charge_data["quantity"],
+            "quantity",
+        )
 
     def select_stock_from_picker(self, data: Mapping[str, str]) -> None:
         stock_search_term = " ".join((data.get("stock_search_term") or "gpa").split())
@@ -772,6 +811,51 @@ class JobDetailsTab(BasePage):
         if value is None:
             return ""
         return str(value).strip()
+
+    def _normalize_other_charge(self, charge: Any) -> dict[str, Any]:
+        if isinstance(charge, Mapping):
+            charge_name = self._first_present_value(
+                charge,
+                ("charge_name", "name", "charge"),
+            )
+            price = self._first_present_value(
+                charge,
+                ("price", "charge_price", "amount"),
+            )
+            quantity = self._first_present_value(charge, ("quantity", "qty"))
+            return {
+                "charge_name": str(charge_name).strip(),
+                "quantity": quantity,
+                "price": price,
+            }
+        return {
+            "charge_name": str(charge or "").strip(),
+            "quantity": "",
+            "price": "",
+        }
+
+    def _first_present_value(self, data: Mapping[str, Any], keys: tuple[str, ...]) -> Any:
+        for key in keys:
+            value = data.get(key)
+            if value is not None and str(value).strip():
+                return value
+        return ""
+
+    def _fill_charges_only_field(self, selector: str, value: Any, label: str) -> bool:
+        text = str(value or "").strip()
+        if not text:
+            self._debug(f"Charges Only {label} is empty; skipping")
+            return False
+
+        self.wait_for_spinner_to_disappear()
+        locator = self._loc(selector).first
+        locator.wait_for(state="visible", timeout=self._timeout_ms)
+        locator.click()
+        locator.fill("")
+        locator.fill(text)
+        locator.press("Enter")
+        self.wait_for_spinner_to_disappear()
+        return True
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")

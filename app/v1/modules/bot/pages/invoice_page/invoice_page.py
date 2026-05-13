@@ -72,6 +72,10 @@ class InvoicePage(BasePage):
                     resume_from=normalized,
                     customer_selection_status=requirement_customer_status,
                 )
+                self._retry_step(
+                    f"other_charges_{index + 1}",
+                    lambda job_data=job_data: self._complete_other_charges(job_data),
+                )
                 if index < len(requirements) - 1:
                     next_requirement = requirements[index + 1]
                     requirement_customer_status = self._retry_step(
@@ -119,7 +123,10 @@ class InvoicePage(BasePage):
                 requirement.get("quantity", ""),
             ),
             "job_charges": requirement.get("job_charges", []),
-            "other_charges": requirement.get("other_charges", []),
+            "other_charges": requirement.get(
+                "other_charges",
+                requirement.get("other_chrages", []),
+            ),
             "notes": quote_record.get("notes", requirement.get("notes", "")),
             "sides": requirement.get("sides", ""),
             "size": requirement.get("size", ""),
@@ -180,6 +187,39 @@ class InvoicePage(BasePage):
         self.wait_for_spinner_to_disappear()
         self._switch_to_job_details_tab()
         return selection_status
+
+    def _complete_other_charges(self, job_data: Dict[str, Any]) -> None:
+        other_charges = self._normalize_other_charges(job_data.get("other_charges"))
+        if not other_charges:
+            self._debug("No other charges provided for this requirement")
+            return
+
+        estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
+        new_estimate_page = NewEstimatePage(self.page, self.timeout)
+        job_details_tab = JobDetailsTab(self.page, self.timeout)
+
+        for index, charge in enumerate(other_charges, start=1):
+            self._debug(
+                f"Adding other charge {index}/{len(other_charges)} as Charges Only job"
+            )
+            estimated_summary_tab.click_add_job()
+            new_estimate_page.complete_existing_customer_job_method("Charges Only")
+            self.wait_for_spinner_to_disappear()
+            self._switch_to_job_details_tab()
+            job_details_tab.wait_until_charges_only_active()
+            job_details_tab.fill_charges_only_job(charge)
+            estimated_summary_tab.switch_to_tab()
+
+    def _normalize_other_charges(self, other_charges: Any) -> list[Any]:
+        if not other_charges:
+            return []
+        if isinstance(other_charges, dict):
+            return [other_charges]
+        if isinstance(other_charges, list):
+            return other_charges
+        if isinstance(other_charges, tuple):
+            return list(other_charges)
+        return [other_charges]
 
     def _retry_step(self, step_name: str, callback, retries: int = 1):
         attempts = retries + 1

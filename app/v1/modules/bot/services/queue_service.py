@@ -167,7 +167,10 @@ def _build_bot_quote_record(
                 "description": requirement.get("description", ""),
                 "job_method": requirement.get("job_method", ""),
                 "job_charges": requirement.get("job_charges", []),
-                "other_charges": requirement.get("other_charges", []),
+                "other_charges": requirement.get(
+                    "other_charges",
+                    requirement.get("other_chrages", []),
+                ),
             }
         )
 
