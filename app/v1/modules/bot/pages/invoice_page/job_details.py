@@ -87,14 +87,14 @@ class JobDetailsTab(BasePage):
             "description",
         )
         self._fill_charges_only_field(
-            self.CHARGES_ONLY_PRICE_INPUT,
-            charge_data["price"],
-            "price",
-        )
-        self._fill_charges_only_field(
             self.CHARGES_ONLY_QTY_INPUT,
             charge_data["quantity"],
             "quantity",
+        )
+        self._fill_charges_only_field(
+            self.CHARGES_ONLY_PRICE_INPUT,
+            charge_data["price"],
+            "price",
         )
 
     def select_stock_from_picker(self, data: Mapping[str, str]) -> None:
@@ -820,7 +820,7 @@ class JobDetailsTab(BasePage):
             )
             price = self._first_present_value(
                 charge,
-                ("price", "charge_price", "amount"),
+                ("charge_price", "price", "amount"),
             )
             quantity = self._first_present_value(charge, ("quantity", "qty"))
             return {
