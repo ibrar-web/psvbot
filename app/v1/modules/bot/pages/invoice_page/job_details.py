@@ -32,6 +32,14 @@ class JobDetailsTab(BasePage):
     CHARGES_SAVE_BUTTON = "xpath=//input[@name='save_charges' and @value='Done']"
     ADD_JOB_CHARGE_BUTTON = "xpath=//a[@name='add_job_charge_btn']"
     QTY_INPUT = "#qty-label-ctext"
+    CHARGES_ONLY_DESCRIPTION_INPUT = "textarea[name='charges-descriptionField']"
+    CHARGES_ONLY_PRICE_INPUT = "input[name='price-label-text']"
+    CHARGES_ONLY_SAVE_BUTTON = (
+        "button[name='save-buttton']:visible, "
+        "button[name='save_btn']:visible, "
+        "input[name='save-buttton']:visible, "
+        "input[name='save_btn']:visible"
+    )
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -109,6 +117,52 @@ class JobDetailsTab(BasePage):
         self._debug("Saving selected charges")
         self.wait_for_spinner_to_disappear()
         self.click(self.CHARGES_SAVE_BUTTON)
+        self.wait_for_spinner_to_disappear()
+
+    def wait_until_charges_only_ready(self) -> None:
+        self._debug("Waiting for Charges Only job details form")
+        self.wait_for_spinner_to_disappear()
+        self.wait_for_visible(self.CHARGES_ONLY_DESCRIPTION_INPUT)
+        self.wait_for_visible(self.QTY_INPUT)
+        self.wait_for_visible(self.CHARGES_ONLY_PRICE_INPUT)
+
+    def configure_other_charge(self, charge: Any) -> None:
+        charge_data = self._normalize_other_charge(charge)
+        charge_name = charge_data["charge_name"]
+        if not charge_name:
+            self._debug("Other charge has no charge_name; skipping")
+            return
+
+        self._debug(f"Configuring other charge job: {charge_name}")
+        self.wait_until_charges_only_ready()
+        self._fill_page_field(self.CHARGES_ONLY_DESCRIPTION_INPUT, charge_name)
+
+        quantity = self._quantity_text(charge_data.get("quantity"))
+        if quantity:
+            self._debug(f"Setting other charge quantity: {quantity}")
+            self._fill_page_field(self.QTY_INPUT, quantity, submit_key="Enter")
+        else:
+            self._debug(
+                f"Other charge '{charge_name}' has no quantity; leaving quantity unchanged"
+            )
+
+        charge_price = self._quantity_text(charge_data.get("charge_price"))
+        if charge_price:
+            self._debug(f"Setting other charge price: {charge_price}")
+            self._fill_page_field(
+                self.CHARGES_ONLY_PRICE_INPUT,
+                charge_price,
+                submit_key="Enter",
+            )
+        else:
+            self._debug(
+                f"Other charge '{charge_name}' has no charge_price; leaving price unchanged"
+            )
+
+        self._debug(f"Saving other charge job: {charge_name}")
+        save_loc = self._loc(self.CHARGES_ONLY_SAVE_BUTTON).first
+        save_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        save_loc.click(timeout=self._timeout_ms)
         self.wait_for_spinner_to_disappear()
 
     def select_bleed(self) -> None:
@@ -603,7 +657,10 @@ class JobDetailsTab(BasePage):
                     or ""
                 ).strip(),
                 "quantity": charge.get("quantity"),
-                "price": charge.get("price"),
+                "price": self._first_value(
+                    charge,
+                    ("price", "charge_price", "amount"),
+                ),
                 "description": str(charge.get("description") or "").strip(),
             }
         return {
@@ -612,6 +669,65 @@ class JobDetailsTab(BasePage):
             "price": None,
             "description": "",
         }
+
+    def _normalize_other_charge(self, charge: Any) -> dict[str, Any]:
+        if isinstance(charge, Mapping):
+            return {
+                "charge_name": str(
+                    self._first_value(
+                        charge,
+                        ("charge_name", "name", "charge", "description"),
+                    )
+                    or ""
+                ).strip(),
+                "quantity": self._first_value(charge, ("quantity", "qty")),
+                "charge_price": self._first_value(
+                    charge,
+                    ("charge_price", "price", "amount", "rate"),
+                ),
+            }
+        return {
+            "charge_name": str(charge or "").strip(),
+            "quantity": None,
+            "charge_price": None,
+        }
+
+    def _first_value(self, data: Mapping[str, Any], keys: tuple[str, ...]) -> Any:
+        for key in keys:
+            value = data.get(key)
+            if value is None:
+                continue
+            if str(value).strip():
+                return value
+        return None
+
+    def _fill_page_field(
+        self,
+        selector: str,
+        value: Any,
+        *,
+        submit_key: str = "Tab",
+    ) -> bool:
+        text = self._quantity_text(value)
+        if not text:
+            return False
+
+        locator = self._loc(selector).first
+        locator.wait_for(state="visible", timeout=self._timeout_ms)
+        locator.click()
+        locator.fill("")
+        locator.fill(text)
+        locator.evaluate(
+            """(el, newValue) => {
+                el.value = newValue;
+                el.dispatchEvent(new Event("input", { bubbles: true }));
+                el.dispatchEvent(new Event("change", { bubbles: true }));
+            }""",
+            text,
+        )
+        locator.press(submit_key)
+        self.wait_for_spinner_to_disappear()
+        return True
 
 
     def _confirm_charge_item(self, term: str) -> None:

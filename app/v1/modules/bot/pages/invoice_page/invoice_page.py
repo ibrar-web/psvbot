@@ -3,6 +3,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.pages.new_estimate_page import NewEstimatePage
@@ -72,6 +74,11 @@ class InvoicePage(BasePage):
                     resume_from=normalized,
                     customer_selection_status=requirement_customer_status,
                 )
+                if job_data.get("other_charges"):
+                    self._retry_step(
+                        f"other_charges_{index + 1}",
+                        lambda: self._add_other_charges_for_requirement(job_data),
+                    )
                 if index < len(requirements) - 1:
                     next_requirement = requirements[index + 1]
                     requirement_customer_status = self._retry_step(
@@ -180,6 +187,71 @@ class InvoicePage(BasePage):
         self.wait_for_spinner_to_disappear()
         self._switch_to_job_details_tab()
         return selection_status
+
+    def _add_other_charges_for_requirement(self, job_data: Dict[str, Any]) -> None:
+        other_charges = self._normalize_other_charges(job_data.get("other_charges"))
+        if not other_charges:
+            self._debug("No other charges provided; skipping Charges Only jobs")
+            return
+
+        for index, charge in enumerate(other_charges, start=1):
+            self._debug(f"Adding other charge {index}/{len(other_charges)}")
+            estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
+            estimated_summary_tab.click_add_job()
+            self._prepare_charges_only_job()
+            job_details_tab = JobDetailsTab(self.page, self.timeout)
+            job_details_tab.configure_other_charge(charge)
+
+    def _normalize_other_charges(self, other_charges: Any) -> list[Any]:
+        if not other_charges:
+            return []
+        if isinstance(other_charges, list):
+            return [charge for charge in other_charges if charge]
+        return [other_charges]
+
+    def _prepare_charges_only_job(self) -> None:
+        self.wait_for_spinner_to_disappear()
+        try:
+            state = self.page.wait_for_function(
+                """() => {
+                    const isVisible = el => {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        return (
+                            style.display !== "none" &&
+                            style.visibility !== "hidden" &&
+                            el.getClientRects().length > 0
+                        );
+                    };
+
+                    const chargesDescription = document.querySelector(
+                        "textarea[name='charges-descriptionField']"
+                    );
+                    if (isVisible(chargesDescription)) {
+                        return "charges_form";
+                    }
+
+                    const jobMethodPicker = document.querySelector(
+                        "kendo-buttongroup[name='job_method_value']"
+                    );
+                    if (isVisible(jobMethodPicker)) {
+                        return "job_method_picker";
+                    }
+
+                    return false;
+                }""",
+                timeout=self._timeout_ms,
+            ).json_value()
+        except PlaywrightTimeoutError:
+            state = None
+
+        if state == "charges_form":
+            return
+
+        new_estimate_page = NewEstimatePage(self.page, self.timeout)
+        new_estimate_page.complete_existing_customer_job_method("Charges Only")
+        self.wait_for_spinner_to_disappear()
+        self._switch_to_job_details_tab()
 
     def _retry_step(self, step_name: str, callback, retries: int = 1):
         attempts = retries + 1
