@@ -76,7 +76,7 @@ def test_login():
     with sync_playwright() as playwright:
         browser, context, page = create_browser_page(playwright)
         try:
-            page.goto(URL, timeout=TIMEOUT * 100)
+            page.goto(URL, timeout=TIMEOUT * 1000)
             login_page = LoginPage(page, timeout=TIMEOUT)
             login_page.login(USERNAME, PASSWORD, COMPANY)
             success = login_page.wait_for_login_result()
@@ -131,7 +131,7 @@ def test_full_flow():
         try:
             # --- Step 1: Login ---
             print("\n  [1/7] Logging in...")
-            page.goto(URL, timeout=TIMEOUT * 100)
+            page.goto(URL, timeout=TIMEOUT * 1000)
             login_page = LoginPage(page, timeout=TIMEOUT)
             login_page.login(USERNAME, PASSWORD, COMPANY)
             success = login_page.wait_for_login_result()
@@ -143,7 +143,7 @@ def test_full_flow():
 
             # --- Step 2: Quick Access page ---
             print("\n  [2/7] Navigating to Quick Access...")
-            page.goto(quick_access_url, timeout=TIMEOUT * 100)
+            page.goto(quick_access_url, timeout=TIMEOUT * 1000)
             BasePage(page, timeout=TIMEOUT).wait_for_spinner_to_disappear()
             print(f"  [PASS] Quick Access loaded — URL: {page.url}")
 

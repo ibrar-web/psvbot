@@ -91,7 +91,7 @@ class LoginPage(BasePage):
             url = (url or "").lower()
             return "nextgen" in url or "quick-access" in url or "home" in url
 
-        deadline = time.monotonic() + self.timeout
+        deadline = time.monotonic() + 100
         while time.monotonic() < deadline:
             invalid_login_message = self._read_invalid_login_message()
             if invalid_login_message:

@@ -145,7 +145,7 @@ def create_app() -> FastAPI:
                 await asyncio.sleep(await get_queue_poll_sleep_seconds())
 
         app.state.queue_poller_task = asyncio.create_task(_queue_poller())
-        app.state.log_archive_task = asyncio.create_task(run_daily_log_archive_forever())
+        # app.state.log_archive_task = asyncio.create_task(run_daily_log_archive_forever())
 
     @app.on_event("shutdown")
     async def shutdown_event() -> None:
