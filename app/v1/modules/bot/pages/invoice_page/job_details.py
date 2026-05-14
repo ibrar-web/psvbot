@@ -169,7 +169,7 @@ class JobDetailsTab(BasePage):
         self.page.locator("span.dot-paper-calculator-icon").first.click()
         self.wait_for_spinner_to_disappear()
 
-        self._debug("Activating Bleed slider")
+        self._debug("Activating Bleed popup")
         self.page.wait_for_function(
             """() => {
                 const labels = Array.from(document.querySelectorAll("label, span, div"))
@@ -184,6 +184,7 @@ class JobDetailsTab(BasePage):
             }""",
             timeout=self._timeout_ms,
         )
+        self._debug("Activating Bleed slider")
         activated = self.page.evaluate(
             """() => {
                 const labels = Array.from(document.querySelectorAll("label, span, div"))

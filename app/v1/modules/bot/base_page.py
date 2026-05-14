@@ -12,7 +12,7 @@ class BasePage:
     def __init__(self, page: Page, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> None:
         self.page = page
         self.timeout = timeout
-        self._timeout_ms = timeout * 1000
+        self._timeout_ms = timeout * 100
         self._warning_observer_active = False
 
     def start_warning_auto_dismiss(self) -> None:
