@@ -221,8 +221,8 @@ def run_estimate_flow(
     try:
         with _flow_lock:
             with sync_playwright() as playwright:
-                log_path = csv_logger.init()
-                _debug(f"CSV log started: {log_path}")
+                csv_logger.init()
+                _debug("CSV logger initialized (terminal-only)")
                 _debug("Starting estimate flow")
                 if quote_record:
                     _debug(
@@ -358,7 +358,7 @@ def run_estimate_flow(
 
     finally:
         _cleanup_local_invoice_file(invoice_path)
-        csv_logger.shutdown()
+        # csv_logger.shutdown() is a no-op; kept for backward compatibility
         if browser is not None:
             try:
                 browser.close()

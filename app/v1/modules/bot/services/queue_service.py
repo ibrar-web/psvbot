@@ -31,20 +31,7 @@ _poller_lock = asyncio.Lock()
 _active_poll_task: asyncio.Task | None = None
 
 
-def _flush_log_handlers() -> None:
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers:
-        try:
-            handler.flush()
-        except Exception:
-            pass
-
-
 def _cleanup_after_job() -> None:
-    from app.v1.modules.bot import csv_logger
-
-    _flush_log_handlers()
-    csv_logger.shutdown()
     gc.collect()
 
 

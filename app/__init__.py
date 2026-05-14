@@ -22,6 +22,27 @@ from app.v1.routes import api_router
 from app.v1.schemas.jobqueuemodel import JobQueueDocument
 
 
+LOG_MEMORY_CLEAR_INTERVAL_SECONDS = 3600  # 1 hour
+
+
+def _clear_log_memory() -> None:
+    """Flush all logging handlers and remove stale references to free memory."""
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        try:
+            handler.flush()
+        except Exception:
+            pass
+    # Also flush the bot-specific logger
+    bot_logger = logging.getLogger("app.v1.modules.bot")
+    for handler in bot_logger.handlers:
+        try:
+            handler.flush()
+        except Exception:
+            pass
+    logging.getLogger(__name__).info("Log memory cleared (hourly flush)")
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -35,7 +56,7 @@ def create_app() -> FastAPI:
     mongo_client = get_client()
     app.state.mongo_client = mongo_client
     app.state.queue_poller_task = None
-    app.state.log_archive_task = None
+    app.state.log_memory_clear_task = None
     allow_origins = (
         ["*"]
         if CORS_ALLOW_ORIGINS.strip() == "*"
@@ -124,20 +145,12 @@ def create_app() -> FastAPI:
             recover_incomplete_jobs,
             schedule_queue_poll_if_idle,
         )
-        from app.v1.modules.bot.services.log_archive_service import (
-            archive_previous_day_logs,
-            run_daily_log_archive_forever,
-        )
 
         await init_beanie(
             database=mongo_client[MONGO_DB],
             document_models=[JobQueueDocument],
         )
         await recover_incomplete_jobs()
-        try:
-            await asyncio.to_thread(archive_previous_day_logs)
-        except Exception:
-            logging.getLogger(__name__).exception("Initial bot log archive run failed")
 
         async def _queue_poller() -> None:
             while True:
@@ -145,7 +158,17 @@ def create_app() -> FastAPI:
                 await asyncio.sleep(await get_queue_poll_sleep_seconds())
 
         app.state.queue_poller_task = asyncio.create_task(_queue_poller())
-        # app.state.log_archive_task = asyncio.create_task(run_daily_log_archive_forever())
+
+        async def _log_memory_clearer() -> None:
+            """Periodically flush logging handlers to free memory every hour."""
+            while True:
+                await asyncio.sleep(LOG_MEMORY_CLEAR_INTERVAL_SECONDS)
+                try:
+                    _clear_log_memory()
+                except Exception:
+                    logging.getLogger(__name__).exception("Hourly log memory clear failed")
+
+        app.state.log_memory_clear_task = asyncio.create_task(_log_memory_clearer())
 
     @app.on_event("shutdown")
     async def shutdown_event() -> None:
@@ -154,11 +177,11 @@ def create_app() -> FastAPI:
             queue_poller_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await queue_poller_task
-        log_archive_task = getattr(app.state, "log_archive_task", None)
-        if log_archive_task is not None:
-            log_archive_task.cancel()
+        log_memory_clear_task = getattr(app.state, "log_memory_clear_task", None)
+        if log_memory_clear_task is not None:
+            log_memory_clear_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
-                await log_archive_task
+                await log_memory_clear_task
         mongo_client.close()
 
     return app
