@@ -1,7 +1,9 @@
+import gc
 import os
 import asyncio
 import contextlib
 import logging
+import sys
 
 from beanie import init_beanie
 from fastapi import FastAPI, HTTPException
@@ -26,21 +28,65 @@ LOG_MEMORY_CLEAR_INTERVAL_SECONDS = 3600  # 1 hour
 
 
 def _clear_log_memory() -> None:
-    """Flush all logging handlers and remove stale references to free memory."""
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers:
-        try:
-            handler.flush()
-        except Exception:
-            pass
-    # Also flush the bot-specific logger
+    """Periodic cleanup to prevent logging-related memory leaks.
+
+    - Flushes all handlers
+    - Removes duplicate StreamHandlers that may accumulate
+    - Prunes stale file-based handlers from the bot logger
+    - Runs gc.collect() to reclaim freed objects
+    """
     bot_logger = logging.getLogger("app.v1.modules.bot")
-    for handler in bot_logger.handlers:
+    root_logger = logging.getLogger()
+
+    # 1. Flush all handlers on root and bot loggers
+    for logger_instance in (root_logger, bot_logger):
+        for handler in list(logger_instance.handlers):
+            try:
+                handler.flush()
+            except Exception:
+                pass
+
+    # 2. On bot logger: remove duplicate terminal handlers (keep only one)
+    seen_terminal = False
+    for handler in list(bot_logger.handlers):
+        is_terminal = (
+            isinstance(handler, logging.StreamHandler)
+            and getattr(handler, "stream", None) in (sys.stderr, sys.stdout)
+        )
+        if is_terminal:
+            if seen_terminal:
+                bot_logger.removeHandler(handler)
+                try:
+                    handler.close()
+                except Exception:
+                    pass
+            else:
+                seen_terminal = True
+        elif not isinstance(handler, logging.StreamHandler):
+            # Remove any non-stream (file) handlers that shouldn't be there
+            bot_logger.removeHandler(handler)
+            try:
+                handler.close()
+            except Exception:
+                pass
+
+    # 3. On root logger: remove duplicate StreamHandlers
+    terminal_handlers = [
+        h for h in root_logger.handlers
+        if isinstance(h, logging.StreamHandler)
+        and getattr(h, "stream", None) in (sys.stderr, sys.stdout)
+    ]
+    for handler in terminal_handlers[1:]:
+        root_logger.removeHandler(handler)
         try:
-            handler.flush()
+            handler.close()
         except Exception:
             pass
-    logging.getLogger(__name__).info("Log memory cleared (hourly flush)")
+
+    # 4. Force garbage collection
+    gc.collect()
+
+    logging.getLogger(__name__).info("Log memory cleared (hourly cleanup + gc)")
 
 
 logging.basicConfig(

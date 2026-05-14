@@ -1,3 +1,4 @@
+import gc
 import logging
 import shutil
 import time
@@ -169,6 +170,51 @@ def _ensure_within_timeout(started_at: float, step: str) -> None:
         )
 
 
+def _cleanup_browser(
+    browser: Optional[Browser],
+    context: Optional[BrowserContext],
+    page: Optional[Page],
+    *,
+    flow_failed: bool = False,
+    logout_succeeded: bool = False,
+    logout_error: Optional[str] = None,
+) -> None:
+    """Thoroughly tear down Playwright resources and release memory."""
+    # 1. Stop any injected JS observers while page is still alive
+    if page is not None:
+        try:
+            BasePage(page).stop_warning_auto_dismiss()
+        except Exception:
+            pass
+
+    # 2. Close in correct order: page -> context -> browser
+    if page is not None:
+        try:
+            page.close()
+        except Exception:
+            pass
+    if context is not None:
+        try:
+            context.close()
+        except Exception:
+            pass
+    if browser is not None:
+        try:
+            browser.close()
+        except Exception:
+            pass
+
+    logger.info(
+        "Browser closed (flow_failed=%s, logout_succeeded=%s, logout_error=%s)",
+        flow_failed,
+        logout_succeeded,
+        logout_error,
+    )
+
+    # 3. Force garbage collection to reclaim Chromium process memory
+    gc.collect()
+
+
 def _cleanup_local_invoice_file(invoice_path: Optional[Path]) -> None:
     if invoice_path is None:
         return
@@ -209,6 +255,7 @@ def run_estimate_flow(
         }
 
     browser: Optional[Browser] = None
+    context: Optional[BrowserContext] = None
     page: Optional[Page] = None
     invoice_path: Optional[Path] = None
     flow_failed = False
@@ -358,15 +405,12 @@ def run_estimate_flow(
 
     finally:
         _cleanup_local_invoice_file(invoice_path)
-        # csv_logger.shutdown() is a no-op; kept for backward compatibility
-        if browser is not None:
-            try:
-                browser.close()
-            except Exception:
-                pass
-            logger.info(
-                "Browser closed (flow_failed=%s, logout_succeeded=%s, logout_error=%s)",
-                flow_failed,
-                logout_succeeded,
-                logout_error,
-            )
+        _cleanup_browser(
+            browser, context, page,
+            flow_failed=flow_failed,
+            logout_succeeded=logout_succeeded,
+            logout_error=logout_error,
+        )
+        # Break local references so GC can reclaim objects immediately
+        del browser, context, page, invoice_path
+        del customer_selection_status

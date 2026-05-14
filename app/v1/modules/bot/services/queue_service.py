@@ -32,6 +32,24 @@ _active_poll_task: asyncio.Task | None = None
 
 
 def _cleanup_after_job() -> None:
+    """Run after every job to release memory: flush logging, clean up bot logger, gc."""
+    import logging as _logging
+
+    # Flush all handlers on the bot logger to ensure no buffered records
+    bot_logger = _logging.getLogger("app.v1.modules.bot")
+    for handler in list(bot_logger.handlers):
+        try:
+            handler.flush()
+        except Exception:
+            pass
+
+    # Flush root logger handlers too
+    for handler in list(_logging.getLogger().handlers):
+        try:
+            handler.flush()
+        except Exception:
+            pass
+
     gc.collect()
 
 
