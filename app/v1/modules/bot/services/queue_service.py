@@ -242,6 +242,7 @@ async def _notify_main_server(
             None if result.get(
                 "status") == "success" else result.get("message")
         ),
+        "estimate_totals": result.get("estimate_totals"),
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -429,11 +430,12 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
 
         await job.save()
         logger.info(
-            "Queue processing finished queue_id=%s end_time=%s total_time_used_seconds=%s status=%s",
+            "Queue processing finished queue_id=%s end_time=%s total_time_used_seconds=%s status=%s estimate_totals=%s",
             getattr(job, "id", None),
             ended_at.isoformat(),
             total_time_used_seconds,
             job.status,
+            result.get("estimate_totals"),
         )
         try:
             logger.info(

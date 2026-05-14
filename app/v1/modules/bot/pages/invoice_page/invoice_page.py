@@ -1,7 +1,7 @@
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.config import DEBUG
@@ -33,12 +33,17 @@ class InvoicePage(BasePage):
         resume_from: str = "auto",
         quote_record: Optional[Dict[str, Any]] = None,
         customer_selection_status: Optional[Dict[str, Any]] = None,
-    ) -> Path:
+    ) -> Tuple[Path, Dict[int, str]]:
         """
         resume_from:
         - auto: if account info looks complete, continue from job details.
         - account: force account tab -> job tab flow.
         - job: skip account tab and start from job tab.
+
+        Returns:
+            Tuple of (invoice_path, estimate_totals) where estimate_totals
+            maps 1-based requirement index to the collect-total value captured
+            before other charges are added.
         """
         quote_record = quote_record or {}
         requirements = self._normalize_requirements(quote_record)
@@ -60,6 +65,7 @@ class InvoicePage(BasePage):
         requirement_customer_status = customer_selection_status or {}
 
         self.start_warning_auto_dismiss()
+        estimate_totals: Dict[int, str] = {}
         try:
             for index, requirement in enumerate(requirements):
                 job_data = self._build_job_data(quote_record, requirement)
@@ -72,6 +78,25 @@ class InvoicePage(BasePage):
                     resume_from=normalized,
                     customer_selection_status=requirement_customer_status,
                 )
+
+                # Collect estimate totals BEFORE other charges alter the values
+                estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
+                try:
+                    current_totals = estimated_summary_tab.collect_estimate_totals()
+                    # Store the last row's value for this requirement index
+                    if current_totals:
+                        estimate_totals[index + 1] = current_totals.get(
+                            max(current_totals.keys()), ""
+                        )
+                        self._debug(
+                            f"Requirement {index + 1} estimate total collected: "
+                            f"{estimate_totals[index + 1]}"
+                        )
+                except Exception as exc:
+                    self._debug(
+                        f"Could not collect estimate total for requirement {index + 1}: {exc}"
+                    )
+
                 self._retry_step(
                     f"other_charges_{index + 1}",
                     lambda job_data=job_data: self._complete_other_charges(job_data),
@@ -85,10 +110,12 @@ class InvoicePage(BasePage):
                         ),
                     )
                     normalized = "job"
-            return self._retry_step(
+
+            invoice_path = self._retry_step(
                 "estimate_summary_download",
                 lambda: self._download_from_estimate_summary(requirement_customer_status),
             )
+            return invoice_path, estimate_totals
         finally:
             self.stop_warning_auto_dismiss()
 

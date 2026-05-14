@@ -322,7 +322,7 @@ def run_estimate_flow(
                 for attempt in range(2):
                     try:
                         _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                        invoice_path = invoice_page.complete_information_tabs(
+                        invoice_path, estimate_totals = invoice_page.complete_information_tabs(
                             resume_from="auto",
                             quote_record=quote_record,
                             customer_selection_status=customer_selection_status,
@@ -339,6 +339,8 @@ def run_estimate_flow(
                             continue
                         raise
                 _debug(f"Invoice tab flow completed. URL: {page.url}")
+                _debug(f"Estimate totals collected: {estimate_totals}")
+                logger.info("Estimate totals: %s", estimate_totals)
 
                 current_step = "save_summary"
                 _ensure_within_timeout(started_at, current_step)
@@ -358,6 +360,7 @@ def run_estimate_flow(
                     "session_reused": False,
                     "browser_open": False,
                     "customer_selection": customer_selection_status,
+                    "estimate_totals": estimate_totals,
                     **upload_result,
                 }
 

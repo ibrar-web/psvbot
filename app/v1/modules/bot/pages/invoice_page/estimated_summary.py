@@ -51,6 +51,39 @@ class EstimatedSummaryTab(BasePage):
         )
         self.wait_for_spinner_to_disappear()
 
+    def collect_estimate_totals(self) -> Dict[int, str]:
+        """Read the collect-total input values from the Estimate Summary table.
+
+        For each row in the tree-table body, extracts the value from the
+        last <td> that contains an input[currency="true"] (the collect-total
+        field).  Returns a dict mapping 1-based row index to the input value.
+        """
+        self.switch_to_tab()
+        self.wait_for_spinner_to_disappear()
+
+        totals: Dict[int, str] = self.page.evaluate(
+            """() => {
+                const tbody = document.querySelector('tbody.ui-treetable-tbody');
+                if (!tbody) return {};
+                const rows = tbody.querySelectorAll(':scope > tr');
+                const result = {};
+                rows.forEach((row, idx) => {
+                    // Find the last <td> that contains an input with currency="true"
+                    const tds = row.querySelectorAll(':scope > td');
+                    for (let i = tds.length - 1; i >= 0; i--) {
+                        const input = tds[i].querySelector('input[currency="true"]');
+                        if (input) {
+                            result[idx + 1] = (input.value || '').trim();
+                            break;
+                        }
+                    }
+                });
+                return result;
+            }"""
+        )
+        self._debug(f"Collected estimate totals: {totals}")
+        return totals or {}
+
     def click_us685_eestimate_and_download(
         self,
         customer_selection_status: Optional[Dict[str, Any]] = None,
