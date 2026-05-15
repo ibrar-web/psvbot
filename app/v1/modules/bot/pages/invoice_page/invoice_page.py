@@ -83,11 +83,24 @@ class InvoicePage(BasePage):
                 estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
                 try:
                     current_totals = estimated_summary_tab.collect_estimate_totals()
-                    # Store the last row's value for this requirement index
                     if current_totals:
-                        estimate_totals[index + 1] = current_totals.get(
-                            max(current_totals.keys()), ""
-                        )
+                        scraped_total = current_totals.get(max(current_totals.keys()), "")
+                        other_charges = job_data.get("other_charges") or []
+                        if isinstance(other_charges, dict):
+                            other_charges = [other_charges]
+                        try:
+                            base = float(
+                                str(scraped_total).replace("$", "").replace(",", "").strip() or "0"
+                            )
+                            for c in other_charges:
+                                if not isinstance(c, dict):
+                                    continue
+                                raw = c.get("charge_price") or c.get("price") or ""
+                                base += float(str(raw).replace("$", "").replace(",", "").strip() or "0")
+                            total_with_tax = round(base + (base * 0.0863), 2)
+                            estimate_totals[index + 1] = f"{total_with_tax:.2f}"
+                        except (ValueError, TypeError):
+                            estimate_totals[index + 1] = scraped_total
                         self._debug(
                             f"Requirement {index + 1} estimate total collected: "
                             f"{estimate_totals[index + 1]}"
