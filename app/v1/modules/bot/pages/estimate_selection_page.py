@@ -129,12 +129,22 @@ class EstimateSelectionPage(BasePage):
 
         self._debug(f"Clicked search result for estimate_id={estimate_id}")
         self.wait_for_spinner_to_disappear()
-        self._wait_for_estimate_opened_or_locked()
-        if self._dismiss_locked_estimate_dialog_if_present():
+        outcome = self._wait_for_estimate_opened_or_locked()
+        if outcome == "locked":
+            if not self._dismiss_locked_estimate_dialog_if_present():
+                raise RuntimeError(
+                    f"Estimate {estimate_id} is locked and the OK dialog could not be dismissed"
+                )
+
+            if self._dismiss_locked_estimate_dialog_if_present():
+                raise RuntimeError(
+                    f"Estimate {estimate_id} is still locked after the second lock dialog; stopping flow"
+                )
+
             self._wait_for_estimate_opened_or_locked(expect_locked=False)
         self._debug("Estimate record opened, spinner dismissed")
 
-    def _wait_for_estimate_opened_or_locked(self, *, expect_locked: bool = True) -> None:
+    def _wait_for_estimate_opened_or_locked(self, *, expect_locked: bool = True) -> str:
         try:
             outcome = self.page.wait_for_function(
                 """(expectLocked) => {
@@ -179,6 +189,7 @@ class EstimateSelectionPage(BasePage):
                 timeout=self._timeout_ms,
             ).json_value()
             self._debug(f"Estimate selection outcome: {outcome}")
+            return str(outcome)
         except PlaywrightTimeoutError as exc:
             raise PlaywrightTimeoutError(
                 "Timed out waiting for selected estimate to open"
