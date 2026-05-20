@@ -39,6 +39,8 @@ class InvoicePage(BasePage):
         - auto: if account info looks complete, continue from job details.
         - account: force account tab -> job tab flow.
         - job: skip account tab and start from job tab.
+        - estimate_summary: start on Estimate Summary, add the first job,
+          choose its job method, then continue from job details.
 
         Returns:
             Tuple of (invoice_path, estimate_totals) where estimate_totals
@@ -68,6 +70,20 @@ class InvoicePage(BasePage):
         estimate_totals: Dict[int, str] = {}
         try:
             for index, requirement in enumerate(requirements):
+                if index == 0 and normalized in {
+                    "estimate_summary",
+                    "summary",
+                    "summary_add_job",
+                    "add_job",
+                }:
+                    requirement_customer_status = self._retry_step(
+                        "add_job_1",
+                        lambda requirement=requirement: self._add_job_and_prepare_requirement(
+                            requirement
+                        ),
+                    )
+                    normalized = "job"
+
                 job_data = self._build_job_data(quote_record, requirement)
                 self._debug(
                     f"Invoice flow requirement {index + 1}/{len(requirements)} job_data={job_data}"

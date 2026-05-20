@@ -338,7 +338,7 @@ def run_estimate_flow(
                         try:
                             _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
                             invoice_path, estimate_totals = invoice_page.complete_information_tabs(
-                                resume_from="job",
+                                resume_from="estimate_summary",
                                 quote_record=quote_record,
                                 customer_selection_status=customer_selection_status,
                             )
