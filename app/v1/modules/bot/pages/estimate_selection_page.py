@@ -90,6 +90,7 @@ class EstimateSelectionPage(BasePage):
             }""",
             timeout=self._timeout_ms,
         )
+        self.wait_for_spinner_to_disappear()
         print(f"estimate_id: {estimate_id}")
         # Step 5: Find and click the result whose <b> tag contains the estimate_id digits.
         # The result text looks like: "[ Estimate:28799 ] - Mini Van Wrap..."
@@ -98,27 +99,21 @@ class EstimateSelectionPage(BasePage):
             """(estimateId) => {
                 const needle = String(estimateId).replace(/\\D/g, '').trim();
                 if (!needle) return false;
-                const results = document.querySelectorAll(
-                    "div.search-results a.search-item"
-                );
-                for (const result of results) {
-                    // Check every <b> tag inside the result
-                    const boldTags = result.querySelectorAll('b');
-                    for (const boldTag of boldTags) {
-                        const boldValue = boldTag.textContent.replace(/\\D/g, '').trim();
-                        if (boldValue === needle) {
-                            result.click();
-                            return true;
-                        }
-                    }
-                    // Fallback: check the full result text contains the needle
-                    const fullText = result.textContent.replace(/\\s+/g, ' ').trim();
-                    const pattern = new RegExp('Estimate[:\\s]*' + needle + '[\\s\\]]', 'i');
-                    if (pattern.test(fullText)) {
-                        result.click();
+
+                const items = document.querySelectorAll("div.search-results a.search-item");
+
+                for (const item of items) {
+                    const text = item.innerText.replace(/\\s+/g, ' ').trim();
+
+                    // Extract full estimate number (works even if split across <b>)
+                    const match = text.match(/Estimate:\\s*(\\d+)/i);
+
+                    if (match && match[1] === needle) {
+                        item.click();
                         return true;
                     }
                 }
+
                 return false;
             }""",
             str(estimate_id),
