@@ -182,6 +182,7 @@ def _build_bot_quote_record(
     record = {
         "_id": quote_id,
         "quote_id": quote_id,
+        "estimate_id": payload.get("estimate_id") or None,
         "tenant_id": quote.get("tenant_id"),
         "user_email": quote.get("user_email", ""),
         "printsmith_url": tenant_credentials.get("printsmith_url") or "",

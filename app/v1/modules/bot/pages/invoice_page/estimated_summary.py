@@ -84,6 +84,93 @@ class EstimatedSummaryTab(BasePage):
         self._debug(f"Collected estimate totals: {totals}")
         return totals or {}
 
+    def remove_all_items(self) -> None:
+        """Remove all job items from the Estimate Summary table.
+
+        Repeatedly clicks the first delete_item button, confirms "Yes" on
+        the warning popup, and waits for the row to be removed. Continues
+        until no items remain in the table.
+        """
+        self.switch_to_tab()
+        self.wait_for_spinner_to_disappear()
+        self._debug("Starting to remove all items from Estimate Summary")
+
+        max_removals = 50  # safety limit to prevent infinite loops
+        removed = 0
+
+        for _ in range(max_removals):
+            # Check if any delete_item button exists
+            has_items = self.page.evaluate(
+                """() => {
+                    const btn = document.querySelector(
+                        'tbody.ui-treetable-tbody span[name="delete_item"]'
+                    );
+                    return !!btn;
+                }"""
+            )
+            if not has_items:
+                self._debug(f"No more items to remove (total removed: {removed})")
+                break
+
+            # Click the first delete_item button using JS (it may be obscured)
+            self.page.evaluate(
+                """() => {
+                    const btn = document.querySelector(
+                        'tbody.ui-treetable-tbody span[name="delete_item"]'
+                    );
+                    if (btn) btn.click();
+                }"""
+            )
+
+            # Wait for the confirmation dialog and click "Yes"
+            self.page.wait_for_function(
+                """() => {
+                    const dialog = document.querySelector(
+                        '.ui-confirmdialog.ui-dialog'
+                    );
+                    if (!dialog) return false;
+                    const style = window.getComputedStyle(dialog);
+                    return style.display !== 'none'
+                        && style.visibility !== 'hidden'
+                        && parseFloat(style.opacity || '1') > 0;
+                }""",
+                timeout=self._timeout_ms,
+            )
+
+            # Click the "Yes" button in the confirmation dialog
+            self.page.evaluate(
+                """() => {
+                    const dialog = document.querySelector(
+                        '.ui-confirmdialog.ui-dialog'
+                    );
+                    if (!dialog) return;
+                    const yesBtn = Array.from(
+                        dialog.querySelectorAll('button[pbutton] .ui-button-text')
+                    ).find(b => (b.textContent || '').trim() === 'Yes');
+                    if (yesBtn) yesBtn.click();
+                }"""
+            )
+            removed += 1
+            self._debug(f"Removed item #{removed}")
+
+            # Wait for the dialog to close and spinner
+            self.page.wait_for_function(
+                """() => {
+                    const dialog = document.querySelector(
+                        '.ui-confirmdialog.ui-dialog'
+                    );
+                    if (!dialog) return true;
+                    const style = window.getComputedStyle(dialog);
+                    return style.display === 'none'
+                        || style.visibility === 'hidden'
+                        || parseFloat(style.opacity || '0') === 0;
+                }""",
+                timeout=self._timeout_ms,
+            )
+            self.wait_for_spinner_to_disappear()
+
+        self._debug(f"Finished removing items. Total removed: {removed}")
+
     def click_us685_eestimate_and_download(
         self,
         customer_selection_status: Optional[Dict[str, Any]] = None,

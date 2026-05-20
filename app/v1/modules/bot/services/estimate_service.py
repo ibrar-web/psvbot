@@ -21,7 +21,9 @@ from app.v1.modules.bot import csv_logger
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.driver import create_browser_page
 from app.v1.modules.bot.pages.estimate_page import EstimatePage
+from app.v1.modules.bot.pages.estimate_selection_page import EstimateSelectionPage
 from app.v1.modules.bot.pages.invoice_page.invoice_page import InvoicePage
+from app.v1.modules.bot.pages.invoice_page.estimated_summary import EstimatedSummaryTab
 from app.v1.modules.bot.pages.invoice_page.job_details import InvalidStockSearchError
 from app.v1.modules.bot.pages.login_page import InvalidLoginCredentialsError, LoginPage
 from app.v1.modules.bot.pages.logout_page import LogoutPage
@@ -232,6 +234,30 @@ def _cleanup_local_invoice_file(invoice_path: Optional[Path]) -> None:
         logger.exception("Failed to delete temporary invoice directory")
 
 
+def _open_existing_estimate(
+    page: Page,
+    *,
+    quick_access_url: str,
+    estimate_id: str,
+) -> None:
+    """Navigate to the quick-access page, use the search box to find and
+    open the existing estimate, then land on the Estimate Summary tab."""
+    _debug(f"Opening quick access to search for existing estimate_id={estimate_id}")
+    page.goto(quick_access_url)
+    BasePage(page).wait_for_spinner_to_disappear()
+
+    selection_page = EstimateSelectionPage(page)
+    selection_page.search_and_open_estimate(estimate_id)
+    _debug(f"Existing estimate {estimate_id} opened. URL: {page.url}")
+
+    # Navigate directly to Estimate Summary tab and remove all existing items
+    summary_tab = EstimatedSummaryTab(page)
+    summary_tab.switch_to_tab()
+    _debug(f"Switched to Estimate Summary. Removing all existing items")
+    summary_tab.remove_all_items()
+    _debug(f"All items removed from estimate_id={estimate_id}")
+
+
 def run_estimate_flow(
     tenant_credentials: Optional[Dict[str, Any]] = None,
     quote_record: Optional[Dict[str, Any]] = None,
@@ -242,6 +268,9 @@ def run_estimate_flow(
     company = str(tenant_credentials.get("company") or "").strip()
     base_url = str(tenant_credentials.get("printsmith_url") or "").strip()
     quick_access_url = _build_quick_access_url(base_url)
+    quote_record = quote_record or {}
+    estimate_id = str(quote_record.get("estimate_id") or "").strip()
+    use_existing_estimate = bool(estimate_id)
 
     if not username or not password:
         return {
@@ -274,6 +303,7 @@ def run_estimate_flow(
                 if quote_record:
                     _debug(
                         f"Using quote context id={quote_record.get('_id') or quote_record.get('id') or quote_record.get('quote_id')}"
+                        f" estimate_id={estimate_id or 'none'}"
                     )
 
                 current_step = "login"
@@ -286,58 +316,98 @@ def run_estimate_flow(
                     company=company,
                 )
 
-                current_step = "quick_access"
-                _ensure_within_timeout(started_at, current_step)
-                page.goto(quick_access_url)
-                BasePage(page).wait_for_spinner_to_disappear()
-                _debug(f"Quick access page loaded. URL: {page.url}")
+                if use_existing_estimate:
+                    # --- EXISTING ESTIMATE FLOW ---
+                    # Search for the estimate, open it, remove all existing jobs
+                    current_step = "open_existing_estimate"
+                    _ensure_within_timeout(started_at, current_step)
+                    _open_existing_estimate(
+                        page,
+                        quick_access_url=quick_access_url,
+                        estimate_id=estimate_id,
+                    )
+                    _debug(f"Existing estimate opened and cleared. URL: {page.url}")
 
-                current_step = "create_estimate_click"
-                _ensure_within_timeout(started_at, current_step)
-                estimate_page = EstimatePage(page)
-                estimate_page.click_create_estimate_quick_access()
-                _debug(f"Create Estimate clicked. URL: {page.url}")
+                    # customer_selection_status stays None for existing estimates
+                    # (no customer setup needed — estimate already has a customer)
+                    customer_selection_status = {}
 
-                current_step = "new_estimate_setup"
-                new_estimate_page = NewEstimatePage(page)
-                for attempt in range(2):
-                    try:
-                        _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                        customer_selection_status = new_estimate_page.complete_walk_in_digital_color(
-                            quote_record or {}
-                        )
-                        break
-                    except Exception:
-                        logger.exception(
-                            "Step failed: %s attempt %s/2", current_step, attempt + 1
-                        )
-                        if attempt == 0:
-                            _debug("New Estimate setup failed on first attempt; retrying once")
-                            continue
-                        raise
-                _debug(f"New Estimate setup completed. URL: {page.url}")
+                    current_step = "invoice_tabs"
+                    invoice_page = InvoicePage(page)
+                    for attempt in range(2):
+                        try:
+                            _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
+                            invoice_path, estimate_totals = invoice_page.complete_information_tabs(
+                                resume_from="job",
+                                quote_record=quote_record,
+                                customer_selection_status=customer_selection_status,
+                            )
+                            break
+                        except InvalidStockSearchError:
+                            raise
+                        except Exception:
+                            logger.exception(
+                                "Step failed: %s attempt %s/2", current_step, attempt + 1
+                            )
+                            if attempt == 0:
+                                _debug("Invoice tabs (existing estimate) failed on first attempt; retrying once")
+                                continue
+                            raise
 
-                current_step = "invoice_tabs"
-                invoice_page = InvoicePage(page)
-                for attempt in range(2):
-                    try:
-                        _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                        invoice_path, estimate_totals = invoice_page.complete_information_tabs(
-                            resume_from="auto",
-                            quote_record=quote_record,
-                            customer_selection_status=customer_selection_status,
-                        )
-                        break
-                    except InvalidStockSearchError:
-                        raise
-                    except Exception:
-                        logger.exception(
-                            "Step failed: %s attempt %s/2", current_step, attempt + 1
-                        )
-                        if attempt == 0:
-                            _debug("Invoice tabs flow failed on first attempt; retrying once")
-                            continue
-                        raise
+                else:
+                    # --- NEW ESTIMATE FLOW ---
+                    current_step = "quick_access"
+                    _ensure_within_timeout(started_at, current_step)
+                    page.goto(quick_access_url)
+                    BasePage(page).wait_for_spinner_to_disappear()
+                    _debug(f"Quick access page loaded. URL: {page.url}")
+
+                    current_step = "create_estimate_click"
+                    _ensure_within_timeout(started_at, current_step)
+                    estimate_page = EstimatePage(page)
+                    estimate_page.click_create_estimate_quick_access()
+                    _debug(f"Create Estimate clicked. URL: {page.url}")
+
+                    current_step = "new_estimate_setup"
+                    new_estimate_page = NewEstimatePage(page)
+                    for attempt in range(2):
+                        try:
+                            _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
+                            customer_selection_status = new_estimate_page.complete_walk_in_digital_color(
+                                quote_record or {}
+                            )
+                            break
+                        except Exception:
+                            logger.exception(
+                                "Step failed: %s attempt %s/2", current_step, attempt + 1
+                            )
+                            if attempt == 0:
+                                _debug("New Estimate setup failed on first attempt; retrying once")
+                                continue
+                            raise
+                    _debug(f"New Estimate setup completed. URL: {page.url}")
+
+                    current_step = "invoice_tabs"
+                    invoice_page = InvoicePage(page)
+                    for attempt in range(2):
+                        try:
+                            _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
+                            invoice_path, estimate_totals = invoice_page.complete_information_tabs(
+                                resume_from="auto",
+                                quote_record=quote_record,
+                                customer_selection_status=customer_selection_status,
+                            )
+                            break
+                        except InvalidStockSearchError:
+                            raise
+                        except Exception:
+                            logger.exception(
+                                "Step failed: %s attempt %s/2", current_step, attempt + 1
+                            )
+                            if attempt == 0:
+                                _debug("Invoice tabs flow failed on first attempt; retrying once")
+                                continue
+                            raise
                 _debug(f"Invoice tab flow completed. URL: {page.url}")
                 _debug(f"Estimate totals collected: {estimate_totals}")
                 logger.info("Estimate totals: %s", estimate_totals)
