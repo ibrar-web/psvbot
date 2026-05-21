@@ -13,12 +13,23 @@ class AuthMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.allowlist = set(allowlist or [])
 
+    def _is_allowlisted(self, path: str) -> bool:
+        for route in self.allowlist:
+            if route == "/":
+                if path == "/":
+                    return True
+                continue
+            normalized = route.rstrip("/")
+            if path == normalized or path.startswith(f"{normalized}/"):
+                return True
+        return False
+
     async def dispatch(self, request: Request, call_next):
         if request.method == "OPTIONS":
             return await call_next(request)
 
         path = request.url.path
-        is_allowlisted = any(path.startswith(route) for route in self.allowlist)
+        is_allowlisted = self._is_allowlisted(path)
         auth_header = request.headers.get("authorization")
 
         if is_allowlisted:

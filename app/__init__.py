@@ -6,7 +6,7 @@ import logging
 import sys
 
 from beanie import init_beanie
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -101,7 +101,6 @@ def create_app() -> FastAPI:
     app = FastAPI(title=APP_NAME, version=APP_VERSION)
     mongo_client = get_client()
     app.state.mongo_client = mongo_client
-    app.state.queue_poller_task = None
     app.state.log_memory_clear_task = None
     allow_origins = (
         ["*"]
@@ -117,7 +116,14 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(
         AuthMiddleware,
-        allowlist=["/", "/health", "/docs", "/openapi.json"],
+        allowlist=[
+            "/",
+            "/health",
+            "/docs",
+            "/openapi.json",
+            "/execute-task",
+            "/api/v1/bot/execute-task",
+        ],
     )
     app.include_router(api_router, prefix="/api/v1")
 
@@ -184,12 +190,22 @@ def create_app() -> FastAPI:
             "build_sha": os.getenv("APP_BUILD_SHA", "unknown"),
         }
 
+    @app.post("/execute-task", tags=["bot"], include_in_schema=True)
+    async def execute_task(request: Request):
+        from app.v1.modules.bot.services.queue_service import process_cloud_task_payload
+
+        payload = await request.json()
+        if not isinstance(payload, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="Task payload must be a JSON object",
+            )
+        return await process_cloud_task_payload(payload)
+
     @app.on_event("startup")
     async def startup_event() -> None:
         from app.v1.modules.bot.services.queue_service import (
-            get_queue_poll_sleep_seconds,
             recover_incomplete_jobs,
-            schedule_queue_poll_if_idle,
         )
 
         await init_beanie(
@@ -197,13 +213,6 @@ def create_app() -> FastAPI:
             document_models=[JobQueueDocument],
         )
         await recover_incomplete_jobs()
-
-        async def _queue_poller() -> None:
-            while True:
-                schedule_queue_poll_if_idle()
-                await asyncio.sleep(await get_queue_poll_sleep_seconds())
-
-        app.state.queue_poller_task = asyncio.create_task(_queue_poller())
 
         async def _log_memory_clearer() -> None:
             """Periodically flush logging handlers to free memory every hour."""
@@ -218,11 +227,6 @@ def create_app() -> FastAPI:
 
     @app.on_event("shutdown")
     async def shutdown_event() -> None:
-        queue_poller_task = getattr(app.state, "queue_poller_task", None)
-        if queue_poller_task is not None:
-            queue_poller_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await queue_poller_task
         log_memory_clear_task = getattr(app.state, "log_memory_clear_task", None)
         if log_memory_clear_task is not None:
             log_memory_clear_task.cancel()

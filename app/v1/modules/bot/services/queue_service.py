@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 import httpx
-from beanie.operators import Or
 from fastapi import HTTPException
 from fastapi.concurrency import run_in_threadpool
 
@@ -19,16 +18,13 @@ from app.v1.core.settings import (
     PRINTSMITH_PASSWORD,
     PRINTSMITH_URL,
     PRINTSMITH_USERNAME,
-    QUEUE_BUSY_POLL_INTERVAL_SECONDS,
     QUEUE_ENFORCE_MACHINE_ASSIGNMENT,
-    QUEUE_IDLE_POLL_INTERVAL_SECONDS,
 )
 from app.v1.modules.bot.services.estimate_service import run_estimate_flow
 from app.v1.schemas.jobqueuemodel import JobQueueDocument, JobQueueStatus
 
 logger = logging.getLogger(__name__)
-_poller_lock = asyncio.Lock()
-_active_poll_task: asyncio.Task | None = None
+_task_execution_lock = asyncio.Lock()
 
 
 def _cleanup_after_job() -> None:
@@ -125,6 +121,23 @@ def _normalize_runtime_credentials(data: Optional[Dict[str, Any]]) -> Dict[str, 
     }
 
 
+def _validate_runtime_credentials(runtime_credentials: Dict[str, str]) -> None:
+    if not runtime_credentials["printsmith_url"]:
+        raise HTTPException(status_code=500, detail="PRINTSMITH_URL is not configured")
+    if not runtime_credentials["username"]:
+        raise HTTPException(
+            status_code=500, detail="PRINTSMITH_USERNAME is not configured"
+        )
+    if not runtime_credentials["password"]:
+        raise HTTPException(
+            status_code=500, detail="PRINTSMITH_PASSWORD is not configured"
+        )
+    if not runtime_credentials["company"]:
+        raise HTTPException(
+            status_code=500, detail="PRINTSMITH_COMPANY is not configured"
+        )
+
+
 async def fetch_main_server_record(queue_id: str) -> Dict[str, Any]:
     if not MAIN_SERVER_API_BASE_URL:
         raise HTTPException(
@@ -145,15 +158,19 @@ async def fetch_main_server_record(queue_id: str) -> Dict[str, Any]:
 
 
 def _build_bot_quote_record(
-    payload: Dict[str, Any], job: JobQueueDocument
+    payload: Dict[str, Any],
+    job: Optional[JobQueueDocument] = None,
+    queue_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     quote = payload.get("quote") or {}
     raw_requirements = payload.get("requirements") or []
     tenant_credentials = payload.get("tenant_credentials") or {}
-    print(f'tenant_credentials: f{tenant_credentials}')
+    fallback_quote_id = queue_id or ""
+    if job is not None:
+        fallback_quote_id = job.quotation_id or str(job.id)
     quote_id = str(
         quote.get("_id") or quote.get("id") or quote.get(
-            "quote_id") or job.quotation_id
+            "quote_id") or fallback_quote_id
     )
 
     if isinstance(raw_requirements, dict):
@@ -199,6 +216,180 @@ def _build_bot_quote_record(
     logger.info("Normalized bot quote record: %s", record)
     print(f"[PSV][QueueService] Normalized bot quote record: {record}")
     return record
+
+
+def _unwrap_task_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    data = payload.get("data")
+    if isinstance(data, dict):
+        merged = {**payload, **data}
+        merged["callback_url"] = data.get("callback_url") or payload.get("callback_url")
+        return merged
+
+    nested_payload = payload.get("payload")
+    if isinstance(nested_payload, dict):
+        merged = {**payload, **nested_payload}
+        merged["callback_url"] = (
+            nested_payload.get("callback_url") or payload.get("callback_url")
+        )
+        return merged
+
+    return payload
+
+
+def _extract_queue_id(payload: Dict[str, Any]) -> str:
+    job_data = payload.get("job") if isinstance(payload.get("job"), dict) else {}
+    return str(
+        payload.get("queue_id")
+        or payload.get("job_queue_id")
+        or payload.get("task_id")
+        or payload.get("job_id")
+        or job_data.get("_id")
+        or job_data.get("id")
+        or ""
+    ).strip()
+
+
+async def _get_job_queue_document(queue_id: str) -> Optional[JobQueueDocument]:
+    if not queue_id:
+        return None
+    try:
+        return await JobQueueDocument.get(queue_id)
+    except Exception:
+        logger.info("No local job_queue document found for queue_id=%s", queue_id)
+        return None
+
+
+async def _resolve_task_source_payload(
+    task_payload: Dict[str, Any],
+    queue_id: str,
+) -> Dict[str, Any]:
+    if any(
+        key in task_payload
+        for key in (
+            "quote_record",
+            "quote",
+            "requirements",
+            "tenant_credentials",
+            "psv_credentials",
+            "credentials",
+        )
+    ):
+        return task_payload
+
+    if queue_id:
+        return await fetch_main_server_record(queue_id)
+
+    raise HTTPException(
+        status_code=400,
+        detail="Cloud Task payload must include quote data or queue_id",
+    )
+
+
+def _build_quote_record_from_task_payload(
+    payload: Dict[str, Any],
+    job: Optional[JobQueueDocument],
+    queue_id: str,
+) -> Dict[str, Any]:
+    quote_record = payload.get("quote_record")
+    if isinstance(quote_record, dict):
+        normalized_record = dict(quote_record)
+        if "requirements" not in normalized_record and "requirements" in payload:
+            normalized_record["requirements"] = payload.get("requirements")
+        if "estimate_id" not in normalized_record and "estimate_id" in payload:
+            normalized_record["estimate_id"] = payload.get("estimate_id")
+        if "quote_id" not in normalized_record:
+            normalized_record["quote_id"] = (
+                normalized_record.get("_id") or queue_id or getattr(job, "quotation_id", "")
+            )
+        return normalized_record
+
+    return _build_bot_quote_record(payload, job, queue_id)
+
+
+def _extract_psv_credentials(
+    payload: Dict[str, Any],
+    quote_record: Dict[str, Any],
+) -> Dict[str, Any]:
+    return (
+        payload.get("tenant_credentials")
+        or payload.get("psv_credentials")
+        or payload.get("credentials")
+        or {
+            "printsmith_url": quote_record.get("printsmith_url", ""),
+            "printsmith_username": quote_record.get("printsmith_username", ""),
+            "printsmith_password": quote_record.get("printsmith_password", ""),
+            "printsmith_company": quote_record.get("printsmith_company", ""),
+        }
+    )
+
+
+def _build_result_payload(
+    *,
+    queue_id: str,
+    result: Dict[str, Any],
+    started_at: datetime,
+    ended_at: datetime,
+    job: Optional[JobQueueDocument] = None,
+) -> Dict[str, Any]:
+    return {
+        "queue_id": queue_id or (str(job.id) if job is not None else None),
+        "quotation_id": getattr(job, "quotation_id", None),
+        "success": result.get("status") == "success",
+        "status": result.get("status"),
+        "message": result.get("message"),
+        "summary_file_name": result.get("summary_file_name"),
+        "summary_file_url": result.get("summary_file_url"),
+        "summary_file_storage_key": result.get("summary_file_storage_key"),
+        "error_message": (
+            None if result.get("status") == "success" else result.get("message")
+        ),
+        "estimate_totals": result.get("estimate_totals"),
+        "started_at": started_at.isoformat(),
+        "ended_at": ended_at.isoformat(),
+        "total_time_used_seconds": round((ended_at - started_at).total_seconds(), 3),
+    }
+
+
+def _callback_headers(payload: Dict[str, Any]) -> Dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    authorization = str(
+        payload.get("callback_authorization")
+        or payload.get("callback_auth_header")
+        or ""
+    ).strip()
+    callback_token = str(payload.get("callback_token") or "").strip()
+
+    if authorization:
+        headers["Authorization"] = authorization
+    elif callback_token:
+        headers["Authorization"] = f"Bearer {callback_token}"
+    elif MAIN_SERVER_API_TOKEN:
+        headers["Authorization"] = f"Bearer {MAIN_SERVER_API_TOKEN}"
+
+    return headers
+
+
+async def _post_callback_url(
+    callback_url: str,
+    callback_payload: Dict[str, Any],
+    task_payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            callback_url,
+            json=callback_payload,
+            headers=_callback_headers(task_payload),
+        )
+        response.raise_for_status()
+        try:
+            body = response.json()
+        except ValueError:
+            body = None
+        return {
+            "status": "success",
+            "http_status": response.status_code,
+            "response": body,
+        }
 
 
 async def sync_job_with_main_server(job: JobQueueDocument) -> Dict[str, Any]:
@@ -295,6 +486,208 @@ async def recover_incomplete_jobs() -> None:
                     getattr(job, "id", None))
 
 
+async def process_cloud_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, Any]:
+    started_at = datetime.utcnow()
+    task_payload = _unwrap_task_payload(raw_payload or {})
+    callback_url = str(task_payload.get("callback_url") or "").strip()
+    queue_id = _extract_queue_id(task_payload)
+    job = await _get_job_queue_document(queue_id)
+
+    if job is not None:
+        queue_id = str(job.id)
+
+    if job is not None and job.status == JobQueueStatus.complete:
+        result = {
+            "status": "success",
+            "message": "Queue record is already complete",
+            "summary_file_name": job.file_name,
+            "summary_file_url": job.file_url,
+        }
+        ended_at = datetime.utcnow()
+        callback_payload = _build_result_payload(
+            queue_id=queue_id,
+            result=result,
+            started_at=started_at,
+            ended_at=ended_at,
+            job=job,
+        )
+        if callback_url:
+            result["callback"] = await _post_callback_url(
+                callback_url, callback_payload, task_payload
+            )
+        return result
+
+    if job is not None and job.status == JobQueueStatus.processing:
+        result = {
+            "status": "skipped",
+            "message": "Queue record is already processing",
+        }
+        ended_at = datetime.utcnow()
+        callback_payload = _build_result_payload(
+            queue_id=queue_id,
+            result=result,
+            started_at=started_at,
+            ended_at=ended_at,
+            job=job,
+        )
+        if callback_url:
+            result["callback"] = await _post_callback_url(
+                callback_url, callback_payload, task_payload
+            )
+        return result
+
+    if job is not None and not _is_job_assigned_to_current_machine(job.machine_name):
+        result = {
+            "status": "skipped",
+            "message": (
+                f"Queue record is assigned to machine '{job.machine_name}', "
+                f"current machine is '{MACHINE_NAME or 'unset'}'"
+            ),
+        }
+        ended_at = datetime.utcnow()
+        callback_payload = _build_result_payload(
+            queue_id=queue_id,
+            result=result,
+            started_at=started_at,
+            ended_at=ended_at,
+            job=job,
+        )
+        if callback_url:
+            result["callback"] = await _post_callback_url(
+                callback_url, callback_payload, task_payload
+            )
+        return result
+
+    async with _task_execution_lock:
+        result: Dict[str, Any]
+        try:
+            if job is not None:
+                job.status = JobQueueStatus.processing
+                job.updated_at = started_at
+                await job.save()
+
+            logger.info(
+                "Cloud Task execution started queue_id=%s start_time=%s",
+                queue_id or "none",
+                started_at.isoformat(),
+            )
+            source_payload = await _resolve_task_source_payload(task_payload, queue_id)
+            quote_record = _build_quote_record_from_task_payload(
+                source_payload,
+                job,
+                queue_id,
+            )
+            psv_credentials = _extract_psv_credentials(source_payload, quote_record)
+            runtime_credentials = (
+                _normalize_runtime_credentials(psv_credentials)
+                or _build_runtime_credentials()
+            )
+            _validate_runtime_credentials(runtime_credentials)
+
+            logger.info(
+                "Cloud Task step=run_bot queue_id=%s flow_timeout_seconds=%s",
+                queue_id or "none",
+                DEFAULT_TIMEOUT_SECONDS,
+            )
+            result = await run_in_threadpool(
+                run_estimate_flow,
+                runtime_credentials,
+                quote_record,
+            )
+
+            ended_at = datetime.utcnow()
+            if job is not None:
+                job.updated_at = ended_at
+                if result.get("status") == "success":
+                    job.status = JobQueueStatus.complete
+                    job.file_name = result.get("summary_file_name")
+                    job.file_url = result.get("summary_file_url")
+                    job.last_error = None
+                else:
+                    job.status = JobQueueStatus.failed
+                    job.retry_count += 1
+                    job.last_error = result.get("message") or "Bot processing failed"
+                    job.failure_history.append(
+                        {
+                            "retry": job.retry_count,
+                            "message": job.last_error,
+                            "timestamp": datetime.utcnow().isoformat(),
+                        }
+                    )
+                await job.save()
+
+            logger.info(
+                "Cloud Task execution finished queue_id=%s end_time=%s status=%s estimate_totals=%s",
+                queue_id or "none",
+                ended_at.isoformat(),
+                result.get("status"),
+                result.get("estimate_totals"),
+            )
+
+        except Exception as exc:
+            logger.exception(
+                "Cloud Task execution failed queue_id=%s", queue_id or "none"
+            )
+            ended_at = datetime.utcnow()
+            result = {
+                "status": "error",
+                "message": str(exc),
+            }
+            if job is not None:
+                job.status = JobQueueStatus.failed
+                job.retry_count += 1
+                job.last_error = str(exc)
+                job.failure_history.append(
+                    {
+                        "retry": job.retry_count,
+                        "message": str(exc),
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+                )
+                job.updated_at = ended_at
+                await job.save()
+
+        callback_payload = _build_result_payload(
+            queue_id=queue_id,
+            result=result,
+            started_at=started_at,
+            ended_at=ended_at,
+            job=job,
+        )
+
+        try:
+            if callback_url:
+                logger.info(
+                    "Cloud Task callback posting queue_id=%s callback_url=%s",
+                    queue_id or "none",
+                    callback_url,
+                )
+                result["callback"] = await _post_callback_url(
+                    callback_url,
+                    callback_payload,
+                    task_payload,
+                )
+            elif job is not None:
+                logger.info(
+                    "Cloud Task callback_url missing; falling back to main server queue_id=%s",
+                    queue_id,
+                )
+                result["main_server_callback"] = await _notify_main_server(job, result)
+        except Exception as exc:
+            logger.exception(
+                "Cloud Task result callback failed queue_id=%s", queue_id or "none"
+            )
+            result["callback"] = {
+                "status": "error",
+                "message": str(exc),
+            }
+        finally:
+            logger.info("Cloud Task cleanup queue_id=%s", queue_id or "none")
+            _cleanup_after_job()
+
+        return result
+
+
 async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
     started_at = datetime.utcnow()
     if job.status == JobQueueStatus.processing:
@@ -379,22 +772,7 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
             _normalize_runtime_credentials(psv_credentials)
             or _build_runtime_credentials()
         )
-        if not runtime_credentials["printsmith_url"]:
-            raise HTTPException(
-                status_code=500, detail="PRINTSMITH_URL is not configured"
-            )
-        if not runtime_credentials["username"]:
-            raise HTTPException(
-                status_code=500, detail="PRINTSMITH_USERNAME is not configured"
-            )
-        if not runtime_credentials["password"]:
-            raise HTTPException(
-                status_code=500, detail="PRINTSMITH_PASSWORD is not configured"
-            )
-        if not runtime_credentials["company"]:
-            raise HTTPException(
-                status_code=500, detail="PRINTSMITH_COMPANY is not configured"
-            )
+        _validate_runtime_credentials(runtime_credentials)
 
         logger.info(
             "Queue step=run_bot queue_id=%s flow_timeout_seconds=%s",
@@ -497,85 +875,3 @@ async def process_job_queue_document(job: JobQueueDocument) -> Dict[str, Any]:
     finally:
         logger.info("Queue cleanup queue_id=%s", getattr(job, "id", None))
         _cleanup_after_job()
-
-
-async def _run_pending_jobs_batch() -> None:
-    logger.info("Queue scheduler checking pending jobs")
-    processing_job = next(
-        (
-            job
-            for job in await JobQueueDocument.find(
-                JobQueueDocument.status == JobQueueStatus.processing
-            ).to_list()
-            if _is_job_assigned_to_current_machine(job.machine_name)
-        ),
-        None,
-    )
-    if processing_job is not None:
-        logger.info(
-            "Queue scheduler skipped because queue_id=%s is already processing on current_machine=%s",
-            getattr(processing_job, "id", None),
-            MACHINE_NAME or "unset",
-        )
-        return
-    pending_jobs = await JobQueueDocument.find(
-        Or(
-            JobQueueDocument.status == JobQueueStatus.pending,
-            JobQueueDocument.status == None,
-        )
-    ).to_list()
-    logger.info("Queue scheduler found %s pending job(s)", len(pending_jobs))
-    for job in pending_jobs:
-        if not _is_job_assigned_to_current_machine(job.machine_name):
-            logger.info(
-                "Queue scheduler ignored queue_id=%s assigned_machine=%s current_machine=%s",
-                getattr(job, "id", None),
-                job.machine_name,
-                MACHINE_NAME or "unset",
-            )
-            continue
-        await process_job_queue_document(job)
-
-
-async def poll_and_process_pending_jobs() -> Dict[str, Any]:
-    if _poller_lock.locked():
-        return {
-            "status": "skipped",
-            "message": "Queue poll is already running",
-        }
-
-    async with _poller_lock:
-        await _run_pending_jobs_batch()
-        return {
-            "status": "success",
-            "message": "Queue poll completed",
-        }
-
-
-async def get_queue_poll_sleep_seconds() -> int:
-    processing_job = next(
-        (
-            job
-            for job in await JobQueueDocument.find(
-                JobQueueDocument.status == JobQueueStatus.processing
-            ).to_list()
-            if _is_job_assigned_to_current_machine(job.machine_name)
-        ),
-        None,
-    )
-    if processing_job is not None:
-        return QUEUE_BUSY_POLL_INTERVAL_SECONDS
-    return QUEUE_IDLE_POLL_INTERVAL_SECONDS
-
-
-def schedule_queue_poll_if_idle() -> bool:
-    global _active_poll_task
-
-    if _active_poll_task is not None and not _active_poll_task.done():
-        logger.info(
-            "Queue scheduler tick skipped because previous batch is still running"
-        )
-        return False
-
-    _active_poll_task = asyncio.create_task(poll_and_process_pending_jobs())
-    return True

@@ -1,6 +1,6 @@
 # PSVBot API
 
-Standalone FastAPI service for the Selenium PrintSmith Vision bot.
+Standalone FastAPI service for the Playwright PrintSmith Vision bot.
 
 ## Project Structure
 
@@ -10,15 +10,16 @@ Standalone FastAPI service for the Selenium PrintSmith Vision bot.
 - `app/v1/core/settings.py`: environment-backed settings
 - `app/v1/middleware/auth.py`: bearer-token auth middleware
 - `app/v1/routes.py`: API v1 route registration
-- `app/v1/modules/bot/`: Selenium bot and queue APIs
+- `app/v1/modules/bot/`: Playwright bot and Cloud Tasks APIs
 - `app/v1/schemas/jobqueuemodel.py`: `job_queue` Beanie document
 - `main.py`: local entrypoint
 
 ## Service Flow
 
 1. Send `Authorization: Bearer <API_BEARER_TOKEN>` on protected routes
-2. Call `POST /api/v1/bot/run-estimate` for direct bot execution, or `POST /api/v1/bot/process-queue` from the main server
-3. The app also polls MongoDB every 5 minutes for `job_queue` records with `status=pending`
+2. Create a Google Cloud Tasks HTTP task from the main server
+3. Cloud Tasks calls `POST /execute-task` on this VM
+4. The task payload can include `callback_url`; after the bot finishes, this service posts the result payload to that URL
 
 ## Setup
 
@@ -44,46 +45,36 @@ PRINTSMITH_PASSWORD=psv-password
 PRINTSMITH_COMPANY=your-company
 ```
 
-## Example Bot Request
+## Example Cloud Task Request
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/bot/run-estimate \
+curl -X POST http://127.0.0.1:8000/execute-task \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <API_BEARER_TOKEN>' \
   -d '{
-    "credentials": {
+    "queue_id": "job-queue-id",
+    "callback_url": "https://service-a/api/result",
+    "tenant_credentials": {
       "printsmith_url": "https://your-company.printsmithvision.com/PrintSmith/PrintSmith.html",
-      "username": "psv-user",
-      "password": "psv-password",
-      "company": "your-company"
+      "printsmith_username": "psv-user",
+      "printsmith_password": "psv-password",
+      "printsmith_company": "your-company"
     },
-    "quote_record": {
-      "quote_id": "sample-quote-1"
-    }
-  }'
-```
-
-## Example Queue Request
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/bot/process-queue \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <API_BEARER_TOKEN>' \
-  -d '{
-    "queue": {
-      "quotation_id": "quote-123",
+    "quote": {
+      "_id": "quote-123",
       "tenant_id": "tenant-1",
-      "user_email": "customer@example.com",
-      "account_name": "Acme",
       "contact_person": "John Doe",
-      "contact_email": "customer@example.com",
-      "contact_phone": "+1-555-0100",
-      "requirements": {
+      "contact_email": "customer@example.com"
+    },
+    "requirements": [
+      {
         "stock_search": "13oz vinyl",
         "quantity": "1",
+        "job_method": "Digital Color",
         "job_charges": []
       }
-    }
+    ]
   }'
 ```
+
+`POST /api/v1/bot/execute-task` is also available for callers that prefer the versioned API prefix. Both task endpoints are allowlisted for Cloud Tasks delivery.
 # psvbot
