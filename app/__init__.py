@@ -123,6 +123,7 @@ def create_app() -> FastAPI:
             "/openapi.json",
             "/execute-task",
             "/api/v1/bot/execute-task",
+            "/api/v1/bot/execute-test-task",
         ],
     )
     app.include_router(api_router, prefix="/api/v1")
