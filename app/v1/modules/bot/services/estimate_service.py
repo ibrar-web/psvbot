@@ -16,7 +16,12 @@ from app.v1.common.storage_service import (
     upload_bytes_to_storage,
 )
 from app.v1.core.settings import BUCKET_NAME, QUOTE_SUMMARY_STORAGE_ROOT
-from app.v1.modules.bot.config import DEBUG, DEFAULT_TIMEOUT_SECONDS
+from app.v1.modules.bot.config import (
+    DEBUG,
+    DEFAULT_TIMEOUT_SECONDS,
+    PAGE_LOAD_TIMEOUT_SECONDS,
+    RECOVERY_HOME_LOAD_TIMEOUT_SECONDS,
+)
 from app.v1.modules.bot import csv_logger
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.driver import create_browser_page
@@ -53,6 +58,168 @@ def _build_quick_access_url(base_url: str) -> str:
         return f"{parsed.scheme}://{parsed.netloc}/PrintSmith/nextgen/en_US/#/quick-access"
 
     return base_url
+
+
+def _is_logged_in_url(url: str) -> bool:
+    normalized_url = (url or "").lower()
+    return any(
+        part in normalized_url
+        for part in ("nextgen", "quick-access", "#/home", "/home")
+    )
+
+
+def _safe_page_url(page: Page) -> str:
+    try:
+        return page.url
+    except Exception:
+        return "unavailable"
+
+
+def _stop_page_load(page: Page) -> None:
+    try:
+        page.evaluate("() => window.stop()")
+    except Exception:
+        logger.debug("Unable to stop current page load before recovery", exc_info=True)
+
+
+def _wait_for_app_to_settle(page: Page, *, timeout_seconds: int, step: str) -> None:
+    try:
+        BasePage(page, timeout=timeout_seconds).wait_for_spinner_to_disappear()
+    except PlaywrightTimeoutError as exc:
+        raise PlaywrightTimeoutError(
+            f"Timed out after {timeout_seconds}s waiting for PSV page to settle "
+            f"at step '{step}'. Current URL: {_safe_page_url(page)}"
+        ) from exc
+
+
+def _load_page(
+    page: Page,
+    url: str,
+    *,
+    step: str,
+    timeout_seconds: int,
+) -> None:
+    _debug(f"Opening {step}: {url} (timeout={timeout_seconds}s)")
+    page.goto(
+        url,
+        wait_until="domcontentloaded",
+        timeout=timeout_seconds * 1000,
+    )
+    _wait_for_app_to_settle(page, timeout_seconds=timeout_seconds, step=step)
+    _debug(f"{step} loaded. URL: {_safe_page_url(page)}")
+
+
+def _complete_login_if_needed(
+    page: Page,
+    *,
+    username: str,
+    password: str,
+    company: str,
+    timeout_seconds: int,
+    step: str,
+) -> None:
+    login_page = LoginPage(page, timeout=timeout_seconds)
+    if _is_logged_in_url(page.url) and not login_page.is_visible(
+        LoginPage.USERNAME_INPUT
+    ):
+        _debug(f"{step}: user is already logged in. URL: {page.url}")
+        _wait_for_app_to_settle(page, timeout_seconds=timeout_seconds, step=step)
+        return
+
+    try:
+        login_page.wait_for_visible(LoginPage.USERNAME_INPUT)
+    except PlaywrightTimeoutError as exc:
+        if _is_logged_in_url(page.url):
+            _debug(f"{step}: login form not visible because user is logged in")
+            _wait_for_app_to_settle(page, timeout_seconds=timeout_seconds, step=step)
+            return
+        raise PlaywrightTimeoutError(
+            f"{step}: login form did not appear within {timeout_seconds}s. "
+            f"Current URL: {_safe_page_url(page)}"
+        ) from exc
+
+    login_page.login(username, password, company)
+    login_page.wait_for_login_result()
+    _wait_for_app_to_settle(page, timeout_seconds=timeout_seconds, step=step)
+    _debug(f"{step}: login successful. URL: {page.url}")
+
+
+def _recover_session_from_home(
+    page: Page,
+    *,
+    base_url: str,
+    username: str,
+    password: str,
+    company: str,
+    failed_step: str,
+) -> None:
+    _debug(
+        f"{failed_step} did not load within {PAGE_LOAD_TIMEOUT_SECONDS}s; "
+        "opening home/login page for recovery"
+    )
+    _stop_page_load(page)
+    _load_page(
+        page,
+        base_url,
+        step=f"{failed_step}_recovery_home",
+        timeout_seconds=RECOVERY_HOME_LOAD_TIMEOUT_SECONDS,
+    )
+    _complete_login_if_needed(
+        page,
+        username=username,
+        password=password,
+        company=company,
+        timeout_seconds=RECOVERY_HOME_LOAD_TIMEOUT_SECONDS,
+        step=f"{failed_step}_recovery_login",
+    )
+
+
+def _navigate_with_recovery(
+    page: Page,
+    url: str,
+    *,
+    base_url: str,
+    username: str,
+    password: str,
+    company: str,
+    step: str,
+) -> None:
+    try:
+        _load_page(
+            page,
+            url,
+            step=step,
+            timeout_seconds=PAGE_LOAD_TIMEOUT_SECONDS,
+        )
+        return
+    except PlaywrightTimeoutError as first_exc:
+        logger.warning(
+            "Page load timeout at step=%s url=%s; attempting home/login recovery",
+            step,
+            url,
+        )
+        _recover_session_from_home(
+            page,
+            base_url=base_url,
+            username=username,
+            password=password,
+            company=company,
+            failed_step=step,
+        )
+        try:
+            _load_page(
+                page,
+                url,
+                step=f"{step}_retry_after_recovery",
+                timeout_seconds=PAGE_LOAD_TIMEOUT_SECONDS,
+            )
+            return
+        except PlaywrightTimeoutError as second_exc:
+            raise PlaywrightTimeoutError(
+                f"{step} failed to load within {PAGE_LOAD_TIMEOUT_SECONDS}s, "
+                "even after home/login recovery. "
+                f"Original error: {first_exc}; retry error: {second_exc}"
+            ) from second_exc
 
 
 def _build_summary_output_path(quote_record: Optional[Dict[str, Any]], summary_file_name: str) -> Path:
@@ -114,14 +281,34 @@ def _login(
     password: str,
     company: str,
 ) -> None:
-    _debug(f"Opening login page: {base_url}")
-    page.goto(base_url)
+    try:
+        _load_page(
+            page,
+            base_url,
+            step="login_page",
+            timeout_seconds=PAGE_LOAD_TIMEOUT_SECONDS,
+        )
+    except PlaywrightTimeoutError:
+        _debug(
+            "Login page did not load within page timeout; "
+            "retrying with recovery home timeout"
+        )
+        _stop_page_load(page)
+        _load_page(
+            page,
+            base_url,
+            step="login_page_recovery",
+            timeout_seconds=RECOVERY_HOME_LOAD_TIMEOUT_SECONDS,
+        )
 
-    login_page = LoginPage(page)
-    login_page.login(username, password, company)
-    login_page.wait_for_login_result()
-    BasePage(page).wait_for_spinner_to_disappear()
-    _debug(f"Login successful. URL: {page.url}")
+    _complete_login_if_needed(
+        page,
+        username=username,
+        password=password,
+        company=company,
+        timeout_seconds=RECOVERY_HOME_LOAD_TIMEOUT_SECONDS,
+        step="login",
+    )
 
 
 def _ensure_browser_and_login(
@@ -237,14 +424,25 @@ def _cleanup_local_invoice_file(invoice_path: Optional[Path]) -> None:
 def _open_existing_estimate(
     page: Page,
     *,
+    base_url: str,
     quick_access_url: str,
     estimate_id: str,
+    username: str,
+    password: str,
+    company: str,
 ) -> None:
     """Navigate to the quick-access page, use the search box to find and
     open the existing estimate, then land on the Estimate Summary tab."""
     _debug(f"Opening quick access to search for existing estimate_id={estimate_id}")
-    page.goto(quick_access_url)
-    BasePage(page).wait_for_spinner_to_disappear()
+    _navigate_with_recovery(
+        page,
+        quick_access_url,
+        base_url=base_url,
+        username=username,
+        password=password,
+        company=company,
+        step="open_existing_estimate_quick_access",
+    )
 
     selection_page = EstimateSelectionPage(page)
     selection_page.search_and_open_estimate(estimate_id)
@@ -323,8 +521,12 @@ def run_estimate_flow(
                     _ensure_within_timeout(started_at, current_step)
                     _open_existing_estimate(
                         page,
+                        base_url=base_url,
                         quick_access_url=quick_access_url,
                         estimate_id=estimate_id,
+                        username=username,
+                        password=password,
+                        company=company,
                     )
                     _debug(f"Existing estimate opened and cleared. URL: {page.url}")
 
@@ -358,8 +560,15 @@ def run_estimate_flow(
                     # --- NEW ESTIMATE FLOW ---
                     current_step = "quick_access"
                     _ensure_within_timeout(started_at, current_step)
-                    page.goto(quick_access_url)
-                    BasePage(page).wait_for_spinner_to_disappear()
+                    _navigate_with_recovery(
+                        page,
+                        quick_access_url,
+                        base_url=base_url,
+                        username=username,
+                        password=password,
+                        company=company,
+                        step=current_step,
+                    )
                     _debug(f"Quick access page loaded. URL: {page.url}")
 
                     current_step = "create_estimate_click"
