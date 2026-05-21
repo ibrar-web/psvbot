@@ -32,6 +32,7 @@ async def execute_task(request: Request) -> Dict[str, Any]:
 
 @router.get("/execute-test-task", summary="Execute bot job with test data")
 async def execute_test_task() -> Dict[str, Any]:
+    print("execute_test_task")
     testdata_path = Path(__file__).parent / "testdata.py"
     if not testdata_path.exists():
         raise HTTPException(status_code=404, detail="testdata.py file not found")
@@ -44,5 +45,5 @@ async def execute_test_task() -> Dict[str, Any]:
             status_code=500,
             detail=f"Failed to parse testdata.py as JSON: {exc}"
         )
-        
+    logger.info(f"Parsed test payload: {payload}")
     return await process_cloud_task_payload(payload)

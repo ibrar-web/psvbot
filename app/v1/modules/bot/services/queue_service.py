@@ -492,7 +492,7 @@ async def process_cloud_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, A
     callback_url = str(task_payload.get("callback_url") or "").strip()
     queue_id = _extract_queue_id(task_payload)
     job = await _get_job_queue_document(queue_id)
-
+    print(job)
     if job is not None:
         queue_id = str(job.id)
 
