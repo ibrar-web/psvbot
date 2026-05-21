@@ -1,9 +1,9 @@
 {
-  "queue_id": "6a0edd1f0827365863f99dc8",
-  "BACK_URL_STATUS_UPDATE": "http://localhost:8000/api/v1/quotation/job6a0edd1f0827365863f99dc8/quote-detail",
+  "queue_id": "6a0eeba9ee87ad3fd2c4bccb",
+  "BACK_URL_STATUS_UPDATE": "http://localhost:8000/api/v1/quotation/job/6a0eeba9ee87ad3fd2c4bccb/quote-detail",
   "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/quotation/job/result",
   "quote": {
-    "_id": "6a0edd190827365863f99dc6",
+    "_id": "6a0eeb82e0a8ef51f3dd5f18",
     "tenant_id": "6a0ac09549e818e8e4b8b447",
     "user_email": "qatestingcsr@yopmail.com",
     "company_name": "blacklion",
