@@ -584,6 +584,31 @@ async def process_cloud_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, A
             )
             _validate_runtime_credentials(runtime_credentials)
 
+            # Call BACK_URL_STATUS_UPDATE if present
+            back_url_status_update = str(task_payload.get("BACK_URL_STATUS_UPDATE") or "").strip()
+            if back_url_status_update:
+                logger.info(
+                    "Calling BACK_URL_STATUS_UPDATE before processing: %s",
+                    back_url_status_update,
+                )
+                try:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        status_response = await client.post(
+                            back_url_status_update,
+                            json={},
+                            headers=_callback_headers(task_payload),
+                        )
+                        status_response.raise_for_status()
+                        logger.info(
+                            "BACK_URL_STATUS_UPDATE response: status_code=%d body=%s",
+                            status_response.status_code,
+                            status_response.text[:200],
+                        )
+                except Exception as exc:
+                    logger.exception(
+                        "BACK_URL_STATUS_UPDATE call failed, proceeding anyway: %s", exc
+                    )
+
             logger.info(
                 "Cloud Task step=run_bot queue_id=%s flow_timeout_seconds=%s",
                 queue_id or "none",
@@ -656,7 +681,45 @@ async def process_cloud_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, A
         )
 
         try:
-            if callback_url:
+            back_url_record_result = str(task_payload.get("BACK_URL_RECORD_RESULT") or "").strip()
+            if back_url_record_result:
+                logger.info(
+                    "Posting result to BACK_URL_RECORD_RESULT: %s",
+                    back_url_record_result,
+                )
+                # Safely collect estimate_id
+                estimate_id = (
+                    task_payload.get("estimate_id")
+                    or (source_payload.get("estimate_id") if "source_payload" in locals() else None)
+                    or (quote_record.get("estimate_id") if "quote_record" in locals() else None)
+                    or result.get("estimate_id")
+                )
+                record_payload = {
+                    "queue_id": queue_id or (str(job.id) if job is not None else ""),
+                    "success": result.get("status") == "success",
+                    "summary_file_name": result.get("summary_file_name"),
+                    "summary_file_url": result.get("summary_file_url"),
+                    "error_message": None if result.get("status") == "success" else (result.get("message") or "Bot processing failed"),
+                    "estimate_totals": result.get("estimate_totals"),
+                    "estimate_id": estimate_id,
+                }
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    record_response = await client.post(
+                        back_url_record_result,
+                        json=record_payload,
+                        headers=_callback_headers(task_payload),
+                    )
+                    record_response.raise_for_status()
+                    logger.info(
+                        "BACK_URL_RECORD_RESULT response: status_code=%d body=%s",
+                        record_response.status_code,
+                        record_response.text[:200],
+                    )
+                    result["back_url_record_result_callback"] = {
+                        "status": "success",
+                        "http_status": record_response.status_code,
+                    }
+            elif callback_url:
                 logger.info(
                     "Cloud Task callback posting queue_id=%s callback_url=%s",
                     queue_id or "none",
