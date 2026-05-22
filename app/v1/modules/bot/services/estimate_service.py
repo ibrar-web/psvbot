@@ -76,18 +76,26 @@ def _safe_page_url(page: Page) -> str:
 
 
 def _stop_page_load(page: Page) -> None:
+    client = None
     try:
-        page.evaluate("() => window.stop()")
+        client = page.context.new_cdp_session(page)
+        client.send("Page.stopLoading")
     except Exception:
         logger.debug("Unable to stop current page load before recovery", exc_info=True)
+    finally:
+        if client is not None:
+            try:
+                client.detach()
+            except Exception:
+                pass
 
 
-def _wait_for_app_to_settle(page: Page, *, timeout_seconds: int, step: str) -> None:
+def _wait_for_app_to_settle(page: Page, *, timeout_seconds: float, step: str) -> None:
     try:
         BasePage(page, timeout=timeout_seconds).wait_for_spinner_to_disappear()
     except PlaywrightTimeoutError as exc:
         raise PlaywrightTimeoutError(
-            f"Timed out after {timeout_seconds}s waiting for PSV page to settle "
+            f"Timed out after {timeout_seconds:.1f}s waiting for PSV page to settle "
             f"at step '{step}'. Current URL: {_safe_page_url(page)}"
         ) from exc
 
@@ -100,12 +108,19 @@ def _load_page(
     timeout_seconds: int,
 ) -> None:
     _debug(f"Opening {step}: {url} (timeout={timeout_seconds}s)")
+    deadline = time.monotonic() + timeout_seconds
     page.goto(
         url,
         wait_until="domcontentloaded",
         timeout=timeout_seconds * 1000,
     )
-    _wait_for_app_to_settle(page, timeout_seconds=timeout_seconds, step=step)
+    remaining_seconds = deadline - time.monotonic()
+    if remaining_seconds <= 0:
+        raise PlaywrightTimeoutError(
+            f"Timed out after {timeout_seconds}s loading PSV page at step '{step}' "
+            f"before the page spinner settled. Current URL: {_safe_page_url(page)}"
+        )
+    _wait_for_app_to_settle(page, timeout_seconds=remaining_seconds, step=step)
     _debug(f"{step} loaded. URL: {_safe_page_url(page)}")
 
 
@@ -332,14 +347,16 @@ def _ensure_browser_and_login(
 
 
 def _logout_if_possible(
-    page: Optional[Page], retries: int = 1
+    page: Optional[Page],
+    retries: int = 1,
+    timeout_seconds: int = RECOVERY_HOME_LOAD_TIMEOUT_SECONDS,
 ) -> tuple[bool, Optional[str]]:
     if page is None:
         return False, "page_not_available"
     last_error: Optional[str] = None
     for attempt in range(1, retries + 2):
         try:
-            logout_page = LogoutPage(page)
+            logout_page = LogoutPage(page, timeout=timeout_seconds)
             logout_page.logout()
             _debug("Logout flow completed")
             return True, None
@@ -658,6 +675,20 @@ def run_estimate_flow(
     except PlaywrightTimeoutError as exc:
         flow_failed = True
         if page is not None:
+            try:
+                _recover_session_from_home(
+                    page,
+                    base_url=base_url,
+                    username=username,
+                    password=password,
+                    company=company,
+                    failed_step=f"{current_step}_before_logout",
+                )
+            except Exception as recovery_exc:
+                logger.warning(
+                    "Home/login recovery before logout failed: %s",
+                    recovery_exc,
+                )
             logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
         logger.exception("Estimate flow failed with Playwright timeout error")
 
