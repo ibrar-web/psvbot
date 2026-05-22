@@ -16,7 +16,6 @@ class EstimateSelectionPage(BasePage):
     # The hidden <select> inside the categories div
     MODULE_SELECT = "xpath=//select[@name='module_select' or @id='module_select']"
     SEARCH_INPUT = "xpath=//input[@name='module_search_feild']"
-    SEARCH_BUTTON = "xpath=//button[@name='search_button']"
     SEARCH_RESULTS = "xpath=//div[contains(@class,'search-results')]//a[contains(@class,'search-item')]"
     LOCKED_DIALOG_TIMEOUT_MS = 5000
 
@@ -62,10 +61,9 @@ class EstimateSelectionPage(BasePage):
 
         Steps:
         1. Click the module category button and select 'Estimate' from the dropdown
-        2. Type the estimate_id into the search field
-        3. Click the search button and wait for spinner
-        4. Find the result that exactly matches the estimate_id in the <b> tag
-        5. Click it — this opens the estimate record and navigates to Estimate Summary
+        2. Type the estimate_id into the search field and press Enter
+        3. If a "not found" warning appears, raise RuntimeError
+        4. Otherwise wait for the estimate record to open
         """
         self._debug(f"Searching for existing estimate_id={estimate_id}")
         self.wait_for_spinner_to_disappear()
@@ -73,59 +71,47 @@ class EstimateSelectionPage(BasePage):
         # Step 1: Select 'Estimate' from the module dropdown
         self._select_estimate_module()
 
-        # Step 2: Type the estimate_id into the search input
+        # Step 2: Type the estimate_id into the search input and press Enter
         self.wait_for_visible(self.SEARCH_INPUT)
         self.type(self.SEARCH_INPUT, str(estimate_id), clear_first=True)
         self._debug(f"Entered estimate_id '{estimate_id}' in search field")
-
-        # Step 3: Click search button and wait for spinner
-        self.click(self.SEARCH_BUTTON)
+        self.page.keyboard.press("Enter")
         self.wait_for_spinner_to_disappear()
-        self._debug("Search triggered, waiting for results")
+        self._debug("Enter pressed, waiting for result or not-found warning")
 
-        # Step 4: Wait for search results to appear
-        self.page.wait_for_function(
+        # Step 3: Wait for either a not-found warning or the estimate record to open
+        outcome = self.page.wait_for_function(
             """() => {
-                const results = document.querySelectorAll(
-                    "div.search-results a.search-item"
-                );
-                return results.length > 0;
-            }""",
-            timeout=self._timeout_ms,
-        )
-        self.wait_for_spinner_to_disappear()
-        print(f"estimate_id: {estimate_id}")
-        # Step 5: Find and click the result whose <b> tag contains the estimate_id digits.
-        # The result text looks like: "[ Estimate:28799 ] - Mini Van Wrap..."
-        # We normalise both sides to strings of digits to handle int/str/whitespace differences.
-        clicked = self.page.evaluate(
-            """(estimateId) => {
-                const needle = String(estimateId).replace(/\\D/g, '').trim();
-                if (!needle) return false;
+                // Check for a ui-dialog with title "Warning" (visible)
+                const warningDialog = Array.from(document.querySelectorAll(".ui-dialog")).find(dialog => {
+                    const style = window.getComputedStyle(dialog);
+                    if (style.display === "none" || style.visibility === "hidden") return false;
+                    const title = (
+                        dialog.querySelector(".ui-dialog-title")?.innerText || ""
+                    ).trim().toLowerCase();
+                    return title === "warning";
+                });
+                if (warningDialog) return "not_found";
 
-                const items = document.querySelectorAll("div.search-results a.search-item");
-
-                for (const item of items) {
-                    const text = item.innerText.replace(/\\s+/g, ' ').trim();
-
-                    // Extract full estimate number (works even if split across <b>)
-                    const match = text.match(/Estimate:\\s*(\\d+)/i);
-
-                    if (match && match[1] === needle) {
-                        item.click();
-                        return true;
-                    }
+                // Check if estimate tabs have appeared (record opened)
+                const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
+                const opened = tabs.some(tab => {
+                    const text = (tab.innerText || tab.textContent || "")
+                        .replace(/\\s+/g, " ").trim();
+                    return text.includes("Estimate Summary") || text.includes("Job Details");
+                });
+                if (opened || window.location.href.includes("#/invoicing/invoice-page")) {
+                    return "opened";
                 }
 
                 return false;
             }""",
-            str(estimate_id),
-        )
+            timeout=self._timeout_ms,
+        ).json_value()
 
-        if not clicked:
-            raise RuntimeError(
-                f"No search result found matching estimate_id={estimate_id}"
-            )
+        if outcome == "not_found":
+            self._dismiss_warning_dialog()
+            raise RuntimeError(f"Estimate not found: estimate_id={estimate_id}")
 
         self._debug(f"Clicked search result for estimate_id={estimate_id}")
         self.wait_for_spinner_to_disappear()
@@ -143,6 +129,57 @@ class EstimateSelectionPage(BasePage):
 
             self._wait_for_estimate_opened_or_locked(expect_locked=False)
         self._debug("Estimate record opened, spinner dismissed")
+
+    def _dismiss_warning_dialog(self) -> None:
+        """Close the visible Warning dialog and wait for it to disappear before returning."""
+        try:
+            self.page.evaluate(
+                """() => {
+                    const isVisible = el => {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        return style.display !== "none"
+                            && style.visibility !== "hidden"
+                            && parseFloat(style.opacity || "1") > 0;
+                    };
+                    const dialog = Array.from(document.querySelectorAll(".ui-dialog")).find(d => {
+                        if (!isVisible(d)) return false;
+                        const title = (d.querySelector(".ui-dialog-title")?.innerText || "")
+                            .trim().toLowerCase();
+                        return title === "warning";
+                    });
+                    if (!dialog) return;
+                    const closeBtn = dialog.querySelector(".ui-dialog-titlebar-close, button.ui-dialog-titlebar-icon");
+                    if (closeBtn && isVisible(closeBtn)) { closeBtn.click(); return; }
+                    const btn = Array.from(dialog.querySelectorAll("button")).find(b => {
+                        const label = (b.innerText || b.textContent || "").trim().toLowerCase();
+                        return label === "ok" || label === "close";
+                    });
+                    if (btn) btn.click();
+                }"""
+            )
+            # Wait until the Warning dialog is gone from the DOM / hidden
+            self.page.wait_for_function(
+                """() => {
+                    const isVisible = el => {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        return style.display !== "none"
+                            && style.visibility !== "hidden"
+                            && parseFloat(style.opacity || "1") > 0;
+                    };
+                    return !Array.from(document.querySelectorAll(".ui-dialog")).some(d => {
+                        if (!isVisible(d)) return false;
+                        const title = (d.querySelector(".ui-dialog-title")?.innerText || "")
+                            .trim().toLowerCase();
+                        return title === "warning";
+                    });
+                }""",
+                timeout=5000,
+            )
+            self._debug("Warning dialog dismissed")
+        except Exception:
+            self._debug("Warning dialog dismiss timed out or failed — continuing anyway")
 
     def _wait_for_estimate_opened_or_locked(self, *, expect_locked: bool = True) -> str:
         try:
