@@ -3,6 +3,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from app.v1.modules.bot.base_page import BasePage
 from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.pages.new_estimate_page import NewEstimatePage
@@ -289,6 +291,7 @@ class InvoicePage(BasePage):
         if isinstance(other_charges, tuple):
             return list(other_charges)
         return [other_charges]
+
 
     def _retry_step(self, step_name: str, callback, retries: int = 1):
         attempts = retries + 1

@@ -1429,7 +1429,10 @@ class JobDetailsTab(BasePage):
                     or ""
                 ).strip(),
                 "quantity": charge.get("quantity"),
-                "price": charge.get("price"),
+                "price": self._first_value(
+                    charge,
+                    ("price", "charge_price", "amount"),
+                ),
                 "description": str(charge.get("description") or "").strip(),
             }
         return {
@@ -1483,6 +1486,15 @@ class JobDetailsTab(BasePage):
                 return value
         return ""
 
+    def _first_value(self, data: Mapping[str, Any], keys: tuple[str, ...]) -> Any:
+        for key in keys:
+            value = data.get(key)
+            if value is None:
+                continue
+            if str(value).strip():
+                return value
+        return None
+
     def _fill_charges_only_field(self, selector: str, value: Any, label: str) -> bool:
         text = str(value or "").strip()
         if not text:
@@ -1498,6 +1510,7 @@ class JobDetailsTab(BasePage):
         locator.press("Enter")
         self.wait_for_spinner_to_disappear()
         return True
+
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")
