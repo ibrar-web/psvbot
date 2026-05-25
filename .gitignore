@@ -12,3 +12,17 @@ storage/
 app/v1/modules/bot/screenshots/*.png
 *-service-account.json
 *.json
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+logs/
+.logs/
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+storage/
+app/v1/modules/bot/screenshots/*.png
+*-service-account.json
+*.json
