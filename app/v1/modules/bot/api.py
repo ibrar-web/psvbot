@@ -22,7 +22,7 @@ async def bot_info(request: Request) -> Dict[str, Any]:
     }
 
 
-@router.post("/enqueue-task", summary="Enqueue a Cloud Tasks bot job")
+@router.post("/execute-task", summary="Enqueue a Cloud Tasks bot job")
 async def enqueue_task(request: Request) -> Dict[str, Any]:
     payload = await request.json()
     if not isinstance(payload, dict):
@@ -30,11 +30,6 @@ async def enqueue_task(request: Request) -> Dict[str, Any]:
             status_code=400, detail="Task payload must be a JSON object"
         )
     return await enqueue_task_payload(payload)
-
-
-@router.post("/execute-task", summary="Enqueue a Cloud Tasks bot job")
-async def execute_task(request: Request) -> Dict[str, Any]:
-    return await enqueue_task(request)
 
 
 @router.get("/execute-test-task", summary="Execute bot job with test data")
@@ -72,3 +67,4 @@ async def execute_test_task(
     logger.info(f"Parsed test payload for id={id}: {payload}")
 
     return await enqueue_task_payload(payload)
+

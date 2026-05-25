@@ -1511,10 +1511,3 @@ async def stop_queue_workers() -> None:
     _owns_mongo_client = False
 
 
-async def process_job_queue_document(job: Any) -> Dict[str, str]:
-    queue_id = str(getattr(job, "id", "") or getattr(job, "queue_id", "") or "")
-    if not queue_id:
-        raise HTTPException(status_code=400, detail="Queue job is missing id")
-    payload = await fetch_main_server_record(queue_id)
-    payload["queue_id"] = queue_id
-    return await enqueue_task_payload(payload)
