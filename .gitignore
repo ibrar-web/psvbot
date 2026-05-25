@@ -26,3 +26,5 @@ storage/
 app/v1/modules/bot/screenshots/*.png
 *-service-account.json
 *.json
+
+*.github
