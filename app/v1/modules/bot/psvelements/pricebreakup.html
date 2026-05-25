@@ -1,0 +1,234 @@
+<form
+  class="dot-form__horizontal ng-untouched ng-pristine ng-valid"
+  novalidate=""
+>
+  <div class="quantityDetails row no-gutters">
+    <span class="col-6"
+      ><h3>
+        <span class="dot-icon dot-multi-copy-icon padding-right-10"></span
+        ><span class="staticPosition" name="header-label-quantity"
+          >Price Breakup</span
+        >
+      </h3></span
+    ><!----><span class="col-6 add-charge-button-container ng-star-inserted"
+      ><a
+        class="dot-button dot-button__secondary dot-button__mini"
+        name="add_multi_qty_btn"
+        ng-reflect-klass="dot-button dot-button__seconda"
+        ng-reflect-ng-class="[object Object]"
+        ng-reflect-text="Add Multi Quantity"
+        ng-reflect-tooltip-position="left"
+        ptooltip="Add Multi Qty"
+        tooltipposition="top"
+        ><span class="dot-icon dot-add-circle-icon"></span
+        ><span name="add-new-charge">Add Quantity</span></a
+      ></span
+    ><!----><!---->
+  </div>
+  <div class="row no-gutters weight-container">
+    <div class="col-8">
+      <label class="qty-label text-bold" name="qty-label-header"
+        >Quantity</label
+      >
+    </div>
+    <div class="col-4">
+      <input
+        autocomplete="off"
+        checkempty="true"
+        class="dot-formcontrol text-right no_mq bold_input"
+        id="qty-label-ctext"
+        name="qty-label-ctext"
+        number-restrict="integer"
+        type="text"
+      />
+    </div>
+  </div>
+  <!---->
+  <div class="row no-gutters weight-container ng-star-inserted">
+    <div class="col-8">
+      <label class="qty-label" name="unit-perside-header">
+        Unit Per Side
+      </label>
+    </div>
+    <div class="col-4">
+      <!----><input
+        autocomplete="off"
+        checkempty="true"
+        class="dot-formcontrol text-right no_mq ng-star-inserted"
+        currency="true"
+        name="unitperside-label-ctext"
+        number-restrict="decimal"
+        precision="4"
+        style="float: right"
+        type="text"
+      />
+    </div>
+  </div>
+  <!---->
+  <div class="row no-gutters weight-container ng-star-inserted">
+    <div class="col-8">
+      <label class="overs-unders-label" name="overs-unders-label-header"
+        >Overs/Unders</label
+      >
+    </div>
+    <div class="col-4">
+      <input
+        allownegative="true"
+        autocomplete="off"
+        checkempty="true"
+        class="dot-formcontrol text-right no_mq"
+        id="overs-unders-label-ctext"
+        name="overs-unders-label-ctext"
+        number-restrict="integer"
+        type="text"
+      />
+    </div>
+  </div>
+  <!---->
+  <div class="row no-gutters weight-container ng-star-inserted">
+    <div class="col-8"><label disabled="true"> In Sets Of </label></div>
+    <div class="col-4 dot-right-section">
+      <input
+        autocomplete="off"
+        checkempty="true"
+        class="dot-formcontrol text-right no_mq"
+        name="in_setsof"
+        number-restrict="integer"
+        type="text"
+      />
+    </div>
+  </div>
+  <!----><!----><!----><!----><!----><!---->
+  <div class="row no-gutters weight-container">
+    <div class="col-8">
+      <label class="qty-label" name="price-header">Price</label>
+    </div>
+    <div class="col-4">
+      <input
+        allownegative="true"
+        checkempty="true"
+        class="dot-formcontrol text-right no_mq"
+        currency="true"
+        name="price-label-text"
+        number-restrict="decimal"
+        style="float: right"
+        type="text"
+      />
+    </div>
+  </div>
+  <!---->
+  <div
+    class="row no-gutters weight-container ng-star-inserted"
+    style="border-bottom: 0"
+  >
+    <div class="col-8"></div>
+    <div class="col-4 weight-badge">
+      <span class="dot-badge dot-badge__default"
+        ><span>Weight</span>: <span name="weight-value">0.00</span></span
+      >
+    </div>
+  </div>
+</form>
+
+<!-- add new charges  -->
+<div class="row no-gutters">
+  <div class="tabContent col-md-12">
+    <div class="sectionOne active">
+      <div class="quantityDetails row no-gutters">
+        <span class="col-6"
+          ><h3>
+            <span class="dot-icon dot-print-charge-icon padding-right-10"></span
+            ><span class="staticPosition" name="charge-header">Charges</span>
+          </h3></span
+        ><span class="col-6 add-charge-button-container"
+          ><a
+            class="dot-button dot-button__secondary dot-button__mini"
+            name="add_job_charge_btn"
+            ptooltip="Add New Charges"
+            tooltipposition="left"
+            ><span class="dot-icon dot-add-circle-icon"></span
+            ><span name="add-new-charge">Add New</span></a
+          ></span
+        >
+        <div class="charge-grid-container col-md-12">
+          <div class="row no-gutters sticky-header">
+            <div class="col-7 padding-left-5"><span>Type</span></div>
+            <div class="col-2 text-right"><span>Quantity</span></div>
+            <div class="col-3 text-right" style="padding-right: 5px">
+              <span>Charge</span>
+            </div>
+          </div>
+          <!---->
+          <div class="charge-grid-body ng-star-inserted">
+            <!---->
+            <div
+              class="row no-gutters w-100 ng-star-inserted"
+              id="charge_index_0"
+            >
+              <div class="col-7 align-center">
+                <!----><span
+                  class="dot-icon dot-print-charge-icon ng-star-inserted"
+                ></span
+                ><!----><!----><!----><a
+                  class="charge-desc text-ellipsis"
+                  href="javascript:;"
+                  ><span class="badge-container"
+                    ><!----><!----><small
+                      class="dot-badge tag_press margin-0 ng-star-inserted"
+                      ptooltip="Press level charge"
+                      tooltipposition="top"
+                      >P</small
+                    ><!----></span
+                  ><span class="charge_desc_label" tooltipposition="left"
+                    >File Review and Setup: 1-2 files</span
+                  ></a
+                >
+              </div>
+              <div class="col-2 text-right"><span>1.00</span></div>
+              <div class="col-3 text-right">
+                <span>$ 30.00</span
+                ><a class="" href="javascript:;"
+                  ><!----><span
+                    class="dot-icon dot-delete-icon delete-charge-icon ng-star-inserted"
+                    name="delete-charge-icon"
+                    id="charge_index_delete_btn_0"
+                  ></span
+                ></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row" id="total_price" style="left: 1010.66px; right: 12px">
+        <div class="col-md-12 bottomSection bs-job-details">
+          <div
+            class="dot-left-section col-7"
+            name="job_tax_lable"
+            style="
+              padding-left: 10px;
+              padding-right: 10px;
+              border-right: 1px solid black;
+            "
+          >
+            <b><span>Tax</span></b
+            ><span
+              style="font-size: 10px; margin-left: 3px; margin-top: 5px"
+              tooltipposition="top"
+              >(Use Parent Tax Table) </span
+            ><span class="editIcon padding-right-10 editIcon top-2 pos-rel"
+              ><span class="icon dot-add-circle-icon"></span
+              ><sales-tax-details><!----></sales-tax-details></span
+            ><!---->
+          </div>
+          <div class="col-5 dot-right-section">
+            <span style="padding-right: 10px"
+              ><span><b>Total</b></span></span
+            ><span><b>$ 30.00</b></span
+            ><!----><!---->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sectionTwo"></div>
+</div>

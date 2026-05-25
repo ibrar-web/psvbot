@@ -1,0 +1,528 @@
+<div _ngcontent-lcf-c12="" class="dot-modal__content">
+  <div
+    _ngcontent-lcf-c68=""
+    class="app-modal-body charges_popup_body charges_popup_scrollArea"
+    id="charges_popup"
+    style="max-height: 794px"
+  >
+    <div _ngcontent-lcf-c68="" class="dot-form__horizontal charge-selector">
+      <!---->
+      <div
+        _ngcontent-lcf-c68=""
+        class="row no-gutters dot-formgroup ng-star-inserted"
+        style="
+          padding: 12px;
+          margin: 10px 0;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+        "
+      >
+        <label
+          _ngcontent-lcf-c68=""
+          class="staticPosition col-4 add_charge"
+          name="charge_label"
+          style="line-height: 32px"
+          >Add New Charge</label
+        ><!---->
+        <div _ngcontent-lcf-c68="" class="col-5 ng-star-inserted">
+          <kendo-combobox
+            _ngcontent-lcf-c68=""
+            name="search_combo"
+            class="k-widget k-combobox k-header k-combobox-clearable"
+            dir="ltr"
+            ><span unselectable="on" class="k-dropdown-wrap k-state-default"
+              ><kendo-searchbar class="k-searchbar"
+                ><input
+                  autocomplete="off"
+                  size="1"
+                  id="6240b145-f924-461d-a899-d0fd0e45083b"
+                  placeholder=""
+                  class="k-input"
+                  tabindex="0"
+                  dir="ltr"
+                  role="listbox"
+                  aria-disabled="false"
+                  aria-readonly="false"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                  aria-owns="137f2d58-a66b-468f-8823-276258b57775"
+                  aria-activedescendant="88a83229-2207-4adc-b218-55e0ad831979-undefined" /></kendo-searchbar
+              ><!----><span unselectable="on" class="k-select"
+                ><span class="k-i-arrow-s k-icon"></span></span
+              ><!----></span
+            ><!----><!----></kendo-combobox
+          >
+        </div>
+        <!---->
+        <div _ngcontent-lcf-c68="" class="col-1">
+          <!----><span
+            _ngcontent-lcf-c68=""
+            class="dot-button dot-button__prominent display_charge_tree_btn ng-star-inserted"
+            name="get_charges_button"
+            ptooltip="Get Charges"
+            style="margin-left: 8px; margin-top: 5px; display: inline-block"
+            tooltipposition="top"
+            >Browse</span
+          >
+        </div>
+        <!---->
+        <div _ngcontent-lcf-c68="" class="align-center col-2 ng-star-inserted">
+          <label
+            _ngcontent-lcf-c68=""
+            class="dot-switch"
+            name="print_services_label"
+            style="margin-left: 20px; flex: 1"
+            ><input
+              _ngcontent-lcf-c68=""
+              name="print_services"
+              type="checkbox"
+            />
+            <div _ngcontent-lcf-c68="" class="dot-switch-slider round"></div>
+            <span _ngcontent-lcf-c68="">Print Services</span></label
+          >
+        </div>
+        <div _ngcontent-lcf-c68="" class="col-6 charges-tree o-auto">
+          <p-overlaypanel
+            _ngcontent-lcf-c68=""
+            appendto="body"
+            class="ng-tns-c30-37"
+            ><!----></p-overlaypanel
+          >
+        </div>
+      </div>
+    </div>
+    <div _ngcontent-lcf-c68="">
+      <charge-definition
+        _ngcontent-lcf-c68=""
+        class="charge-definition-picker"
+        _nghost-lcf-c59=""
+        ><!----></charge-definition
+      >
+    </div>
+    <div
+      _ngcontent-lcf-c68=""
+      class="charges_accordion_container"
+      style=""
+    ></div>
+    <div _ngcontent-lcf-c68="" class="charges_accordion_container">
+      <p-accordion _ngcontent-lcf-c68=""
+        ><div role="tablist" class="ui-accordion ui-widget ui-helper-reset">
+          <!---->
+          <div _ngcontent-lcf-c68="" class="ng-star-inserted" style="">
+            <!----><p-accordiontab
+              _ngcontent-lcf-c68=""
+              class="ng-tns-c24-39 ng-star-inserted"
+              ><div class="ui-accordion-header ui-state-default ui-corner-all">
+                <a
+                  class="ng-tns-c24-39"
+                  role="tab"
+                  tabindex="0"
+                  id="ui-accordiontab-4"
+                  aria-controls="ui-accordiontab-4-content"
+                  aria-expanded="false"
+                  ><span
+                    class="ui-accordion-toggle-icon pi pi-fw pi-chevron-right"
+                  ></span
+                  ><!----><!----><p-header
+                    _ngcontent-lcf-c68=""
+                    class="ng-star-inserted"
+                    ><div _ngcontent-lcf-c68="">
+                      <div
+                        _ngcontent-lcf-c68=""
+                        class="charges_details_summary row no-gutters"
+                      >
+                        <div
+                          _ngcontent-lcf-c68=""
+                          class="dot-left-section col-8"
+                        >
+                          <!----><!----><span
+                            _ngcontent-lcf-c68=""
+                            class="charge_desc"
+                            name="charge_desc"
+                            ><!----><span
+                              _ngcontent-lcf-c68=""
+                              class="dot-icon dot-print-charge-icon ng-star-inserted"
+                            ></span
+                            ><!----><span
+                              _ngcontent-lcf-c68=""
+                              name="charge_desc_val"
+                            >
+                              File Review and Setup: 1-2 files
+                            </span></span
+                          >
+                        </div>
+                        <div
+                          _ngcontent-lcf-c68=""
+                          class="dot-right-section col-4 row no-gutters"
+                        >
+                          <span
+                            _ngcontent-lcf-c68=""
+                            class="price_label col-3"
+                            name="charge_price_label"
+                            >Price ($)</span
+                          ><span
+                            _ngcontent-lcf-c68=""
+                            class="charge_price col-3"
+                            name="charge_price"
+                          >
+                            30.00 </span
+                          ><span _ngcontent-lcf-c68="" class="col-2"></span
+                          ><span _ngcontent-lcf-c68="" class="col-4"
+                            ><!----><span
+                              _ngcontent-lcf-c68=""
+                              class="delete_charge dot-button dot-button__secondary dot-button__icon dot-icon__button__gray dot-icon__button__circle no_mq ng-star-inserted"
+                              name="delete_charge"
+                              ><span
+                                _ngcontent-lcf-c68=""
+                                class="dot-icon dot-delete-icon"
+                              ></span></span
+                          ></span>
+                        </div>
+                      </div></div></p-header
+                  ><!----></a
+                >
+              </div>
+              <div
+                class="ui-accordion-content-wrapper ng-trigger ng-trigger-tabContent ui-accordion-content-wrapper-overflown"
+                role="tabpanel"
+                id="ui-accordiontab-4-content"
+                aria-hidden="true"
+                aria-labelledby="ui-accordiontab-4"
+                style="height: 0px"
+              >
+                <div class="ui-accordion-content ui-widget-content">
+                  <div _ngcontent-lcf-c68="">
+                    <charge-definition _ngcontent-lcf-c68="" _nghost-lcf-c59=""
+                      ><!---->
+                      <div
+                        _ngcontent-lcf-c59=""
+                        class="ng-star-inserted"
+                        style=""
+                      >
+                        <form
+                          _ngcontent-lcf-c59=""
+                          class="dot-form__horizontal charge-popup-definition ng-untouched ng-pristine ng-valid"
+                          novalidate=""
+                        >
+                          <h4
+                            _ngcontent-lcf-c59=""
+                            class="staticPosition"
+                            name="charges_popup_title"
+                          >
+                            File Review and Setup: 1-2 files
+                          </h4>
+                          <div _ngcontent-lcf-c59="" class="charges_container">
+                            <div
+                              _ngcontent-lcf-c59=""
+                              class="row no-gutters dot-checkbox-container"
+                              style="margin-bottom: 10px"
+                            >
+                              <div _ngcontent-lcf-c59="" class="checkbox-group">
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-form__checkbox"
+                                  ><input
+                                    _ngcontent-lcf-c59=""
+                                    id="finished"
+                                    name="finished"
+                                    type="checkbox"
+                                    value="finished"
+                                  /><span _ngcontent-lcf-c59=""
+                                    >Finished</span
+                                  ></label
+                                >
+                              </div>
+                              <!---->
+                              <div
+                                _ngcontent-lcf-c59=""
+                                class="checkbox-group ng-star-inserted"
+                              >
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-form__checkbox"
+                                  ><input
+                                    _ngcontent-lcf-c59=""
+                                    id="taxable"
+                                    name="taxable"
+                                    type="checkbox"
+                                    value="taxable"
+                                  /><span _ngcontent-lcf-c59=""
+                                    >Taxable</span
+                                  ></label
+                                >
+                              </div>
+                              <div _ngcontent-lcf-c59="" class="checkbox-group">
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-form__checkbox"
+                                  ><input
+                                    _ngcontent-lcf-c59=""
+                                    id="brokered"
+                                    name="brokered"
+                                    type="checkbox"
+                                    value="brokered"
+                                  /><span _ngcontent-lcf-c59=""
+                                    >Brokered</span
+                                  ></label
+                                >
+                              </div>
+                              <div _ngcontent-lcf-c59="" class="checkbox-group">
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-form__checkbox"
+                                  ><input
+                                    _ngcontent-lcf-c59=""
+                                    id="displayQty"
+                                    name="displayQty"
+                                    type="checkbox"
+                                    value="displayQty"
+                                  /><span _ngcontent-lcf-c59=""
+                                    >Display Quantity</span
+                                  ></label
+                                >
+                              </div>
+                              <div _ngcontent-lcf-c59="" class="checkbox-group">
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-form__checkbox"
+                                  ><input
+                                    _ngcontent-lcf-c59=""
+                                    id="hidden"
+                                    name="hidden"
+                                    type="checkbox"
+                                    value="hidden"
+                                  /><span _ngcontent-lcf-c59=""
+                                    >Hidden</span
+                                  ></label
+                                >
+                              </div>
+                              <div _ngcontent-lcf-c59="" class="checkbox-group">
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-form__checkbox"
+                                  ><input
+                                    _ngcontent-lcf-c59=""
+                                    id="hidePrice"
+                                    name="hidePrice"
+                                    type="checkbox"
+                                    value="hidePrice"
+                                  /><span _ngcontent-lcf-c59=""
+                                    >Hide Price</span
+                                  ></label
+                                >
+                              </div>
+                            </div>
+                            <!---->
+                            <div
+                              _ngcontent-lcf-c59=""
+                              class="row dot-formgroup"
+                            >
+                              <label
+                                _ngcontent-lcf-c59=""
+                                class="col-2 dot-form__label"
+                                name="chargeDesc_input_label"
+                              >
+                                Description:
+                              </label>
+                              <div _ngcontent-lcf-c59="" class="col-4">
+                                <input
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+                                  name="chargeDesc"
+                                  type="text"
+                                /><span
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-icon dot-info-icon"
+                                  style="
+                                    top: 8px;
+                                    position: absolute;
+                                    right: -7px;
+                                  "
+                                  tooltipposition="top"
+                                ></span>
+                              </div>
+                              <label
+                                _ngcontent-lcf-c59=""
+                                class="col-2 dot-form__label"
+                                name="prodduction_location_label"
+                              >
+                                Production Location:
+                              </label>
+                              <div _ngcontent-lcf-c59="" class="col-4">
+                                <input
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-formcontrol ng-untouched ng-pristine"
+                                  disabled=""
+                                  name="prodLocation"
+                                  type="text"
+                                />
+                              </div>
+                            </div>
+                            <div
+                              _ngcontent-lcf-c59=""
+                              class="row dot-formgroup dot-checkbox-container"
+                            >
+                              <label
+                                _ngcontent-lcf-c59=""
+                                class="col-2 dot-form__label"
+                                name="notes_label"
+                              >
+                                Notes:
+                              </label>
+                              <div _ngcontent-lcf-c59="" class="col-4">
+                                <input
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+                                  name="chargeNotes"
+                                  type="text"
+                                />
+                              </div>
+                              <div
+                                _ngcontent-lcf-c59=""
+                                class="checkbox-group col-3"
+                                style="margin-left: -20px"
+                              >
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-form__checkbox"
+                                  ><input
+                                    _ngcontent-lcf-c59=""
+                                    id="showNotes"
+                                    name="showNotes"
+                                    type="checkbox"
+                                    value="showNotes"
+                                  /><span _ngcontent-lcf-c59=""
+                                    >Show Notes
+                                  </span></label
+                                >
+                              </div>
+                            </div>
+                            <!---->
+                            <div _ngcontent-lcf-c59="" class="row no-gutters">
+                              <!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!---->
+                            </div>
+                            <div _ngcontent-lcf-c59="" class="row no-gutters">
+                              <div
+                                _ngcontent-lcf-c59=""
+                                class="row col-6 dot-formgroup"
+                              >
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="col-4 dot-form__label"
+                                  name="chrg_price_label"
+                                  >Price</label
+                                >
+                                <div _ngcontent-lcf-c59="" class="col-8">
+                                  <input
+                                    _ngcontent-lcf-c59=""
+                                    allownegative="true"
+                                    checkempty="true"
+                                    class="dot-formcontrol ng-untouched ng-pristine ng-valid"
+                                    name="price"
+                                    number-restrict="decimal"
+                                    precision="2"
+                                    type="text"
+                                  />
+                                </div>
+                              </div>
+                              <div
+                                _ngcontent-lcf-c59=""
+                                class="row col-6 dot-formgroup"
+                              >
+                                <label
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-form__label col-4"
+                                  name="tax_table_label"
+                                  style="
+                                    padding-right: 16px !important;
+                                    width: 170px !important;
+                                  "
+                                  >Tax Table:</label
+                                >
+                                <div _ngcontent-lcf-c59="" class="col-8">
+                                  <kendo-dropdownlist
+                                    _ngcontent-lcf-c59=""
+                                    id="taxTable"
+                                    name="taxTable"
+                                    class="k-widget k-dropdown k-header ng-untouched ng-pristine"
+                                    ><span
+                                      role="listbox"
+                                      unselectable="on"
+                                      class="k-dropdown-wrap k-state-disabled"
+                                      id="taxTable"
+                                      dir="ltr"
+                                      readonly="false"
+                                      aria-disabled="true"
+                                      aria-readonly="false"
+                                      aria-haspopup="true"
+                                      aria-expanded="false"
+                                      aria-owns="abd30289-7449-4cc5-822c-7e5061f00d01"
+                                      aria-activedescendant="c92e3d16-0010-4d4d-9fd0-a5df2fcabad7-Use Parent Tax Table"
+                                      ><span unselectable="on" class="k-input"
+                                        ><!----><!---->Use Parent Tax
+                                        Table</span
+                                      ><span unselectable="on" class="k-select"
+                                        ><span
+                                          class="k-i-arrow-s k-icon"
+                                        ></span></span
+                                      ><!----></span
+                                    ><!----><!----></kendo-dropdownlist
+                                  >
+                                </div>
+                              </div>
+                            </div>
+                            <div
+                              _ngcontent-lcf-c59=""
+                              class="app-modal-footer row no-gutters"
+                            >
+                              <!---->
+                              <div
+                                _ngcontent-lcf-c59=""
+                                class="dot-right-section col-12 ng-star-inserted"
+                              >
+                                <input
+                                  _ngcontent-lcf-c59=""
+                                  class="dot-button dot-button__prominent disabled"
+                                  name="update"
+                                  type="button"
+                                  value="Confirm"
+                                  disabled=""
+                                />
+                              </div>
+                              <!---->
+                            </div>
+                          </div>
+                        </form>
+                      </div></charge-definition
+                    >
+                  </div>
+                  <!---->
+                </div>
+              </div></p-accordiontab
+            >
+          </div>
+        </div></p-accordion
+      >
+    </div>
+  </div>
+</div>
+
+<!-- button -->
+
+<div _ngcontent-lcf-c12="" class="dot-modal__footer">
+  <div _ngcontent-lcf-c68="" class="app-modal-footer">
+    <input
+      _ngcontent-lcf-c68=""
+      class="dot-button dot-button__tertiary"
+      name="cancel_single_charge_updates"
+      type="button"
+      value="Cancel"
+    /><input
+      _ngcontent-lcf-c68=""
+      class="dot-button dot-button__prominent"
+      name="save_charges"
+      type="button"
+      value="Done"
+    />
+  </div>
+</div>

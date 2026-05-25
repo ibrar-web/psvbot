@@ -1,0 +1,407 @@
+<div
+  class="buttons dot-buttons-group button-group-single dropdown-container ng-star-inserted"
+  name="add_btn_group"
+>
+  <button class="dot-button dot-button__secondary dot-button__icon" title="">
+    <span class="dot-icon">Add </span
+    ><span class="dot-icon dot-down-arrow-icon"></span>
+  </button>
+  <div class="dot-dropdown" name="add_btn_dropdown">
+    <div class="dot-dropdown-options">
+      <ul class="dot-dropdown-options-items">
+        <li><!----></li>
+        <li>
+          <!----><a
+            href="javascript:"
+            name="add_job_btn"
+            class="ng-star-inserted"
+            ><span class="dot-icon dot-add-circle-icon"></span
+            ><span>Add Job</span></a
+          >
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div
+  class="job_details row no-gutters"
+  style="height: 622.203px; overflow: auto"
+>
+  <!---->
+  <div class="col-8 ng-star-inserted" style="height: 299px">
+    <form
+      class="dot-form__horizontal ng-untouched ng-pristine ng-valid"
+      novalidate=""
+    >
+      <!---->
+      <div class="dot-formgroup row no-gutters">
+        <label class="dot-form__label col-2" name="job-method"
+          >Job Method</label
+        >
+        <div class="col-2">
+          <kendo-dropdownlist
+            name="jobMethodList"
+            class="k-widget k-dropdown k-header"
+            ><span
+              role="listbox"
+              unselectable="on"
+              class="k-dropdown-wrap k-state-default"
+              id="b816da7e-7061-429c-baca-8638cb766365"
+              dir="ltr"
+              readonly="false"
+              tabindex="0"
+              aria-disabled="false"
+              aria-readonly="false"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-owns="1b8e057d-4d15-4e0b-8d0a-e2ce57b45553"
+              aria-activedescendant="40e07d0a-f5bd-453c-bb94-bc8f77b65096-1916"
+              ><span unselectable="on" class="k-input"
+                ><!----><!---->Charges Only</span
+              ><span unselectable="on" class="k-select"
+                ><span class="k-i-arrow-s k-icon"></span></span
+              ><!----></span
+            ><!----><!----></kendo-dropdownlist
+          >
+        </div>
+        <label
+          class="dot-form__label col-2"
+          name="productjob"
+          style="padding-left: 5px; padding-right: 5px"
+          >Product</label
+        >
+        <div class="col-2">
+          <kendo-dropdownlist
+            autocomplete="off"
+            name="productsList"
+            class="k-widget k-dropdown k-header"
+            ><span
+              role="listbox"
+              unselectable="on"
+              class="k-dropdown-wrap k-state-default"
+              id="a91182ee-a94c-46de-b2ff-2eaab92557af"
+              dir="ltr"
+              readonly="false"
+              tabindex="0"
+              aria-disabled="false"
+              aria-readonly="false"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-owns="5fbcc744-01f3-4ed6-967c-66ded1bebd3d"
+              aria-activedescendant="1fcb2a82-31c3-415f-80d1-5ebe0828efa0-undefined"
+              ><span unselectable="on" class="k-input"><!----><!----></span
+              ><span unselectable="on" class="k-select"
+                ><span class="k-i-arrow-s k-icon"></span></span
+              ><!----></span
+            ><!----><!----></kendo-dropdownlist
+          >
+        </div>
+        <!---->
+        <div class="col-1 ng-star-inserted">
+          <label
+            class="dot-switch"
+            name="finished_toggle_label"
+            style="position: relative; left: 16px"
+            ><input
+              name="finished"
+              type="checkbox"
+              class="ng-untouched ng-pristine ng-valid"
+            />
+            <div class="dot-switch-slider round"></div>
+            <span>Finished</span></label
+          >
+        </div>
+        <!---->
+        <div
+          class="col-1 ng-star-inserted"
+          style="position: relative; right: -50px"
+        >
+          <label class="dot-switch" name="brokered_toggle_label"
+            ><input
+              name="brokered"
+              type="checkbox"
+              class="ng-untouched ng-pristine ng-valid"
+            />
+            <div class="dot-switch-slider round"></div>
+            <span>Brokered</span></label
+          >
+        </div>
+      </div>
+      <div class="dot-formgroup row no-gutters">
+        <label class="dot-form__label col-2" name="job-location"
+          >Location</label
+        >
+        <div class="col-2">
+          <kendo-dropdownlist
+            name="locationList"
+            class="k-widget k-dropdown k-header"
+            ><span
+              role="listbox"
+              unselectable="on"
+              class="k-dropdown-wrap k-state-default"
+              id="6950fd92-36ea-469c-868c-1f4f2a57d7bb"
+              dir="ltr"
+              readonly="false"
+              tabindex="0"
+              aria-disabled="false"
+              aria-readonly="false"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-owns="7a0ea2f6-97b0-427a-9606-0da9fd6d9c19"
+              aria-activedescendant="c1e337cf-3ab9-40b3-8050-70b5451b9eb3-undefined"
+              ><span unselectable="on" class="k-input"><!----><!----></span
+              ><span unselectable="on" class="k-select"
+                ><span class="k-i-arrow-s k-icon"></span></span
+              ><!----></span
+            ><!----><!----></kendo-dropdownlist
+          >
+        </div>
+        <label
+          class="dot-form__label col-2"
+          name="job-comment"
+          style="padding-right: 5px"
+          >Job Comment</label
+        ><!----><input
+          class="dot-formcontrol col-5 ng-untouched ng-pristine ng-valid ng-star-inserted"
+          maxlength="255"
+          name="job_comment"
+          type="text"
+        /><!---->
+        <div class="row no-gutters dot-formgroup col-3">
+          <!---->
+          <div class="col-6"><!----></div>
+        </div>
+      </div>
+      <!----><!----><!----><!----><!----><job-detail-charges
+        _nghost-gdl-c55=""
+        class="ng-star-inserted"
+        ><div _ngcontent-gdl-c55="" class="dot-formgroup row no-gutters">
+          <label _ngcontent-gdl-c55="" class="dot-form__label col-2"
+            >Description</label
+          >
+          <div _ngcontent-gdl-c55="" class="col-9">
+            <textarea
+              _ngcontent-gdl-c55=""
+              class="dot-formcontrol"
+              cols="8"
+              name="charges-descriptionField"
+              rows="5"
+              style="resize: none"
+            >
+            </textarea>
+          </div>
+          <!---->
+        </div>
+        <div _ngcontent-gdl-c55="" class="dot-formgroup row no-gutters">
+          <label _ngcontent-gdl-c55="" class="dot-form__label col-2"
+            >Notes</label
+          >
+          <div _ngcontent-gdl-c55="" class="col-9">
+            <textarea
+              _ngcontent-gdl-c55=""
+              class="dot-formcontrol"
+              cols="8"
+              name="charges-jobnotesField"
+              rows="3"
+              style="resize: none"
+            >
+            </textarea>
+          </div>
+        </div>
+        <div _ngcontent-gdl-c55="" class="dot-formgroup row no-gutters">
+          <label
+            _ngcontent-gdl-c55=""
+            class="dot-checkbox dot-form__label col-11"
+            ><input
+              _ngcontent-gdl-c55=""
+              id="charges_includenotes"
+              name="charges_includenotes"
+              type="checkbox"
+              value="includeNotes"
+            /><label _ngcontent-gdl-c55="" for="charges_includenotes"
+              ><span _ngcontent-gdl-c55=""> Include Notes</span></label
+            ></label
+          >
+        </div></job-detail-charges
+      ><!----><!---->
+    </form>
+  </div>
+  <!----><!---->
+  <div
+    class="col-4 job-details-right-pane ng-star-inserted"
+    id="job_details_right_pane"
+    name="job-details-right-pane"
+    style="height: 299px"
+  >
+    <form
+      class="dot-form__horizontal ng-untouched ng-pristine ng-valid"
+      novalidate=""
+    >
+      <div class="quantityDetails row no-gutters">
+        <span class="col-6"
+          ><h3>
+            <span class="dot-icon dot-multi-copy-icon padding-right-10"></span
+            ><span class="staticPosition" name="header-label-quantity"
+              >Price Breakup</span
+            >
+          </h3></span
+        ><!----><span class="col-6 add-charge-button-container ng-star-inserted"
+          ><a
+            class="dot-button dot-button__secondary dot-button__mini"
+            name="add_multi_qty_btn"
+            ng-reflect-klass="dot-button dot-button__seconda"
+            ng-reflect-ng-class="[object Object]"
+            ng-reflect-text="Add Multi Quantity"
+            ng-reflect-tooltip-position="left"
+            ptooltip="Add Multi Qty"
+            tooltipposition="top"
+            ><span class="dot-icon dot-add-circle-icon"></span
+            ><span name="add-new-charge">Add Quantity</span></a
+          ></span
+        ><!----><!---->
+      </div>
+      <div class="row no-gutters weight-container">
+        <div class="col-8">
+          <label class="qty-label text-bold" name="qty-label-header"
+            >Quantity</label
+          >
+        </div>
+        <div class="col-4">
+          <input
+            autocomplete="off"
+            checkempty="true"
+            class="dot-formcontrol text-right no_mq bold_input"
+            id="qty-label-ctext"
+            name="qty-label-ctext"
+            number-restrict="integer"
+            type="text"
+          />
+        </div>
+      </div>
+      <!----><!----><!----><!----><!----><!----><!----><!----><!---->
+      <div class="row no-gutters weight-container">
+        <div class="col-8">
+          <label class="qty-label" name="price-header">Price</label>
+        </div>
+        <div class="col-4">
+          <input
+            allownegative="true"
+            checkempty="true"
+            class="dot-formcontrol text-right no_mq"
+            currency="true"
+            name="price-label-text"
+            number-restrict="decimal"
+            style="float: right; color: rgb(0, 0, 255)"
+            type="text"
+          />
+        </div>
+      </div>
+      <!---->
+    </form>
+    <div class="row no-gutters"><div class="col-md-12"></div></div>
+    <div class="row no-gutters">
+      <div class="tabContent col-md-12">
+        <div class="sectionOne active">
+          <div class="quantityDetails row no-gutters">
+            <span class="col-6"
+              ><h3>
+                <span
+                  class="dot-icon dot-print-charge-icon padding-right-10"
+                ></span
+                ><span class="staticPosition" name="charge-header"
+                  >Charges</span
+                >
+              </h3></span
+            ><span class="col-6 add-charge-button-container"
+              ><a
+                class="dot-button dot-button__secondary dot-button__mini"
+                name="add_job_charge_btn"
+                ptooltip="Add New Charges"
+                tooltipposition="left"
+                ><span class="dot-icon dot-add-circle-icon"></span
+                ><span name="add-new-charge">Add New</span></a
+              ></span
+            >
+            <div class="charge-grid-container col-md-12">
+              <div class="row no-gutters sticky-header">
+                <div class="col-7 padding-left-5"><span>Type</span></div>
+                <div class="col-2 text-right"><span>Quantity</span></div>
+                <div class="col-3 text-right" style="padding-right: 5px">
+                  <span>Charge</span>
+                </div>
+              </div>
+              <!---->
+            </div>
+          </div>
+          <div class="row" id="total_price" style="left: 818px; right: 12px">
+            <div class="col-md-12 bottomSection bs-job-details">
+              <div
+                class="dot-left-section col-7"
+                name="job_tax_lable"
+                style="
+                  padding-left: 10px;
+                  padding-right: 10px;
+                  border-right: 1px solid black;
+                "
+              >
+                <b><span>Tax</span></b
+                ><span
+                  style="font-size: 10px; margin-left: 3px; margin-top: 5px"
+                  tooltipposition="top"
+                  >(Use Parent Tax Table) </span
+                ><span class="editIcon padding-right-10 editIcon top-2 pos-rel"
+                  ><span class="icon dot-add-circle-icon"></span
+                  ><sales-tax-details><!----></sales-tax-details></span
+                ><!---->
+              </div>
+              <div class="col-5 dot-right-section">
+                <span style="padding-right: 10px"
+                  ><span><b>Total</b></span></span
+                ><span><b>$ 100.00</b></span
+                ><!----><!---->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sectionTwo"></div>
+    </div>
+    <div class="row no-gutters">
+      <kendo-panelbar
+        class="job_details_accordion k-widget k-panelbar"
+        style="margin-bottom: 16px; height: auto; overflow: visible"
+        tabindex="0"
+        role="tree"
+        aria-activedescendant=""
+        dir="ltr"
+        ><!----><!----><!----><!----><!----><kendo-panelbar-item
+          name="charges_breakdown_panel"
+          ptooltip="Charges Breakdown details"
+          tooltipposition="top"
+          class="ng-tns-c61-526 k-item k-state-default ng-star-inserted"
+          role="treeitem"
+          id="k-panelbar-52-item-default-91"
+          aria-expanded="false"
+          aria-selected="false"
+          ><span class="ng-tns-c61-526 k-link k-header"
+            ><!----><!---->
+            <!----><span class="item-title ng-star-inserted"
+              >Charges Breakdown details</span
+            ><!----><span
+              class="ng-tns-c61-526 k-icon k-i-arrow-s k-panelbar-expand ng-star-inserted"
+            ></span></span
+          ><!----></kendo-panelbar-item
+        ><!----><!----></kendo-panelbar
+      >
+    </div>
+  </div>
+</div>
+
+<button
+  class="dot-button dot-button__prominent ng-star-inserted"
+  name="save-buttton"
+  title=""
+>
+  Save
+</button>
