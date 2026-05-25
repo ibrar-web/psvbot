@@ -6,7 +6,7 @@ on:
       - multiprocessing
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_BOT }}
   REGION: us-central1
   REPOSITORY: playwright-worker
   IMAGE_NAME: playwright-queue-worker
