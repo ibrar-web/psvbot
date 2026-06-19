@@ -57,11 +57,11 @@ QUOTE_RECORD = {
    "requirements": [
       {
          "stock_search": "Kelly Dig Silk Cvr 100 83M 18 X12 410/cs",
-         "quantity": 50.0,
+         "quantity": 5.0,
          "size": "3x4",
          "sides": "duplex",
          "description": "50 double-sided 3x4 laminated badges with one hole at the top for a lanyard and round corners",
-         "job_method": "Digital Color",
+         "job_method": "Sublet",
          "job_charges": [
             {"charge_name": "1 Hole Punch (Laminated)", "charge_price": 0.1,  "quantity": 50.0},
             {"charge_name": "Lanyards",                 "charge_price": 1.5,  "quantity": 50.0},
@@ -99,7 +99,7 @@ QUOTE_RECORD = {
       "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
       "printsmith_company": "alphagraphics685",
    },
-   "estimate_id": "37568",
+#    "estimate_id": "37568",
 }
 
 _flow_lock = Lock()
@@ -181,6 +181,7 @@ def _build_bot_quote_record(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "job_method": req.get("job_method", ""),
                 "job_charges": req.get("job_charges", []),
                 "other_charges": req.get("other_charges", req.get("other_chrages", [])),
+                "total": req.get("total", ""),
             }
         )
 

@@ -24,6 +24,10 @@ class JobDetailsTab(BasePage):
     )
     JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
     JOB_DESCRIPTION_INPUT = "xpath=//textarea[@name='digital-descriptionField']"
+    SUBLET_DESCRIPTION_INPUT = "xpath=//textarea[@name='outside-descriptionField']"
+    SUBLET_VENDOR_LABEL = (
+        "xpath=//label[contains(@class,'dot-form__label') and normalize-space()='Vendor']"
+    )
     STOCK_PICKER_BUTTON = "xpath=//a[@ptooltip='Stock Picker']"
     STOCK_CONFIRM_BUTTON = "xpath=//button[@name='save_stock_details']"
     STOCK_CANCEL_BUTTON = "xpath=//button[@name='cancel_stock_details']"
@@ -38,6 +42,9 @@ class JobDetailsTab(BasePage):
     CHARGES_SAVE_BUTTON = "xpath=//input[@name='save_charges' and @value='Done']"
     ADD_JOB_CHARGE_BUTTON = "xpath=//a[@name='add_job_charge_btn']"
     QTY_INPUT = "#qty-label-ctext"
+    SUBLET_QTY_INPUT = "xpath=//input[@name='qty-label-ctext']"
+    SUBLET_UNIT_COST_INPUT = "xpath=//input[@name='unit_cost']"
+    SUBLET_MARKUP_INPUT = "xpath=//input[@name='markup']"
     CHARGES_ONLY_DESCRIPTION_INPUT = "xpath=//textarea[@name='charges-descriptionField']"
     CHARGES_ONLY_PRICE_INPUT = "xpath=//input[@name='price-label-text']"
     CHARGES_ONLY_QTY_INPUT = "xpath=//input[@name='qty-label-ctext']"
@@ -47,7 +54,7 @@ class JobDetailsTab(BasePage):
             print(f"[PrintSmith][JobDetailsTab] {message}")
         logger.info(message)
 
-    def wait_until_active(self) -> None:
+    def wait_until_active(self, job_method: str = "") -> None:
         self._debug("Waiting for Job Details tab to become active")
         self.wait_for_visible(self.JOB_DETAILS_TAB)
         self.page.wait_for_function(
@@ -59,7 +66,10 @@ class JobDetailsTab(BasePage):
             timeout=self._timeout_ms,
         )
         self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
-        self.wait_for_visible(self.STOCK_PICKER_BUTTON)
+        if (job_method or "").strip().lower() == "sublet":
+            self.wait_for_visible(self.SUBLET_DESCRIPTION_INPUT)
+        else:
+            self.wait_for_visible(self.STOCK_PICKER_BUTTON)
 
     def wait_until_charges_only_active(self) -> None:
         self._debug("Waiting for Charges Only Job Details tab to become active")
@@ -108,7 +118,7 @@ class JobDetailsTab(BasePage):
         self._select_matching_stock_row(stock_search_term)
         self._confirm_stock_selection()
 
-    def fill_job_description(self, data: Mapping[str, str]) -> None:
+    def fill_job_description(self, data: Mapping[str, str], job_method: str = "") -> None:
         description = str(data.get("description") or "").strip()
         if not description:
             self._debug("No job description provided; skipping description field")
@@ -116,7 +126,11 @@ class JobDetailsTab(BasePage):
 
         self._debug("Filling job description before opening Stock Picker")
         self.wait_for_spinner_to_disappear()
-        description_loc = self._loc(self.JOB_DESCRIPTION_INPUT).first
+        if (job_method or "").strip().lower() == "sublet":
+            description_loc = self._loc(self.SUBLET_DESCRIPTION_INPUT).first
+
+        else:
+            description_loc = self._loc(self.JOB_DESCRIPTION_INPUT).first
         description_loc.wait_for(state="visible", timeout=self._timeout_ms)
         description_loc.fill(description)
         self.page.evaluate(
@@ -162,6 +176,69 @@ class JobDetailsTab(BasePage):
         self.wait_for_spinner_to_disappear()
         self.click(self.CHARGES_SAVE_BUTTON)
         self.wait_for_spinner_to_disappear()
+
+    def sublet_price_breakup(self, data: Mapping[str, Any]) -> None:
+        """Fill the Sublet price breakup: quantity, then unit cost, then markup.
+
+        - price_breakup_quantity: filled as an integer into the qty field
+        - agent_total: filled as a 2-decimal float into the unit_cost field
+        - markup: always filled with 2.00
+        """
+        quantity = self._sublet_int_text(data.get("price_breakup_quantity"))
+        unit_cost = self._sublet_decimal_text(data.get("agent_total"))
+
+        if quantity:
+            self._debug(f"Sublet: setting quantity: {quantity}")
+            qty_loc = self._loc(self.SUBLET_QTY_INPUT).first
+            qty_loc.wait_for(state="visible", timeout=self._timeout_ms)
+            qty_loc.click()
+            qty_loc.fill("")
+            qty_loc.fill(quantity)
+            qty_loc.press("Enter")
+            self.wait_for_spinner_to_disappear()
+        else:
+            self._debug("Sublet: no quantity provided; skipping quantity field")
+
+        if unit_cost:
+            self._debug(f"Sublet: setting unit cost: {unit_cost}")
+            unit_cost_loc = self._loc(self.SUBLET_UNIT_COST_INPUT).first
+            unit_cost_loc.wait_for(state="visible", timeout=self._timeout_ms)
+            unit_cost_loc.click()
+            unit_cost_loc.fill("")
+            unit_cost_loc.fill(unit_cost)
+            unit_cost_loc.press("Enter")
+            self.wait_for_spinner_to_disappear()
+        else:
+            self._debug("Sublet: no total provided; skipping unit cost field")
+
+        self._debug("Sublet: setting markup: 2.00")
+        markup_loc = self._loc(self.SUBLET_MARKUP_INPUT).first
+        markup_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        markup_loc.click()
+        markup_loc.fill("")
+        markup_loc.fill("2.00")
+        markup_loc.press("Enter")
+        self.wait_for_spinner_to_disappear()
+
+    def _sublet_decimal_text(self, value: Any) -> str:
+        text = str(value if value is not None else "").replace(",", "").strip()
+        if not text:
+            return ""
+        try:
+            return f"{float(text):.2f}"
+        except (ValueError, TypeError):
+            self._debug(f"Sublet: could not parse decimal from '{value}'; using raw value")
+            return text
+
+    def _sublet_int_text(self, value: Any) -> str:
+        text = str(value if value is not None else "").replace(",", "").strip()
+        if not text:
+            return ""
+        try:
+            return str(int(float(text)))
+        except (ValueError, TypeError):
+            self._debug(f"Sublet: could not parse integer from '{value}'; using raw value")
+            return text
 
     def select_bleed(self) -> None:
         self._debug("Selecting bleed option via paper-calculator icon")
