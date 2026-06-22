@@ -270,8 +270,8 @@ class EstimatedSummaryTab(BasePage):
         if not raw:
             return ""
 
-        # Drop any time component (e.g. ISO "2026-06-27T00:00:00").
-        raw = raw.split("T")[0].split(" ")[0]
+  
+        raw = raw.split("T")[0].strip()
 
         formats = (
             "%Y-%m-%d",
@@ -281,6 +281,12 @@ class EstimatedSummaryTab(BasePage):
             "%m-%d-%Y",
             "%d-%m-%Y",
             "%Y/%m/%d",
+            "%B %d, %Y",   # July 1, 2026
+            "%B %d %Y",    # July 1 2026
+            "%b %d, %Y",   # Jul 1, 2026
+            "%b %d %Y",    # Jul 1 2026
+            "%d %B %Y",    # 1 July 2026
+            "%d %b %Y",    # 1 Jul 2026
         )
         for fmt in formats:
             try:
