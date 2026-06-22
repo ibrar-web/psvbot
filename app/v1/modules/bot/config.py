@@ -17,3 +17,6 @@ QUOTE_SUMMARY_STORAGE_ROOT = (
     os.getenv("PRINTSMITH_QUOTE_SUMMARY_STORAGE_ROOT", "estimates").strip()
     or "estimates"
 )
+WANTED_DATE_DEFAULT_WORKING_DAYS = int(
+    os.getenv("PRINTSMITH_WANTED_DATE_WORKING_DAYS", "5")
+)

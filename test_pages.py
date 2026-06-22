@@ -51,6 +51,7 @@ QUOTE_RECORD = {
       "contact_email": "qatestingadmin@yopmail.com",
       "contact_phone": "",
       "customer_name": None,
+    #   "due_date": "2026-07-01",
       "chat_id": "fdbc0b53-7abe-4dc3-8b42-105875b3356b",
       "message_id": "bb61eda2-b1fa-4954-957f-6d51cb5d97ce",
    },
@@ -60,6 +61,7 @@ QUOTE_RECORD = {
          "quantity": 5.0,
          "size": "3x4",
          "sides": "duplex",
+        #  "date": "2026-07-01",
          "description": "50 double-sided 3x4 laminated badges with one hole at the top for a lanyard and round corners",
          "job_method": "Sublet",
          "job_charges": [
@@ -79,6 +81,7 @@ QUOTE_RECORD = {
          "quantity": 75.0,
          "size": "3x4",
          "sides": "duplex",
+        #  "date": "2026-07-01",
          "description": "75 double-sided 3x4 PVC name tags with one hole at the top for a lanyard, lamination, and round corners",
          "job_method": "Large Format",
          "job_charges": [
@@ -96,12 +99,12 @@ QUOTE_RECORD = {
       },
    ],
    "tenant_credentials": {
-      "printsmith_username": "AijazAsif",
-      "printsmith_password": "Howard@530SF",
+      "printsmith_username": "raza",
+      "printsmith_password": "28@TheClose",
       "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
       "printsmith_company": "alphagraphics685",
    },
-   "estimate_id": "38090",
+#    "estimate_id": "38090",
 }
 
 _flow_lock = Lock()
@@ -185,6 +188,7 @@ def _build_bot_quote_record(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "other_charges": req.get("other_charges", req.get("other_chrages", [])),
                 "total": req.get("total", ""),
                 "vendor_name": req.get("vendor_name", ""),
+                "date": req.get("date", req.get("wanted_date", req.get("due_date", ""))),
             }
         )
 
@@ -203,6 +207,13 @@ def _build_bot_quote_record(payload: Dict[str, Any]) -> Dict[str, Any]:
         "contact_email": quote.get("contact_email", ""),
         "contact_phone": quote.get("contact_phone", ""),
         "requirements": requirements,
+        "wanted_date": (
+            payload.get("wanted_date")
+            or payload.get("due_date")
+            or quote.get("wanted_date")
+            or quote.get("due_date")
+            or ""
+        ),
     }
 
 

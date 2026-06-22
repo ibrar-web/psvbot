@@ -492,6 +492,10 @@ def _build_bot_quote_record(
                 ),
                 "total": requirement.get("total", ""),
                 "vendor_name": requirement.get("vendor_name", ""),
+                "date": requirement.get(
+                    "date",
+                    requirement.get("wanted_date", requirement.get("due_date", "")),
+                ),
             }
         )
 
@@ -514,6 +518,13 @@ def _build_bot_quote_record(
         "contact_phone": quote.get("contact_phone", ""),
         "requirements": requirements,
         "notes": payload.get("notes", quote.get("notes", "")),
+        "wanted_date": (
+            payload.get("wanted_date")
+            or payload.get("due_date")
+            or quote.get("wanted_date")
+            or quote.get("due_date")
+            or ""
+        ),
     }
 
 

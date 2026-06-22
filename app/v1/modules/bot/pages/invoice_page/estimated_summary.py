@@ -2,6 +2,7 @@ import logging
 import re
 import tempfile
 import time
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import unquote, urlparse
@@ -10,7 +11,11 @@ from urllib.request import Request, urlopen
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from app.v1.modules.bot.base_page import BasePage
-from app.v1.modules.bot.config import DEBUG, HEADLESS
+from app.v1.modules.bot.config import (
+    DEBUG,
+    HEADLESS,
+    WANTED_DATE_DEFAULT_WORKING_DAYS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +34,7 @@ class EstimatedSummaryTab(BasePage):
         "xpath=//div[@name='print_btn_group']//button[@name='print_btn'"
         " and .//span[normalize-space()='US685 E-Estimate']]"
     )
+    WANTED_DATE_INPUT = "xpath=//input[@name='wantedDate']"
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -187,6 +193,124 @@ class EstimatedSummaryTab(BasePage):
             return self._download_headless(temp_dir)
         else:
             return self._download_headed(temp_dir)
+
+
+
+    def set_wanted_date(self, quote_record: Dict[str, Any]) -> str:
+        """Fill the estimate's wanted (due) date field.
+
+        Returns the normalized date string that was entered.
+        """
+        raw = self._extract_wanted_date(quote_record)
+        wanted_date = self._normalize_wanted_date(raw)
+        if not wanted_date:
+            wanted_date = self._default_wanted_date()
+            self._debug(
+                f"No wanted date in request; defaulting to "
+                f"{WANTED_DATE_DEFAULT_WORKING_DAYS} working day(s) out: {wanted_date}"
+            )
+        else:
+            self._debug(f"Wanted date from request normalized to: {wanted_date}")
+
+        self.wait_for_spinner_to_disappear()
+        if not super().is_visible(self.WANTED_DATE_INPUT):
+            self._debug("wantedDate input not found on Estimate Summary; skipping")
+            return wanted_date
+
+        field = self.find(self.WANTED_DATE_INPUT)
+        field.click()
+        # Select-all + delete instead of fill() so the PrimeNG/Angular input
+        # registers the change; fill() sets .value without firing the events
+        # the calendar binding listens for, so the value gets reverted.
+        field.press("Control+a")
+        field.press("Delete")
+        field.press_sequentially(wanted_date, delay=50)
+        # Commit the value and close any datepicker overlay the field may open
+        # so it does not obscure the print button.
+        field.press("Enter")
+        field.blur()
+        self.wait_for_spinner_to_disappear()
+        actual = field.input_value()
+        self._debug(f"wantedDate set to '{wanted_date}'; input now reads '{actual}'")
+        return wanted_date
+
+    def _extract_wanted_date(self, quote_record: Dict[str, Any]) -> str:
+        """Pull a date string from the request under any of the known keys."""
+        if not isinstance(quote_record, dict):
+            return ""
+        candidates = [quote_record]
+        requirements = quote_record.get("requirements")
+        if isinstance(requirements, dict):
+            candidates.append(requirements)
+        elif isinstance(requirements, list):
+            candidates.extend(r for r in requirements if isinstance(r, dict))
+
+        keys = (
+            "wanted_date",
+            "wantedDate",
+            "due_date",
+            "dueDate",
+            "delivery_date",
+            "deliveryDate",
+            "date",
+        )
+        for source in candidates:
+            for key in keys:
+                value = source.get(key)
+                if value not in (None, ""):
+                    return str(value).strip()
+        return ""
+
+    def _normalize_wanted_date(self, raw: str) -> str:
+        """Normalize an arbitrary date string to ``M/D/YYYY``.
+
+        Returns an empty string if the value cannot be parsed.
+        """
+        raw = (raw or "").strip()
+        if not raw:
+            return ""
+
+        # Drop any time component (e.g. ISO "2026-06-27T00:00:00").
+        raw = raw.split("T")[0].split(" ")[0]
+
+        formats = (
+            "%Y-%m-%d",
+            "%m/%d/%Y",
+            "%m/%d/%y",
+            "%d/%m/%Y",
+            "%m-%d-%Y",
+            "%d-%m-%Y",
+            "%Y/%m/%d",
+        )
+        for fmt in formats:
+            try:
+                parsed = datetime.strptime(raw, fmt).date()
+                return self._format_wanted_date(parsed)
+            except ValueError:
+                continue
+        self._debug(f"Could not parse wanted date '{raw}'; will use default")
+        return ""
+
+    def _default_wanted_date(self) -> str:
+        return self._format_wanted_date(
+            self._add_working_days(date.today(), WANTED_DATE_DEFAULT_WORKING_DAYS)
+        )
+
+    @staticmethod
+    def _add_working_days(start: date, working_days: int) -> date:
+        """Advance ``start`` by ``working_days`` Mon-Fri days."""
+        current = start
+        remaining = max(working_days, 0)
+        while remaining > 0:
+            current += timedelta(days=1)
+            if current.weekday() < 5:  # Mon-Fri
+                remaining -= 1
+        return current
+
+    @staticmethod
+    def _format_wanted_date(value: date) -> str:
+        """Format as month_number/date/year with no leading zeros."""
+        return f"{value.month}/{value.day}/{value.year}"
 
     def click_add_job(self) -> None:
         self._debug("Opening Add menu on Estimate Summary and selecting Add Job")

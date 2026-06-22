@@ -142,7 +142,10 @@ class InvoicePage(BasePage):
 
             invoice_path = self._retry_step(
                 "estimate_summary_download",
-                lambda: self._download_from_estimate_summary(requirement_customer_status),
+                lambda: self._download_from_estimate_summary(
+                    requirement_customer_status,
+                    quote_record=quote_record,
+                ),
             )
             return invoice_path, estimate_totals
         finally:
@@ -338,6 +341,7 @@ class InvoicePage(BasePage):
     def _download_from_estimate_summary(
         self,
         customer_selection_status: Optional[Dict[str, Any]] = None,
+        quote_record: Optional[Dict[str, Any]] = None,
     ) -> Path:
         estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
         self._debug("Switching to Estimate Summary tab")
@@ -345,6 +349,8 @@ class InvoicePage(BasePage):
         self._debug(
             f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}"
         )
+        # Set the wanted/due date before finalizing the estimate.
+        estimated_summary_tab.set_wanted_date(quote_record or {})
         self._debug("Downloading invoice from Estimate Summary")
         return estimated_summary_tab.click_us685_eestimate_and_download(
             customer_selection_status=customer_selection_status,
