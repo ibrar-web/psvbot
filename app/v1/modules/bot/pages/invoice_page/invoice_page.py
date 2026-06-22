@@ -188,6 +188,7 @@ class InvoicePage(BasePage):
             "size": requirement.get("size", ""),
             "job_method": requirement.get("job_method", ""),
             "agent_total": requirement.get("total", ""),
+            "vendor_name": requirement.get("vendor_name", ""),
         }
 
     def _complete_single_requirement(
@@ -197,7 +198,7 @@ class InvoicePage(BasePage):
         job_data: Dict[str, Any],
         resume_from: str,
         customer_selection_status: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    ) -> Optional[Dict[str, Any]]:
         customer_selection_status = customer_selection_status or {}
         used_fallback_customer = bool(
             customer_selection_status.get("used_fallback_customer")
@@ -331,6 +332,7 @@ class InvoicePage(BasePage):
         self._debug("Completing Job Details tab for Sublet job method")
         job_details_tab.wait_until_active(job_method="sublet")
         job_details_tab.fill_job_description(job_data, job_method="sublet")
+        job_details_tab.select_vendor(job_data.get("vendor_name", ""))
         job_details_tab.sublet_price_breakup(job_data)
 
     def _download_from_estimate_summary(

@@ -491,6 +491,7 @@ def _build_bot_quote_record(
                     requirement.get("other_chrages", []),
                 ),
                 "total": requirement.get("total", ""),
+                "vendor_name": requirement.get("vendor_name", ""),
             }
         )
 

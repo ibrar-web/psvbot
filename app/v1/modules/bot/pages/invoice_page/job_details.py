@@ -126,11 +126,12 @@ class JobDetailsTab(BasePage):
 
         self._debug("Filling job description before opening Stock Picker")
         self.wait_for_spinner_to_disappear()
+        
         if (job_method or "").strip().lower() == "sublet":
             description_loc = self._loc(self.SUBLET_DESCRIPTION_INPUT).first
-
         else:
             description_loc = self._loc(self.JOB_DESCRIPTION_INPUT).first
+        
         description_loc.wait_for(state="visible", timeout=self._timeout_ms)
         description_loc.fill(description)
         self.page.evaluate(
@@ -144,6 +145,105 @@ class JobDetailsTab(BasePage):
             }""",
             description,
         )
+        self.wait_for_spinner_to_disappear()
+
+    def select_vendor(self, vendor_name: str) -> None:
+        """Select a vendor from the Kendo dropdownlist on the Sublet form.
+
+        The site's type-to-search on this dropdown is unreliable, so instead of
+        typing we open the list and click the matching option directly in the
+        DOM (exact -> startsWith -> includes), mirroring the approach used for
+        job method selection.
+
+        Does NOT raise on a bad/missing vendor; it just logs a debug message so
+        the rest of the job keeps running.
+        """
+        normalized_vendor = " ".join((vendor_name or "").split()).strip()
+        if not normalized_vendor:
+            self._debug("Vendor name not selected: no vendor name provided")
+            return
+
+        self._debug(f"Selecting vendor: {normalized_vendor}")
+        self.wait_for_spinner_to_disappear()
+
+        # 1) Open the dropdown so Kendo renders the option list.
+        opened = self.page.evaluate(
+            """() => {
+                const dropdown = document.querySelector("kendo-dropdownlist[name='vendor']");
+                if (!dropdown) return false;
+                const opener = dropdown.querySelector(".k-input, .k-select, .k-dropdown-wrap")
+                    || dropdown;
+                opener.scrollIntoView({ block: "center" });
+                opener.click();
+                return true;
+            }"""
+        )
+        if not opened:
+            self._debug(f"Vendor name not selected: dropdown not found for '{normalized_vendor}'")
+            return
+
+        # 2) Wait for the option list to render (Kendo appends it to <body>).
+        try:
+            self.page.wait_for_function(
+                """() => {
+                    const items = Array.from(document.querySelectorAll(
+                        ".k-animation-container [role='listbox'] li.k-item, "
+                        + ".k-animation-container li.k-item, "
+                        + ".k-list [role='option'], .k-list li.k-item"
+                    )).filter(node => {
+                        const style = window.getComputedStyle(node);
+                        return style.display !== "none" && style.visibility !== "hidden" && node.offsetParent !== null;
+                    });
+                    return items.length > 0;
+                }""",
+                timeout=self._timeout_ms,
+            )
+        except PlaywrightTimeoutError:
+            self._debug(f"Vendor name not selected: option list did not render for '{normalized_vendor}'")
+            return
+
+        # 3) Match the option by normalized text and click it directly.
+        selected = self.page.evaluate(
+            """(vendorName) => {
+                const normalize = value => (value || "")
+                    .replace(/\\s+/g, " ")
+                    .trim()
+                    .toLowerCase();
+                const target = normalize(vendorName);
+
+                const items = Array.from(document.querySelectorAll(
+                    ".k-animation-container [role='listbox'] li.k-item, "
+                    + ".k-animation-container li.k-item, "
+                    + ".k-list [role='option'], .k-list li.k-item"
+                )).filter(node => {
+                    const style = window.getComputedStyle(node);
+                    return style.display !== "none" && style.visibility !== "hidden" && node.offsetParent !== null;
+                });
+                if (!items.length) return false;
+
+                const entries = items.map(node => ({
+                    node,
+                    text: normalize(node.innerText || node.textContent || "")
+                })).filter(entry => entry.text);
+
+                let match = entries.find(e => e.text === target)
+                    || entries.find(e => e.text.startsWith(target))
+                    || entries.find(e => e.text.includes(target))
+                    || null;
+                if (!match) return false;
+
+                match.node.scrollIntoView({ block: "center" });
+                match.node.click();
+                return true;
+            }""",
+            normalized_vendor,
+        )
+        if not selected:
+            self._debug(f"Vendor name not selected: no matching option for '{normalized_vendor}'")
+            # Close the open dropdown so it doesn't block later steps.
+            self.page.keyboard.press("Escape")
+            self.wait_for_spinner_to_disappear()
+            return
         self.wait_for_spinner_to_disappear()
 
     def configure_price_breakup(self, data: Mapping[str, str]) -> None:
@@ -218,6 +318,19 @@ class JobDetailsTab(BasePage):
         markup_loc.fill("")
         markup_loc.fill("2.00")
         markup_loc.press("Enter")
+        self.wait_for_spinner_to_disappear()
+
+        job_charges = data.get("job_charges") or []
+        copies_quantity = self._quantity_text(data.get("copies_quantity"))
+        if not job_charges:
+            self._debug("No charges provided; skipping charges modal")
+            return
+
+        self._open_add_new_charges_modal()
+        self._add_job_charges(job_charges, copies_quantity=copies_quantity)
+        self._debug("Saving selected charges")
+        self.wait_for_spinner_to_disappear()
+        self.click(self.CHARGES_SAVE_BUTTON)
         self.wait_for_spinner_to_disappear()
 
     def _sublet_decimal_text(self, value: Any) -> str:

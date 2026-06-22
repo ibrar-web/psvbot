@@ -72,6 +72,7 @@ QUOTE_RECORD = {
          "rush_fee": 0.0,
          "total": 786.5,
          "estimate_totals": {},
+         "vendor_name" : "Print 2 Fly",
       },
       {
          "stock_search": "][ PVC 3mm Black",
@@ -91,6 +92,7 @@ QUOTE_RECORD = {
          "rush_fee": 0.0,
          "total": 1042.25,
          "estimate_totals": {},
+         "vendor_name" : None,
       },
    ],
    "tenant_credentials": {
@@ -99,7 +101,7 @@ QUOTE_RECORD = {
       "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
       "printsmith_company": "alphagraphics685",
    },
-#    "estimate_id": "37568",
+   "estimate_id": "38090",
 }
 
 _flow_lock = Lock()
@@ -182,6 +184,7 @@ def _build_bot_quote_record(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "job_charges": req.get("job_charges", []),
                 "other_charges": req.get("other_charges", req.get("other_chrages", [])),
                 "total": req.get("total", ""),
+                "vendor_name": req.get("vendor_name", ""),
             }
         )
 
