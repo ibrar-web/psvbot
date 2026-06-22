@@ -187,6 +187,8 @@ class InvoicePage(BasePage):
             "sides": requirement.get("sides", ""),
             "size": requirement.get("size", ""),
             "job_method": requirement.get("job_method", ""),
+            "agent_total": requirement.get("total", ""),
+            "vendor_name": requirement.get("vendor_name", ""),
         }
 
     def _complete_single_requirement(
@@ -196,7 +198,7 @@ class InvoicePage(BasePage):
         job_data: Dict[str, Any],
         resume_from: str,
         customer_selection_status: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    ) -> Optional[Dict[str, Any]]:
         customer_selection_status = customer_selection_status or {}
         used_fallback_customer = bool(
             customer_selection_status.get("used_fallback_customer")
@@ -305,6 +307,12 @@ class InvoicePage(BasePage):
     def _complete_job_details(self, job_data: Dict[str, Any]) -> None:
         self._debug("Completing Job Details tab")
         job_details_tab = JobDetailsTab(self.page, self.timeout)
+
+        method = (job_data.get("job_method") or "").strip().lower()
+        if method == "sublet":
+            self._complete_sublet_job_details(job_details_tab, job_data)
+            return
+
         job_details_tab.wait_until_active()
         job_details_tab.fill_job_description(job_data)
         job_details_tab.select_stock_from_picker(job_data)
@@ -313,6 +321,19 @@ class InvoicePage(BasePage):
         job_details_tab.select_bleed()
         job_details_tab.select_sides(job_data.get("sides", ""))
         job_details_tab.configure_price_breakup(job_data)
+
+    def _complete_sublet_job_details(
+        self,
+        job_details_tab: JobDetailsTab,
+        job_data: Dict[str, Any],
+    ) -> None:
+        """Sublet: same Job Details form, fewer steps.
+        """
+        self._debug("Completing Job Details tab for Sublet job method")
+        job_details_tab.wait_until_active(job_method="sublet")
+        job_details_tab.fill_job_description(job_data, job_method="sublet")
+        job_details_tab.select_vendor(job_data.get("vendor_name", ""))
+        job_details_tab.sublet_price_breakup(job_data)
 
     def _download_from_estimate_summary(
         self,
