@@ -349,12 +349,44 @@ class InvoicePage(BasePage):
         self._debug(
             f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}"
         )
+        # Add the delivery charge (if any) before finalizing so it lands on the
+        # generated estimate/invoice.
+        delivery_charge = self._build_delivery_charge(quote_record or {})
+        if delivery_charge:
+            self._debug(f"Adding delivery charge: {delivery_charge}")
+            estimated_summary_tab.add_charges([delivery_charge])
         # Set the wanted/due date before finalizing the estimate.
         estimated_summary_tab.set_wanted_date(quote_record or {})
         self._debug("Downloading invoice from Estimate Summary")
         return estimated_summary_tab.click_us685_eestimate_and_download(
             customer_selection_status=customer_selection_status,
         )
+
+    def _build_delivery_charge(self, quote_record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Build the delivery charge dict from the quote, or None if no delivery.
+
+        The quote's ``delivery`` field is a dict carrying the charge name,
+        price and quantity (e.g. ``{"charge_name": ..., "charge_price": ...,
+        "quantity": ...}``). Returns None when there is no delivery or no name.
+        """
+        delivery = quote_record.get("delivery")
+        if not isinstance(delivery, dict):
+            return None
+
+        delivery_name = str(
+            delivery.get("charge_name")
+            or delivery.get("name")
+            or delivery.get("charge")
+            or ""
+        ).strip()
+        if not delivery_name:
+            return None
+
+        return {
+            "charge_name": delivery_name,
+            "charge_price": delivery.get("charge_price", delivery.get("price")),
+            "quantity": delivery.get("quantity", delivery.get("qty")),
+        }
 
     def _switch_to_job_details_tab(self) -> None:
         self.wait_for_spinner_to_disappear()

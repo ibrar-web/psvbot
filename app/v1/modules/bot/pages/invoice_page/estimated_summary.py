@@ -16,6 +16,7 @@ from app.v1.modules.bot.config import (
     HEADLESS,
     WANTED_DATE_DEFAULT_WORKING_DAYS,
 )
+from app.v1.modules.bot.pages.invoice_page.job_details import JobDetailsTab
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class EstimatedSummaryTab(BasePage):
     ESTIMATE_SUMMARY_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Estimate Summary']]"
     ADD_BUTTON = "xpath=//div[@name='add_btn_group']//button"
     ADD_JOB_BUTTON = "xpath=//a[@name='add_job_btn']"
+    ADD_JOB_CHARGE_BUTTON = "xpath=//a[@name='add_job_charge_btn']"
     CREATE_PROSPECT_BUTTON = (
         "xpath=//button[@name='create_account_button'"
         " and .//span[contains(normalize-space(),'Create Prospect')]]"
@@ -327,6 +329,51 @@ class EstimatedSummaryTab(BasePage):
         self.wait_for_visible(self.ADD_JOB_BUTTON)
         self.click(self.ADD_JOB_BUTTON)
         self.wait_for_spinner_to_disappear()
+
+    def add_charges(self, charges: Any) -> None:
+        """Add one or more charges directly from the Estimate Summary tab.
+
+        Opens the Add menu, clicks the "Add Charge" link (parallel to "Add
+        Job"), then reuses the JobDetailsTab charges-modal flow to search,
+        fill quantity/price and save each charge. The modal opened here is
+        the same ``#charges_popup`` modal driven by JobDetailsTab, so the
+        charge search/fill/confirm logic is shared rather than duplicated.
+
+        ``charges`` is a list of dicts (or a single dict). Each charge may use
+        any of the keys JobDetailsTab understands: charge_name/name/charge,
+        quantity/qty, price/charge_price/amount.
+        """
+        if isinstance(charges, dict):
+            charges = [charges]
+        charges = [c for c in (charges or []) if c]
+        if not charges:
+            self._debug("No charges provided; skipping Add Charge")
+            return
+
+        self._debug(f"Opening Add menu on Estimate Summary and selecting Add Charge ({len(charges)} charge(s))")
+        self.switch_to_tab()
+        self.wait_for_spinner_to_disappear()
+        self.wait_for_visible(self.ADD_BUTTON)
+        self.click(self.ADD_BUTTON)
+        self.wait_for_visible(self.ADD_JOB_CHARGE_BUTTON)
+        self.click(self.ADD_JOB_CHARGE_BUTTON)
+        self.wait_for_spinner_to_disappear()
+
+        # The charges modal is identical to the Price Breakup charges modal on
+        # the Job Details tab, so drive it with that page object's helpers.
+        job_details = JobDetailsTab(self.page, self.timeout)
+        job_details.wait_for_visible(job_details.CHARGES_MODAL)
+        job_details.wait_for_spinner_to_disappear()
+        job_details._loc(job_details.CHARGES_SEARCH_INPUT).first.wait_for(
+            state="visible", timeout=self._timeout_ms
+        )
+
+        job_details._add_job_charges(charges)
+
+        self._debug("Saving selected charges (Done)")
+        job_details.wait_for_spinner_to_disappear()
+        job_details.click(job_details.CHARGES_SAVE_BUTTON)
+        job_details.wait_for_spinner_to_disappear()
 
     def _download_headless(self, temp_dir: Path) -> Path:
         download_timeout = max(self._timeout_ms, 120_000)

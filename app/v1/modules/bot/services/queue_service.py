@@ -516,6 +516,7 @@ def _build_bot_quote_record(
         "contact_person": quote.get("contact_person", ""),
         "contact_email": quote.get("contact_email", ""),
         "contact_phone": quote.get("contact_phone", ""),
+        "delivery": quote.get("delivery") or {},
         "requirements": requirements,
         "notes": payload.get("notes", quote.get("notes", "")),
         "wanted_date": (
@@ -541,6 +542,9 @@ def _build_quote_record_from_task_payload(
             normalized_record["estimate_id"] = payload.get("estimate_id")
         if "quote_id" not in normalized_record:
             normalized_record["quote_id"] = normalized_record.get("_id") or queue_id
+        if "delivery" not in normalized_record:
+            quote = payload.get("quote") or {}
+            normalized_record["delivery"] = quote.get("delivery") or {}
         return normalized_record
 
     return _build_bot_quote_record(payload, queue_id)

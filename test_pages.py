@@ -51,6 +51,13 @@ QUOTE_RECORD = {
       "contact_email": "qatestingadmin@yopmail.com",
       "contact_phone": "",
       "customer_name": None,
+      "delivery": {
+         "charge_name": "Vehicle Courier SF - Standard",
+         "charge_price": 70.0,
+         "quantity": 1,
+         "subtotal": 70.0,
+      },
+
     #   "due_date": "2026-07-01",
       "chat_id": "fdbc0b53-7abe-4dc3-8b42-105875b3356b",
       "message_id": "bb61eda2-b1fa-4954-957f-6d51cb5d97ce",
@@ -104,7 +111,7 @@ QUOTE_RECORD = {
       "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
       "printsmith_company": "alphagraphics685",
    },
-#    "estimate_id": "38090",
+   "estimate_id": "38090",
 }
 
 _flow_lock = Lock()
@@ -206,6 +213,7 @@ def _build_bot_quote_record(payload: Dict[str, Any]) -> Dict[str, Any]:
         "contact_person": quote.get("contact_person", ""),
         "contact_email": quote.get("contact_email", ""),
         "contact_phone": quote.get("contact_phone", ""),
+        "delivery": quote.get("delivery") or {},
         "requirements": requirements,
         "wanted_date": (
             payload.get("wanted_date")
