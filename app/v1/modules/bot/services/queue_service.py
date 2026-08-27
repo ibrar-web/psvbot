@@ -18,6 +18,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.db.mongo import get_client
 from app.v1.core.settings import (
+    MACHINE_NAME,
     MAIN_SERVER_API_BASE_URL,
     MAIN_SERVER_API_TOKEN,
     MONGO_DB,
@@ -25,6 +26,7 @@ from app.v1.core.settings import (
     PRINTSMITH_PASSWORD,
     PRINTSMITH_URL,
     PRINTSMITH_USERNAME,
+    QUEUE_ENFORCE_MACHINE_ASSIGNMENT,
     QUEUE_MAX_ATTEMPTS,
     QUEUE_POLL_INTERVAL_SECONDS,
     QUEUE_PROCESSING_STALE_SECONDS,
@@ -139,6 +141,15 @@ async def _ensure_indexes() -> None:
         name="status_available_created_at",
     )
     await collection.create_index(
+        [
+            ("status", ASCENDING),
+            ("machine_name", ASCENDING),
+            ("available_at", ASCENDING),
+            ("created_at", ASCENDING),
+        ],
+        name="status_machine_available_created_at",
+    )
+    await collection.create_index(
         [("status", ASCENDING), ("callback_available_at", ASCENDING)],
         name="status_callback_available_at",
     )
@@ -220,6 +231,7 @@ def _dict_value(payload: Dict[str, Any], key: str) -> Dict[str, Any]:
 def _extract_lock_components(
     payload: Dict[str, Any],
     queue_id: str,
+    task_type: str,
 ) -> Dict[str, Optional[str]]:
     quote = _dict_value(payload, "quote")
     quote_record = _dict_value(payload, "quote_record")
@@ -227,9 +239,7 @@ def _extract_lock_components(
 
     return {
         "queue_id": queue_id,
-        "task_type": (
-            str(payload.get("task_type") or "").strip() or TaskType.CREATE_ESTIMATE.value
-        ),
+        "task_type": task_type,
         "chat_id": _first_identifier(
             payload.get("chat_id"),
             quote.get("chat_id"),
@@ -278,8 +288,9 @@ def _lock_key_values(lock_components: Dict[str, Optional[str]]) -> list[str]:
 def _task_lock_fields(
     payload: Dict[str, Any],
     queue_id: str,
+    task_type: str,
 ) -> Dict[str, Any]:
-    lock_components = _extract_lock_components(payload, queue_id)
+    lock_components = _extract_lock_components(payload, queue_id, task_type)
     return {
         "lock_keys": lock_components,
         "lock_key_values": _lock_key_values(lock_components),
@@ -297,8 +308,9 @@ def _task_lock_values_from_task(task: Dict[str, Any]) -> list[str]:
             }
         )
     queue_id = _clean_identifier(task.get("queue_id"))
-    payload = task.get("payload") if isinstance(task.get("payload"), dict) else {}
-    return _task_lock_fields(payload, queue_id)["lock_key_values"]
+    payload = task.get("data") if isinstance(task.get("data"), dict) else {}
+    task_type = str(task.get("task_type") or "").strip() or TaskType.CREATE_ESTIMATE.value
+    return _task_lock_fields(payload, queue_id, task_type)["lock_key_values"]
 
 
 def _is_timeout_error_message(error_message: str) -> bool:
@@ -440,22 +452,42 @@ def _validate_runtime_credentials(runtime_credentials: Dict[str, str]) -> None:
         )
 
 
-def _unwrap_task_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
-    data = payload.get("data")
-    if isinstance(data, dict):
-        merged = {**payload, **data}
-        merged["callback_url"] = data.get("callback_url") or payload.get("callback_url")
-        return merged
+def _extract_task_envelope(
+    raw_payload: Dict[str, Any],
+) -> tuple[str, Optional[str], Dict[str, Any]]:
+    """Split an incoming task payload into (task_type, machine_name, data).
 
-    nested_payload = payload.get("payload")
-    if isinstance(nested_payload, dict):
-        merged = {**payload, **nested_payload}
-        merged["callback_url"] = (
-            nested_payload.get("callback_url") or payload.get("callback_url")
-        )
-        return merged
+    Callers send the explicit envelope: {"task_type": ..., "machine_name": ...,
+    "data": {...current flow's payload, unchanged shape...}}. Older callers that
+    still send a flat payload (no "data" key) are treated as create_estimate with
+    the whole payload as data, so existing integrations keep working unchanged.
+    A legacy nested "payload" key is also honored for the same reason.
+    """
+    raw_payload = raw_payload or {}
+    envelope_data = raw_payload.get("data")
 
-    return payload
+    if isinstance(envelope_data, dict):
+        data = envelope_data
+    else:
+        nested_payload = raw_payload.get("payload")
+        if isinstance(nested_payload, dict):
+            data = nested_payload
+        else:
+            data = {
+                key: value
+                for key, value in raw_payload.items()
+                if key not in ("task_type", "machine_name")
+            }
+
+    task_type = (
+        str(raw_payload.get("task_type") or data.get("task_type") or "").strip()
+        or TaskType.CREATE_ESTIMATE.value
+    )
+    machine_name = (
+        str(raw_payload.get("machine_name") or data.get("machine_name") or "").strip()
+        or None
+    )
+    return task_type, machine_name, data
 
 
 def _extract_queue_id(payload: Dict[str, Any]) -> str:
@@ -625,7 +657,7 @@ def _cleanup_after_job() -> None:
 
 
 async def enqueue_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, str]:
-    task_payload = _unwrap_task_payload(raw_payload or {})
+    task_type, machine_name, task_payload = _extract_task_envelope(raw_payload or {})
     queue_id = _extract_queue_id(task_payload)
     if not queue_id:
         raise HTTPException(
@@ -634,7 +666,7 @@ async def enqueue_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, str]:
         )
 
     now = _now()
-    lock_fields = _task_lock_fields(task_payload, queue_id)
+    lock_fields = _task_lock_fields(task_payload, queue_id, task_type)
     existing_task = await _tasks().find_one(
         {"queue_id": queue_id},
         {"status": 1},
@@ -660,7 +692,9 @@ async def enqueue_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, str]:
                 "available_at": now,
             },
             "$set": {
-                "payload": task_payload,
+                "task_type": task_type,
+                "machine_name": machine_name,
+                "data": task_payload,
                 **lock_fields,
                 "updated_at": now,
                 "last_enqueue_at": now,
@@ -669,7 +703,12 @@ async def enqueue_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, str]:
         upsert=True,
     )
 
-    logger.info("Task queued queue_id=%s", queue_id)
+    logger.info(
+        "Task queued queue_id=%s task_type=%s machine_name=%s",
+        queue_id,
+        task_type,
+        machine_name,
+    )
     return {"status": "queued", "queue_id": queue_id}
 
 
@@ -717,8 +756,9 @@ async def _release_task_locks(queue_id: str, *, owner_only: bool = True) -> None
 
 async def _claim_pending_task(candidate: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     queue_id = str(candidate["queue_id"])
-    task_payload = candidate.get("payload") if isinstance(candidate.get("payload"), dict) else {}
-    lock_fields = _task_lock_fields(task_payload, queue_id)
+    task_payload = candidate.get("data") if isinstance(candidate.get("data"), dict) else {}
+    task_type = str(candidate.get("task_type") or "").strip() or TaskType.CREATE_ESTIMATE.value
+    lock_fields = _task_lock_fields(task_payload, queue_id, task_type)
     lock_key_values = _task_lock_values_from_task(candidate) or lock_fields["lock_key_values"]
 
     if not await _acquire_task_locks(queue_id, lock_key_values):
@@ -752,15 +792,28 @@ async def _claim_pending_task(candidate: Dict[str, Any]) -> Optional[Dict[str, A
 async def _fetch_next_pending_task() -> Optional[Dict[str, Any]]:
     now = _now()
     candidate_limit = max(QUEUE_WORKER_CONCURRENCY * 10, 100)
-    candidates = await _tasks().find(
+    conditions: list[Dict[str, Any]] = [
+        {"status": TASK_STATUS_PENDING},
         {
-            "status": TASK_STATUS_PENDING,
             "$or": [
                 {"available_at": {"$lte": now}},
                 {"available_at": {"$exists": False}},
-            ],
-        }
-    ).sort(
+            ]
+        },
+    ]
+    if QUEUE_ENFORCE_MACHINE_ASSIGNMENT:
+        # A task with no machine_name is unassigned and claimable by any worker;
+        # a task with a machine_name is only claimable by that exact machine.
+        conditions.append(
+            {
+                "$or": [
+                    {"machine_name": {"$in": [None, ""]}},
+                    {"machine_name": {"$exists": False}},
+                    {"machine_name": MACHINE_NAME},
+                ]
+            }
+        )
+    candidates = await _tasks().find({"$and": conditions}).sort(
         [("available_at", ASCENDING), ("created_at", ASCENDING)]
     ).limit(candidate_limit).to_list(length=candidate_limit)
 
@@ -897,6 +950,7 @@ async def _call_status_update(
     queue_id: str,
     attempt: int,
     lock_keys: Optional[Dict[str, Any]] = None,
+    machine_name: Optional[str] = None,
 ) -> None:
     status_url = str(task_payload.get("BACK_URL_STATUS_UPDATE") or "").strip()
     if not status_url:
@@ -904,6 +958,8 @@ async def _call_status_update(
     lock_keys = lock_keys or {}
     payload = {
         "queue_id": queue_id,
+        "task_type": lock_keys.get("task_type"),
+        "machine_name": machine_name,
         "status": TASK_STATUS_PROCESSING,
         "attempt": attempt,
         "max_attempts": MAX_TASK_ATTEMPTS,
@@ -921,7 +977,9 @@ async def _call_record_result(
     *,
     task_payload: Dict[str, Any],
     queue_id: str,
+    task_type: str,
     success: bool,
+    machine_name: Optional[str] = None,
     result: Optional[Dict[str, Any]] = None,
     error_message: Optional[str] = None,
     task_status: Optional[str] = None,
@@ -940,12 +998,10 @@ async def _call_record_result(
         task_payload.get("estimate_id")
         or result.get("estimate_id")
     )
-    task_type = (
-        str(task_payload.get("task_type") or "").strip() or TaskType.CREATE_ESTIMATE.value
-    )
     payload = {
         "queue_id": queue_id,
         "task_type": task_type,
+        "machine_name": machine_name,
         "success": success,
         "status": task_status or (TASK_STATUS_DONE if success else TASK_STATUS_FAILED),
         "attempt": attempt,
@@ -956,6 +1012,7 @@ async def _call_record_result(
         "summary_file_storage_key": result.get("summary_file_storage_key"),
         "history_file_name": result.get("history_file_name"),
         "history_file_url": result.get("history_file_url"),
+        "history_file_local_path": result.get("history_file_local_path"),
         "history_file_storage_key": result.get("history_file_storage_key"),
         "error_message": None if success else (error_message or result.get("message")),
         "estimate_totals": result.get("estimate_totals"),
@@ -1005,7 +1062,9 @@ def _build_callback_delivery(
     *,
     task_payload: Dict[str, Any],
     queue_id: str,
+    task_type: str,
     success: bool,
+    machine_name: Optional[str] = None,
     result: Optional[Dict[str, Any]] = None,
     error_message: Optional[str] = None,
     task_status: Optional[str] = None,
@@ -1015,6 +1074,8 @@ def _build_callback_delivery(
     return {
         "task_payload": task_payload,
         "queue_id": queue_id,
+        "task_type": task_type,
+        "machine_name": machine_name,
         "success": success,
         "result": result or {},
         "error_message": error_message,
@@ -1083,7 +1144,9 @@ async def _send_or_store_record_result(
     task: Dict[str, Any],
     task_payload: Dict[str, Any],
     queue_id: str,
+    task_type: str,
     success: bool,
+    machine_name: Optional[str] = None,
     result: Optional[Dict[str, Any]] = None,
     error_message: Optional[str] = None,
     task_status: Optional[str] = None,
@@ -1093,6 +1156,8 @@ async def _send_or_store_record_result(
     delivery = _build_callback_delivery(
         task_payload=task_payload,
         queue_id=queue_id,
+        task_type=task_type,
+        machine_name=machine_name,
         success=success,
         result=result,
         error_message=error_message,
@@ -1202,9 +1267,10 @@ async def _defer_task_for_lock_conflict(
 async def _ensure_task_locks_for_payload(
     task: Dict[str, Any],
     source_payload: Dict[str, Any],
+    task_type: str,
 ) -> Dict[str, Any]:
     queue_id = str(task["queue_id"])
-    lock_fields = _task_lock_fields(source_payload, queue_id)
+    lock_fields = _task_lock_fields(source_payload, queue_id, task_type)
     current_values = set(_task_lock_values_from_task(task))
     desired_values = set(lock_fields["lock_key_values"])
     missing_values = sorted(desired_values - current_values)
@@ -1219,13 +1285,13 @@ async def _ensure_task_locks_for_payload(
         {"queue_id": queue_id, "locked_by": WORKER_ID},
         {
             "$set": {
-                "payload": source_payload,
+                "data": source_payload,
                 **lock_fields,
                 "updated_at": _now(),
             }
         },
     )
-    task["payload"] = source_payload
+    task["data"] = source_payload
     task["lock_keys"] = lock_fields["lock_keys"]
     task["lock_key_values"] = lock_fields["lock_key_values"]
     return lock_fields
@@ -1287,18 +1353,21 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
         await _process_callback_delivery(task, worker_name)
         return
 
-    task_payload = task.get("payload") or {}
+    task_payload = task.get("data") or {}
     if not isinstance(task_payload, dict):
         task_payload = {}
     callback_payload = dict(task_payload)
     attempt = int(task.get("attempts") or 0)
+    task_type = str(task.get("task_type") or "").strip() or TaskType.CREATE_ESTIMATE.value
+    machine_name = task.get("machine_name")
 
     heartbeat_task: Optional[asyncio.Task] = None
     try:
         logger.info(
-            "Worker %s processing queue_id=%s attempt=%s",
+            "Worker %s processing queue_id=%s task_type=%s attempt=%s",
             worker_name,
             queue_id,
+            task_type,
             attempt,
         )
         heartbeat_task = asyncio.create_task(_heartbeat(queue_id))
@@ -1306,12 +1375,8 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
         source_payload = await _resolve_task_source_payload(task_payload, queue_id)
         source_payload = {**source_payload, "queue_id": queue_id}
         callback_payload = {**source_payload, **task_payload, "queue_id": queue_id}
-        lock_fields = await _ensure_task_locks_for_payload(task, source_payload)
+        lock_fields = await _ensure_task_locks_for_payload(task, source_payload, task_type)
 
-        task_type = (
-            str(source_payload.get("task_type") or task_payload.get("task_type") or "").strip()
-            or TaskType.CREATE_ESTIMATE.value
-        )
         handler = TASK_HANDLERS.get(task_type)
         if handler is None:
             error_message = f"Unknown task_type: {task_type}"
@@ -1324,6 +1389,8 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
                 task=task,
                 task_payload=callback_payload,
                 queue_id=queue_id,
+                task_type=task_type,
+                machine_name=machine_name,
                 success=False,
                 error_message=error_message,
                 task_status=next_status,
@@ -1356,6 +1423,7 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
             queue_id=queue_id,
             attempt=attempt,
             lock_keys=lock_fields["lock_keys"],
+            machine_name=machine_name,
         )
 
         logger.info(
@@ -1385,6 +1453,8 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
                     task=task,
                     task_payload=callback_payload,
                     queue_id=queue_id,
+                    task_type=task_type,
+                    machine_name=machine_name,
                     success=False,
                     result=result,
                     error_message=error_message,
@@ -1405,6 +1475,8 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
             task=task,
             task_payload=callback_payload,
             queue_id=queue_id,
+            task_type=task_type,
+            machine_name=machine_name,
             success=True,
             result=result,
             task_status=TASK_STATUS_DONE,
@@ -1443,6 +1515,8 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
                 task=task,
                 task_payload=callback_payload,
                 queue_id=queue_id,
+                task_type=task_type,
+                machine_name=machine_name,
                 success=False,
                 error_message=error_message,
                 task_status=next_status,

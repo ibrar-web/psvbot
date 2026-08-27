@@ -10,6 +10,7 @@ logs/
 .DS_Store
 storage/
 app/v1/modules/bot/screenshots/*.png
+app/v1/public/
 *-service-account.json
 *.json
 __pycache__/

@@ -5,8 +5,17 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException, Request, Query
 
+from app.v1.core.settings import MACHINE_NAME
 from app.v1.modules.bot.services.queue_service import enqueue_task_payload
 from app.v1.modules.bot.task_types import TaskType
+
+
+def _build_envelope(task_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "task_type": task_type,
+        "machine_name": MACHINE_NAME or None,
+        "data": data,
+    }
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["bot"])
@@ -69,12 +78,12 @@ def _load_test_payload(case: str, id: str) -> Dict[str, Any]:
 async def execute_test_task(
     id: str = Query(..., description="Test payload id"),
 ) -> Dict[str, Any]:
-    payload = _load_test_payload(TaskType.CREATE_ESTIMATE.value, id)
-    payload = {**payload, "task_type": TaskType.CREATE_ESTIMATE.value}
+    data = _load_test_payload(TaskType.CREATE_ESTIMATE.value, id)
+    envelope = _build_envelope(TaskType.CREATE_ESTIMATE.value, data)
 
-    logger.info(f"Parsed create_estimate test payload for id={id}: {payload}")
+    logger.info(f"Parsed create_estimate test payload for id={id}: {envelope}")
 
-    return await enqueue_task_payload(payload)
+    return await enqueue_task_payload(envelope)
 
 
 _ESTIMATE_HISTORY_TASK_TYPES = {
@@ -106,9 +115,9 @@ async def execute_test_estimate_history_task(
             ),
         )
 
-    payload = _load_test_payload(normalized_case, id)
-    payload = {**payload, "task_type": normalized_case}
+    data = _load_test_payload(normalized_case, id)
+    envelope = _build_envelope(normalized_case, data)
 
-    logger.info(f"Parsed {normalized_case} test payload for id={id}: {payload}")
+    logger.info(f"Parsed {normalized_case} test payload for id={id}: {envelope}")
 
-    return await enqueue_task_payload(payload)
+    return await enqueue_task_payload(envelope)

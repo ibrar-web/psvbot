@@ -10,6 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.db.mongo import get_client
 from app.v1.core.settings import (
@@ -18,6 +19,7 @@ from app.v1.core.settings import (
     CORS_ALLOW_ORIGINS,
 )
 from app.v1.middleware.auth import AuthMiddleware
+from app.v1.modules.bot.config import BOT_PUBLIC_DIR
 from app.v1.routes import api_router
 
 
@@ -124,9 +126,13 @@ def create_app() -> FastAPI:
             "/api/v1/bot/execute-task",
             "/api/v1/bot/execute-test-task",
             "/api/v1/bot/execute-test-estimate-history-task",
+            "/public",
         ],
     )
     app.include_router(api_router, prefix="/api/v1")
+
+    BOT_PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/public", StaticFiles(directory=str(BOT_PUBLIC_DIR)), name="public")
 
     def custom_openapi():
         if app.openapi_schema:

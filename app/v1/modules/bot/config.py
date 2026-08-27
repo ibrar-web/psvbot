@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 
 def _to_bool(value: str) -> bool:
@@ -24,3 +25,8 @@ ESTIMATE_HISTORY_STORAGE_ROOT = (
 WANTED_DATE_DEFAULT_WORKING_DAYS = int(
     os.getenv("PRINTSMITH_WANTED_DATE_WORKING_DAYS", "5")
 )
+
+# Served statically at /public by the FastAPI app (see app/__init__.py). Files
+# written here are reachable by anyone with the link, no auth required.
+# Lives at app/v1/public, not nested under the bot module.
+BOT_PUBLIC_DIR = Path(__file__).resolve().parents[2] / "public"

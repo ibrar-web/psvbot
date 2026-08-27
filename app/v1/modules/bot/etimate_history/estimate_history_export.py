@@ -1,15 +1,16 @@
 import logging
+import shutil
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
+from uuid import uuid4
 
 from playwright.sync_api import Browser, BrowserContext, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
-from app.v1.common.storage_service import build_storage_key, upload_bytes_to_storage
 from app.v1.modules.bot import csv_logger
-from app.v1.modules.bot.config import DEBUG, ESTIMATE_HISTORY_STORAGE_ROOT
+from app.v1.modules.bot.config import BOT_PUBLIC_DIR, DEBUG, ESTIMATE_HISTORY_STORAGE_ROOT
 from app.v1.modules.bot.session_runner import (
     _cleanup_browser,
     _ensure_browser_and_login,
@@ -89,9 +90,9 @@ def run_estimate_history_export_flow(
             csv_path = history_page.download_csv()
             _debug(f"CSV downloaded to: {csv_path}")
 
-            current_step = "upload_csv"
+            current_step = "store_csv"
             _ensure_within_timeout(started_at, current_step)
-            upload_result = _upload_history_csv(
+            store_result = _store_history_csv_publicly(
                 csv_path, tenant_id=tenant_id, queue_id=queue_id
             )
 
@@ -104,7 +105,7 @@ def run_estimate_history_export_flow(
                 "step": current_step,
                 "logout_succeeded": logout_succeeded,
                 "logout_error": logout_error,
-                **upload_result,
+                **store_result,
             }
 
     except InvalidLoginCredentialsError as exc:
@@ -155,28 +156,28 @@ def run_estimate_history_export_flow(
         del browser, context, page, csv_path
 
 
-def _upload_history_csv(
+def _store_history_csv_publicly(
     csv_path: Path,
     *,
     tenant_id: str,
     queue_id: str,
 ) -> Dict[str, Optional[str]]:
+    """Copy the downloaded CSV into BOT_PUBLIC_DIR, served statically at /public
+    with no auth. For now this is the whole "make it available" step; a later
+    step will instead push the file to another server via API on top of this.
+    """
     file_name = csv_path.name
-    folder_prefix = f"{ESTIMATE_HISTORY_STORAGE_ROOT}/{tenant_id}/{queue_id}"
-    storage_key = build_storage_key(folder_prefix, file_name)
-    upload_bytes_to_storage(
-        key=storage_key,
-        content=csv_path.read_bytes(),
-        content_type="text/csv",
-        metadata={
-            "tenant_id": tenant_id,
-            "queue_id": queue_id,
-        },
-    )
+    public_dir = BOT_PUBLIC_DIR / ESTIMATE_HISTORY_STORAGE_ROOT / tenant_id / queue_id
+    public_dir.mkdir(parents=True, exist_ok=True)
+    stored_name = f"{uuid4().hex}_{file_name}"
+    stored_path = public_dir / stored_name
+    shutil.copy2(csv_path, stored_path)
+
+    relative_path = stored_path.relative_to(BOT_PUBLIC_DIR).as_posix()
     return {
         "history_file_name": file_name,
-        "history_file_storage_key": storage_key,
-        "history_file_url": storage_key,
+        "history_file_local_path": str(stored_path),
+        "history_file_url": f"/public/{relative_path}",
     }
 
 
