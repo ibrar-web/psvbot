@@ -30,6 +30,7 @@ class EstimateHistoryPage(BasePage):
     # DOWNLOAD_CSV_BUTTON is the proven-live "grid finished loading" readiness
     # signal (verified across both the export and lookup flows already).
     DOWNLOAD_CSV_BUTTON = "xpath=//a[@name='downloadAsCSVButton']"
+    # ptooltip="Clear Filter" — confirmed live.
     CLEAR_FILTERS_BUTTON = "xpath=//a[@name='reset_estimate_history_grid']"
 
     def _debug(self, message: str) -> None:
@@ -138,6 +139,12 @@ class EstimateHistoryPage(BasePage):
         self._debug("Clearing all Estimate History grid filters")
         self.wait_for_spinner_to_disappear()
         self.click(self.CLEAR_FILTERS_BUTTON)
+        # wait_for_spinner_to_disappear() alone right after the click can
+        # pass instantly if the spinner hasn't appeared yet, racing ahead of
+        # the grid reload the clear actually triggers. Observed live: the
+        # spinner can take 2-3s to show up, so give it 3s before checking
+        # that it's finished.
+        self.page.wait_for_timeout(3000)
         self.wait_for_spinner_to_disappear()
 
     def _sanitize_filename(self, filename: str, default_extension: str = "") -> str:

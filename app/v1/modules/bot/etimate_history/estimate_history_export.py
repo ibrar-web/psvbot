@@ -86,6 +86,10 @@ def run_estimate_history_export_flow(
             history_page.open_from_quick_access()
             _debug(f"Estimate History grid opened. URL: {page.url}")
 
+            current_step = "clear_filters"
+            _ensure_within_timeout(started_at, current_step)
+            history_page.clear_filters()
+
             current_step = "download_csv"
             _ensure_within_timeout(started_at, current_step)
             csv_path = history_page.download_csv()
