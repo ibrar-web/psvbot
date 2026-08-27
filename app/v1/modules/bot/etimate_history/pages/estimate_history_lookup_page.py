@@ -1,4 +1,7 @@
 import logging
+import time
+
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.etimate_history.pages.estimate_history_page import EstimateHistoryPage
@@ -37,13 +40,33 @@ class EstimateHistoryLookupPage(EstimateHistoryPage):
         link_loc.wait_for(state="visible", timeout=self._timeout_ms)
         link_loc.click()
         if estimate_id:
-            # Confirm we actually navigated to this record, not just clicked.
-            self.page.wait_for_function(
-                """(id) => window.location.href.includes(id)""",
-                arg=str(estimate_id),
-                timeout=self._timeout_ms,
-            )
+            # Poll page.url from Python rather than an in-page JS evaluate:
+            # this route can trigger a full navigation/reload, which destroys
+            # the JS execution context wait_for_function would be attached to
+            # (observed live as "Target page, context or browser has been
+            # closed") even though the page itself is still fine afterward.
+            self._wait_for_url_contains(str(estimate_id))
+        try:
+            # Designed to survive an in-flight navigation, unlike wait_for_function.
+            self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
+        except PlaywrightTimeoutError:
+            pass
         self.wait_for_spinner_to_disappear()
+
+    def _wait_for_url_contains(self, fragment: str) -> None:
+        deadline = time.monotonic() + (self._timeout_ms / 1000)
+        while time.monotonic() < deadline:
+            try:
+                if fragment in (self.page.url or ""):
+                    return
+            except Exception:
+                pass
+            # Plain sleep, not page.wait_for_timeout: this loop must survive a
+            # moment where the page's CDP connection itself is mid-reload.
+            time.sleep(0.25)
+        raise PlaywrightTimeoutError(
+            f"Timed out waiting for URL to contain '{fragment}'. Current URL: {self.page.url}"
+        )
 
     def search_and_open_by_estimate_id(self, estimate_id: str) -> None:
         # Clear any filters left over from a previous session/state (e.g. a

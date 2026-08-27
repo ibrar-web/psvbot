@@ -1,0 +1,786 @@
+<div
+  class="ng-trigger ng-trigger-animation ng-tns-c5-0 ui-dialog ui-confirmdialog ui-widget ui-widget-content ui-corner-all ui-shadow ng-star-inserted"
+  style="
+    z-index: 1003;
+    transform: translateX(-50%) translateY(-50%) translateZ(0px) scale(1);
+    opacity: 1;
+  "
+>
+  <div
+    class="ui-dialog-titlebar ui-widget-header ui-helper-clearfix ui-corner-top"
+  >
+    <!----><span class="ui-dialog-title ng-tns-c5-0 ng-star-inserted" style=""
+      >Error</span
+    ><!----><a
+      role="button"
+      tabindex="0"
+      class="ng-tns-c5-0 ui-dialog-titlebar-icon ui-dialog-titlebar-close ui-corner-all ng-star-inserted"
+      style=""
+      ><span class="pi pi-fw pi-times"></span
+    ></a>
+  </div>
+  <div class="ui-dialog-content ui-widget-content">
+    <!----><span class="ui-confirmdialog-message"
+      >Estimate 25089 is locked by user 'Raza' (ID:
+      15d5ff81-bcda-49b4-b05b-c093606b0421)</span
+    >
+  </div>
+  <!----><!---->
+  <div
+    class="ui-dialog-footer ui-widget-content ng-tns-c5-0 ng-star-inserted"
+    style=""
+  >
+    <!----><button
+      pbutton=""
+      type="button"
+      class="undefined ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ng-star-inserted"
+    >
+      <span
+        aria-hidden="true"
+        class="ui-button-icon-left ui-clickable pi pi-check"
+      ></span
+      ><span class="ui-button-text ui-clickable">OK</span></button
+    ><!---->
+  </div>
+</div>
+
+<!-- profile option on that hover it will open meny   -->
+
+<span
+  _ngcontent-yxu-c4=""
+  class="username-icon margin-right-10"
+  name="user-options-dropdown-container"
+  ><div _ngcontent-yxu-c4="" class="dot-dropdown" name="user-options-dropdown">
+    <div _ngcontent-yxu-c4="" class="dot-dropdown-options">
+      <ul _ngcontent-yxu-c4="" class="dot-dropdown-options-items">
+        <li _ngcontent-yxu-c4="">
+          <a _ngcontent-yxu-c4="" class="no-hover" href="javascript:"
+            ><span _ngcontent-yxu-c4="">Welcome </span
+            ><span _ngcontent-yxu-c4="" class="text-bold">AijazAsif</span></a
+          >
+        </li>
+        <span
+          _ngcontent-yxu-c4=""
+          class="horizontal_separator w-100 displayBlock"
+        ></span
+        ><!---->
+        <li _ngcontent-yxu-c4="" class="ng-star-inserted">
+          <a _ngcontent-yxu-c4="" href="javascript:" name="user_settings"
+            >User Preferences</a
+          >
+        </li>
+        <li _ngcontent-yxu-c4="">
+          <a _ngcontent-yxu-c4="" href="javascript:" name="my_profile"
+            >My Profile</a
+          >
+        </li>
+        <!----><span
+          _ngcontent-yxu-c4=""
+          class="horizontal_separator w-100 displayBlock"
+        ></span
+        ><!---->
+        <!-- click to open locked records -->
+        <li _ngcontent-yxu-c4="" class="ng-star-inserted">
+          <a _ngcontent-yxu-c4="" href="javascript:" name="record_lock"
+            >Record Lock</a
+          >
+        </li>
+        <!---->
+        <li _ngcontent-yxu-c4="" class="ng-star-inserted">
+          <a
+            _ngcontent-yxu-c4=""
+            class="red-hover"
+            href="javascript:"
+            name="user-options-logout"
+            >Logout</a
+          >
+        </li>
+      </ul>
+    </div>
+  </div></span
+>
+<!-- that will open menu -->
+
+<!-- record lock modal -->
+
+<div
+  _ngcontent-wbr-c12=""
+  class="dot-modal"
+  style="
+    opacity: 1;
+    width: 800px;
+    max-width: 800px;
+    top: 50px;
+    margin-left: -400px;
+  "
+>
+  <div _ngcontent-wbr-c12="" class="modal-dialog">
+    <div _ngcontent-wbr-c12="" class="modal-content">
+      <div _ngcontent-wbr-c12="" class="dot-modal__header">
+        <div _ngcontent-wbr-c34="" class="app-modal-header">
+          <div _ngcontent-wbr-c34="" class="close">
+            <span
+              _ngcontent-wbr-c34=""
+              class="dot-icon dot-cancel-icon"
+              data-dismiss="modal"
+              name="close_record_lock_popup"
+            ></span>
+          </div>
+          <div _ngcontent-wbr-c34="">
+            <span
+              _ngcontent-wbr-c34=""
+              class="text-left"
+              name="userSettingsPopupTitle"
+            >
+              Record Lock
+            </span>
+          </div>
+        </div>
+      </div>
+      <div _ngcontent-wbr-c12="" class="dot-modal__content">
+        <div
+          _ngcontent-wbr-c34=""
+          class="app-modal-body record_lock_popup_scrollArea padding-10"
+          id="record_lock_popup"
+          style="max-height: 663px"
+        >
+          <div _ngcontent-wbr-c34="" class="row no-gutters align-center">
+            <label
+              _ngcontent-wbr-c34=""
+              class="staticPosition col-4 padding-right-10 text-right"
+              ><span _ngcontent-wbr-c34="">Locked Records of: </span></label
+            >
+            <div _ngcontent-wbr-c34="" class="col-4 padding-left-10">
+              <kendo-dropdownlist
+                _ngcontent-wbr-c34=""
+                class="k-widget k-dropdown k-header ng-valid ng-touched ng-dirty"
+                ><span
+                  role="listbox"
+                  unselectable="on"
+                  class="k-dropdown-wrap k-state-default"
+                  id="2c8a6812-412a-47ef-ac55-b4c5d125c36b"
+                  dir="ltr"
+                  readonly="false"
+                  tabindex="0"
+                  aria-disabled="false"
+                  aria-readonly="false"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                  aria-owns="553b38b9-710d-4f74-b040-38d4c7533a01"
+                  aria-activedescendant="752a9793-fb3a-42dc-9597-a8f907e459f7-logged_user"
+                  ><span unselectable="on" class="k-input"
+                    ><!----><!---->Currently logged in user (yourself)</span
+                  ><span unselectable="on" class="k-select"
+                    ><span class="k-i-arrow-s k-icon"></span></span
+                  ><!----></span
+                ><!----><!----></kendo-dropdownlist
+              >
+            </div>
+            <div _ngcontent-wbr-c34="" class="col-4 padding-left-10">
+              <input
+                _ngcontent-wbr-c34=""
+                class="dot-formcontrol ng-untouched ng-pristine"
+                maxlength="50"
+                type="text"
+                disabled=""
+              />
+            </div>
+          </div>
+          <div
+            _ngcontent-wbr-c34=""
+            class="row no-gutters margin-top-10 padding-top-10"
+          >
+            <div _ngcontent-wbr-c34="" class="col-12">
+              <p-table
+                _ngcontent-wbr-c34=""
+                scrollheight="calc(var(--app-height) - 315px)"
+                selectionmode="single"
+                ><div
+                  class="ui-table ui-widget ui-table-hoverable-rows"
+                  style="width: 100%"
+                >
+                  <!----><!----><!----><!----><!----><!---->
+                  <div class="ui-table-scrollable-wrapper ng-star-inserted">
+                    <!---->
+                    <div class="ui-table-scrollable-view">
+                      <div class="ui-table-scrollable-header ui-widget-header">
+                        <div
+                          class="ui-table-scrollable-header-box"
+                          style="margin-right: 0px"
+                        >
+                          <table class="ui-table-scrollable-header-table">
+                            <!---->
+                            <colgroup
+                              _ngcontent-wbr-c34=""
+                              class="ng-star-inserted"
+                            >
+                              <!---->
+                              <col
+                                _ngcontent-wbr-c34=""
+                                presizablecolumn=""
+                                id="col_header_table"
+                                class="ui-resizable-column ng-star-inserted"
+                                style="
+                                  min-width: 50px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              />
+                              <col
+                                _ngcontent-wbr-c34=""
+                                presizablecolumn=""
+                                id="col_header_record"
+                                class="ui-resizable-column ng-star-inserted"
+                                style="
+                                  min-width: 50px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              />
+                              <col
+                                _ngcontent-wbr-c34=""
+                                presizablecolumn=""
+                                id="col_header_lock"
+                                class="ui-resizable-column ng-star-inserted"
+                                style="
+                                  min-width: 50px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              />
+                              <col
+                                _ngcontent-wbr-c34=""
+                                presizablecolumn=""
+                                id="col_header_userName"
+                                class="ui-resizable-column ng-star-inserted"
+                                style="
+                                  min-width: 50px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              />
+                            </colgroup>
+                            <thead class="ui-table-thead">
+                              <!---->
+                              <tr
+                                _ngcontent-wbr-c34=""
+                                class="ng-star-inserted"
+                              >
+                                <!---->
+                                <th
+                                  _ngcontent-wbr-c34=""
+                                  tooltipposition="top"
+                                  id="col_header_table"
+                                  class="ui-sortable-column ng-star-inserted"
+                                  tabindex="0"
+                                  style="
+                                    min-width: 100px;
+                                    width: 60px;
+                                    max-width: 250px;
+                                  "
+                                >
+                                  <span
+                                    _ngcontent-wbr-c34=""
+                                    class="heading_title"
+                                  >
+                                    Table</span
+                                  >
+                                </th>
+                                <th
+                                  _ngcontent-wbr-c34=""
+                                  tooltipposition="top"
+                                  id="col_header_record"
+                                  class="ui-sortable-column ng-star-inserted"
+                                  tabindex="0"
+                                  style="
+                                    min-width: 100px;
+                                    width: 60px;
+                                    max-width: 250px;
+                                  "
+                                >
+                                  <span
+                                    _ngcontent-wbr-c34=""
+                                    class="heading_title"
+                                  >
+                                    Record</span
+                                  >
+                                </th>
+                                <th
+                                  _ngcontent-wbr-c34=""
+                                  tooltipposition="top"
+                                  id="col_header_lock"
+                                  class="ui-sortable-column ng-star-inserted"
+                                  tabindex="0"
+                                  style="
+                                    min-width: 100px;
+                                    width: 60px;
+                                    max-width: 250px;
+                                  "
+                                >
+                                  <span
+                                    _ngcontent-wbr-c34=""
+                                    class="heading_title"
+                                  >
+                                    Lock</span
+                                  >
+                                </th>
+                                <th
+                                  _ngcontent-wbr-c34=""
+                                  tooltipposition="top"
+                                  id="col_header_userName"
+                                  class="ui-sortable-column ng-star-inserted"
+                                  tabindex="0"
+                                  style="
+                                    min-width: 100px;
+                                    width: 60px;
+                                    max-width: 250px;
+                                  "
+                                >
+                                  <span
+                                    _ngcontent-wbr-c34=""
+                                    class="heading_title"
+                                  >
+                                    User Name</span
+                                  >
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody class="ui-table-tbody">
+                              <!---->
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div
+                        class="ui-table-scrollable-body"
+                        style="
+                          max-height: calc(var(--app-height) - 315px);
+                          height: 558px;
+                        "
+                      >
+                        <table class="ui-table-scrollable-body-table">
+                          <!---->
+                          <colgroup
+                            _ngcontent-wbr-c34=""
+                            class="ng-star-inserted"
+                          >
+                            <!---->
+                            <col
+                              _ngcontent-wbr-c34=""
+                              presizablecolumn=""
+                              id="col_header_table"
+                              class="ui-resizable-column ng-star-inserted"
+                              style="
+                                min-width: 50px;
+                                width: 60px;
+                                max-width: 250px;
+                              "
+                            />
+                            <col
+                              _ngcontent-wbr-c34=""
+                              presizablecolumn=""
+                              id="col_header_record"
+                              class="ui-resizable-column ng-star-inserted"
+                              style="
+                                min-width: 50px;
+                                width: 60px;
+                                max-width: 250px;
+                              "
+                            />
+                            <col
+                              _ngcontent-wbr-c34=""
+                              presizablecolumn=""
+                              id="col_header_lock"
+                              class="ui-resizable-column ng-star-inserted"
+                              style="
+                                min-width: 50px;
+                                width: 60px;
+                                max-width: 250px;
+                              "
+                            />
+                            <col
+                              _ngcontent-wbr-c34=""
+                              presizablecolumn=""
+                              id="col_header_userName"
+                              class="ui-resizable-column ng-star-inserted"
+                              style="
+                                min-width: 50px;
+                                width: 60px;
+                                max-width: 250px;
+                              "
+                            />
+                          </colgroup>
+                          <tbody class="ui-table-tbody">
+                            <!----><!----><!----><!---->
+                            <tr
+                              _ngcontent-wbr-c34=""
+                              name="540920_0"
+                              class="ui-selectable-row ng-star-inserted"
+                              tabindex="0"
+                            >
+                              <!---->
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_table"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  Estimate
+                                </div>
+                                <!----><!----><!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_record"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  5917971
+                                </div>
+                                <!----><!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_lock"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  39351
+                                </div>
+                                <!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_userName"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!----><!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  Raza
+                                </div>
+                              </td>
+                            </tr>
+                            <!----><!---->
+                            <tr
+                              _ngcontent-wbr-c34=""
+                              name="540930_1"
+                              class="ui-selectable-row ng-star-inserted"
+                              tabindex="0"
+                            >
+                              <!---->
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_table"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  Estimate
+                                </div>
+                                <!----><!----><!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_record"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  5735823
+                                </div>
+                                <!----><!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_lock"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  37339
+                                </div>
+                                <!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_userName"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!----><!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  Raza
+                                </div>
+                              </td>
+                            </tr>
+                            <!----><!---->
+                            <tr
+                              _ngcontent-wbr-c34=""
+                              name="540934_2"
+                              class="ui-selectable-row ng-star-inserted"
+                              tabindex="0"
+                            >
+                              <!---->
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_table"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  Estimate
+                                </div>
+                                <!----><!----><!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_record"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  5910816
+                                </div>
+                                <!----><!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_lock"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  39282
+                                </div>
+                                <!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_userName"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!----><!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  Raza
+                                </div>
+                              </td>
+                            </tr>
+                            <!----><!---->
+                            <tr
+                              _ngcontent-wbr-c34=""
+                              name="540939_3"
+                              class="ui-selectable-row ng-star-inserted"
+                              tabindex="0"
+                            >
+                              <!---->
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_table"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  Estimate
+                                </div>
+                                <!----><!----><!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_record"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  4169933
+                                </div>
+                                <!----><!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_lock"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  25089
+                                </div>
+                                <!---->
+                              </td>
+                              <td
+                                _ngcontent-wbr-c34=""
+                                class="ui-resizable-column ng-star-inserted"
+                                id="col_data_userName"
+                                style="
+                                  min-width: 100px;
+                                  width: 60px;
+                                  max-width: 250px;
+                                "
+                              >
+                                <!----><!----><!----><!---->
+                                <div
+                                  _ngcontent-wbr-c34=""
+                                  class="ng-star-inserted"
+                                >
+                                  Raza
+                                </div>
+                              </td>
+                            </tr>
+                            <!----><!----><!----><!---->
+                          </tbody>
+                        </table>
+                        <!----><!---->
+                      </div>
+                      <!---->
+                    </div>
+                  </div>
+                  <!----><!----><!----><!----><!---->
+                </div></p-table
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <div _ngcontent-wbr-c12="" class="dot-modal__footer">
+        <div _ngcontent-wbr-c34="" class="app-modal-footer">
+          <div _ngcontent-wbr-c34="" class="row no-gutters">
+            <div _ngcontent-wbr-c34="" class="col-12 text-right">
+              <input
+                _ngcontent-wbr-c34=""
+                class="dot-button dot-button__tertiary"
+                type="button"
+                value="Cancel"
+              /><input
+                _ngcontent-wbr-c34=""
+                class="dot-button dot-button__prominent"
+                type="button"
+                value="Unlock"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
