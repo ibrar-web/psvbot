@@ -38,6 +38,9 @@ from app.v1.modules.bot.services.estimate_service import run_estimate_flow
 from app.v1.modules.bot.etimate_history.estimate_history_export import (
     run_estimate_history_export_flow,
 )
+from app.v1.modules.bot.etimate_history.estimate_history_lookup import (
+    run_estimate_history_lookup_flow,
+)
 from app.v1.modules.bot.task_types import TaskType
 
 logger = logging.getLogger(__name__)
@@ -45,6 +48,7 @@ logger = logging.getLogger(__name__)
 TASK_HANDLERS = {
     TaskType.CREATE_ESTIMATE.value: run_estimate_flow,
     TaskType.ESTIMATE_HISTORY_EXPORT.value: run_estimate_history_export_flow,
+    TaskType.ESTIMATE_HISTORY_LOOKUP.value: run_estimate_history_lookup_flow,
 }
 
 TASKS_COLLECTION = "tasks"
