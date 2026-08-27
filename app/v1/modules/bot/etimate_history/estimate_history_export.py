@@ -1,16 +1,14 @@
 import logging
-import shutil
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
-from uuid import uuid4
 
 from playwright.sync_api import Browser, BrowserContext, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 from app.v1.modules.bot import csv_logger
-from app.v1.modules.bot.config import BOT_PUBLIC_DIR, DEBUG, ESTIMATE_HISTORY_STORAGE_ROOT
+from app.v1.modules.bot.config import DEBUG, ESTIMATE_HISTORY_STORAGE_ROOT
 from app.v1.modules.bot.session_runner import (
     _cleanup_browser,
     _ensure_browser_and_login,
@@ -21,6 +19,7 @@ from app.v1.modules.bot.pages.login_page import InvalidLoginCredentialsError
 from app.v1.modules.bot.etimate_history.pages.estimate_history_export_page import (
     EstimateHistoryExportPage,
 )
+from app.v1.modules.bot.etimate_history.public_storage import store_file_publicly
 
 logger = logging.getLogger(__name__)
 
@@ -164,22 +163,16 @@ def _store_history_csv_publicly(
     tenant_id: str,
     queue_id: str,
 ) -> Dict[str, Optional[str]]:
-    """Copy the downloaded CSV into BOT_PUBLIC_DIR, served statically at /public
-    with no auth. For now this is the whole "make it available" step; a later
-    step will instead push the file to another server via API on top of this.
-    """
-    file_name = csv_path.name
-    public_dir = BOT_PUBLIC_DIR / ESTIMATE_HISTORY_STORAGE_ROOT / tenant_id / queue_id
-    public_dir.mkdir(parents=True, exist_ok=True)
-    stored_name = f"{uuid4().hex}_{file_name}"
-    stored_path = public_dir / stored_name
-    shutil.copy2(csv_path, stored_path)
-
-    relative_path = stored_path.relative_to(BOT_PUBLIC_DIR).as_posix()
+    result = store_file_publicly(
+        csv_path,
+        subfolder=ESTIMATE_HISTORY_STORAGE_ROOT,
+        tenant_id=tenant_id,
+        queue_id=queue_id,
+    )
     return {
-        "history_file_name": file_name,
-        "history_file_local_path": str(stored_path),
-        "history_file_url": f"/public/{relative_path}",
+        "history_file_name": result["file_name"],
+        "history_file_local_path": result["file_local_path"],
+        "history_file_url": result["file_url"],
     }
 
 

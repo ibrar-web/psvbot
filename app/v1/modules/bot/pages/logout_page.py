@@ -9,10 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class LogoutPage(BasePage):
-    USER_OPTIONS_DROPDOWN = (
-        "xpath=//span[@name='user-options-dropdown-container']"
-        " | //*[@name='user-options-dropdown']"
-    )
+    # USER_OPTIONS_DROPDOWN is inherited from BasePage (shared with the
+    # Record Lock panel, which lives behind the same menu).
     LOGOUT_LINK = "xpath=//a[@name='user-options-logout']"
     LEAVE_BUTTON = (
         "xpath=//button[normalize-space()='Leave']"

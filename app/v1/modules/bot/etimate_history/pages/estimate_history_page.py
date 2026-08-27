@@ -1,5 +1,8 @@
 import logging
+import re
+import time
 from pathlib import Path
+from urllib.parse import unquote
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -136,3 +139,12 @@ class EstimateHistoryPage(BasePage):
         self.wait_for_spinner_to_disappear()
         self.click(self.CLEAR_FILTERS_BUTTON)
         self.wait_for_spinner_to_disappear()
+
+    def _sanitize_filename(self, filename: str, default_extension: str = "") -> str:
+        filename = unquote(filename)
+        filename = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._")
+        if not filename:
+            filename = f"estimate_history_{int(time.time())}"
+        if "." not in filename and default_extension:
+            filename = f"{filename}.{default_extension.lstrip('.')}"
+        return filename

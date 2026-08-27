@@ -1,9 +1,7 @@
 import logging
-import re
 import tempfile
 import time
 from pathlib import Path
-from urllib.parse import unquote
 
 from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.etimate_history.pages.estimate_history_page import EstimateHistoryPage
@@ -27,7 +25,7 @@ class EstimateHistoryExportPage(EstimateHistoryPage):
 
         download = download_info.value
         suggested = download.suggested_filename or f"estimate_history_{int(time.time())}.csv"
-        filename = self._sanitize_filename(suggested)
+        filename = self._sanitize_filename(suggested, default_extension="csv")
         temp_dir = Path(tempfile.mkdtemp(prefix="psv_estimate_history_"))
         target_path = temp_dir / filename
 
@@ -39,12 +37,3 @@ class EstimateHistoryExportPage(EstimateHistoryPage):
             raise RuntimeError(f"Download failed: {failure}")
 
         return target_path
-
-    def _sanitize_filename(self, filename: str) -> str:
-        filename = unquote(filename)
-        filename = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._")
-        if not filename:
-            filename = f"estimate_history_{int(time.time())}"
-        if "." not in filename:
-            filename = f"{filename}.csv"
-        return filename
