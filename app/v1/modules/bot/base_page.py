@@ -378,54 +378,83 @@ class BasePage:
     )
 
     def _select_record_lock_scope_all_users(self) -> None:
+        # Two earlier approaches both kept landing on "User Name" (an actual
+        # grid column name, not a real dropdown option): querying the popup
+        # DOM by CSS proximity, then driving via keyboard. Guessing at CSS
+        # scoping has failed twice, so this scopes via the widget's own
+        # accessibility wiring instead: Kendo's dropdownlist input carries
+        # aria-owns/aria-controls pointing at the exact popup listbox id it
+        # opened, which is unambiguous regardless of how many other Kendo
+        # popups exist on the page.
         dropdown_loc = self._loc(self.RECORD_LOCK_SCOPE_DROPDOWN).first
         dropdown_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        dropdown_loc.scroll_into_view_if_needed(timeout=self._timeout_ms)
 
-        opened = dropdown_loc.evaluate(
-            """(dropdown) => {
-                const opener = dropdown.querySelector(".k-input, .k-select, .k-dropdown-wrap") || dropdown;
-                opener.scrollIntoView({ block: "center" });
-                opener.click();
-                return true;
-            }"""
-        )
-        logger.info("_select_record_lock_scope_all_users: dropdown opened=%s", opened)
+        opener_loc = dropdown_loc.locator(".k-input, .k-select, .k-dropdown-wrap").first
+
+        def displayed_text() -> str:
+            return (
+                dropdown_loc.evaluate(
+                    "(dropdown) => (dropdown.querySelector('.k-input')?.innerText || '').trim()"
+                )
+                or ""
+            )
+
+        before = displayed_text()
+        logger.info("_select_record_lock_scope_all_users: before='%s'", before)
+
+        opener_loc.click(timeout=self._timeout_ms)
 
         try:
             self.page.wait_for_function(
-                f"""() => {{
-                    const items = Array.from(document.querySelectorAll(
-                        "{self._KENDO_POPUP_ITEMS_JS}"
-                    )).filter(node => {{
-                        const style = window.getComputedStyle(node);
-                        return style.display !== "none" && style.visibility !== "hidden"
-                            && node.offsetParent !== null;
-                    }});
-                    return items.length > 0;
-                }}""",
+                """(dropdown) => {
+                    const owner = dropdown.querySelector("[aria-owns], [aria-controls]");
+                    if (!owner) return false;
+                    const id = owner.getAttribute("aria-owns") || owner.getAttribute("aria-controls");
+                    const popup = id && document.getElementById(id);
+                    return !!(popup && popup.querySelectorAll("li, [role='option']").length > 0);
+                }""",
+                arg=dropdown_loc.element_handle(timeout=self._timeout_ms),
                 timeout=self._timeout_ms,
             )
         except PlaywrightTimeoutError:
-            logger.warning("_select_record_lock_scope_all_users: no popup items rendered")
-            return
+            logger.warning("_select_record_lock_scope_all_users: popup listbox did not resolve via aria-owns/aria-controls")
 
-        selected = self.page.evaluate(
-            f"""() => {{
-                const items = Array.from(document.querySelectorAll(
-                    "{self._KENDO_POPUP_ITEMS_JS}"
-                )).filter(node => {{
-                    const style = window.getComputedStyle(node);
-                    return style.display !== "none" && style.visibility !== "hidden"
-                        && node.offsetParent !== null;
-                }});
-                if (!items.length) return null;
-                const target = items.find(node => {{
+        items = dropdown_loc.evaluate(
+            """(dropdown) => {
+                const owner = dropdown.querySelector("[aria-owns], [aria-controls]");
+                const id = owner && (owner.getAttribute("aria-owns") || owner.getAttribute("aria-controls"));
+                const popup = id && document.getElementById(id);
+                if (!popup) return [];
+                return Array.from(popup.querySelectorAll("li, [role='option']"))
+                    .map(node => (node.innerText || node.textContent || "").trim())
+                    .filter(Boolean);
+            }"""
+        )
+        logger.info("_select_record_lock_scope_all_users: popup items=%s", items)
+
+        clicked = dropdown_loc.evaluate(
+            """(dropdown) => {
+                const owner = dropdown.querySelector("[aria-owns], [aria-controls]");
+                const id = owner && (owner.getAttribute("aria-owns") || owner.getAttribute("aria-controls"));
+                const popup = id && document.getElementById(id);
+                if (!popup) return null;
+                const candidates = Array.from(popup.querySelectorAll("li, [role='option']"));
+                const target = candidates.find(node => {
+                    const text = (node.innerText || node.textContent || "").trim().toLowerCase();
+                    return text.includes("all");
+                }) || candidates.find(node => {
                     const text = (node.innerText || node.textContent || "").trim().toLowerCase();
                     return !text.includes("currently logged in") && !text.includes("yourself");
-                }}) || items[items.length - 1];
-                target.scrollIntoView({{ block: "center" }});
-                target.click();
+                });
+                if (!target) return null;
+                target.scrollIntoView({ block: "center" });
+                target.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+                target.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+                target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
                 return (target.innerText || target.textContent || "").trim();
-            }}"""
+            }"""
         )
-        logger.info("_select_record_lock_scope_all_users: selected '%s'", selected)
+        self.page.wait_for_timeout(300)
+        after = displayed_text()
+        logger.info("_select_record_lock_scope_all_users: clicked='%s' after='%s'", clicked, after)
