@@ -33,8 +33,17 @@ from app.v1.core.settings import (
 )
 from app.v1.modules.bot.config import DEFAULT_TIMEOUT_SECONDS
 from app.v1.modules.bot.services.estimate_service import run_estimate_flow
+from app.v1.modules.bot.etimate_history.estimate_history_export import (
+    run_estimate_history_export_flow,
+)
+from app.v1.modules.bot.task_types import TaskType
 
 logger = logging.getLogger(__name__)
+
+TASK_HANDLERS = {
+    TaskType.CREATE_ESTIMATE.value: run_estimate_flow,
+    TaskType.ESTIMATE_HISTORY_EXPORT.value: run_estimate_history_export_flow,
+}
 
 TASKS_COLLECTION = "tasks"
 TASK_LOCKS_COLLECTION = "task_locks"
@@ -218,6 +227,9 @@ def _extract_lock_components(
 
     return {
         "queue_id": queue_id,
+        "task_type": (
+            str(payload.get("task_type") or "").strip() or TaskType.CREATE_ESTIMATE.value
+        ),
         "chat_id": _first_identifier(
             payload.get("chat_id"),
             quote.get("chat_id"),
@@ -245,6 +257,10 @@ def _extract_lock_components(
 
 
 def _lock_key_values(lock_components: Dict[str, Optional[str]]) -> list[str]:
+    # Namespacing every key by task_type means a create_estimate job and an
+    # estimate_history_export/lookup job on the same record never block each
+    # other — only two jobs of the *same* task type on the same record do.
+    task_type = str(lock_components.get("task_type") or TaskType.CREATE_ESTIMATE.value)
     lock_specs = (
         ("queue", lock_components.get("queue_id")),
         ("chat", lock_components.get("chat_id")),
@@ -252,7 +268,7 @@ def _lock_key_values(lock_components: Dict[str, Optional[str]]) -> list[str]:
         ("estimate", lock_components.get("estimate_id")),
     )
     values = {
-        f"{name}:{str(value).strip().casefold()}"
+        f"{task_type}:{name}:{str(value).strip().casefold()}"
         for name, value in lock_specs
         if _clean_identifier(value)
     }
@@ -924,8 +940,12 @@ async def _call_record_result(
         task_payload.get("estimate_id")
         or result.get("estimate_id")
     )
+    task_type = (
+        str(task_payload.get("task_type") or "").strip() or TaskType.CREATE_ESTIMATE.value
+    )
     payload = {
         "queue_id": queue_id,
+        "task_type": task_type,
         "success": success,
         "status": task_status or (TASK_STATUS_DONE if success else TASK_STATUS_FAILED),
         "attempt": attempt,
@@ -934,6 +954,9 @@ async def _call_record_result(
         "summary_file_name": result.get("summary_file_name"),
         "summary_file_url": result.get("summary_file_url"),
         "summary_file_storage_key": result.get("summary_file_storage_key"),
+        "history_file_name": result.get("history_file_name"),
+        "history_file_url": result.get("history_file_url"),
+        "history_file_storage_key": result.get("history_file_storage_key"),
         "error_message": None if success else (error_message or result.get("message")),
         "estimate_totals": result.get("estimate_totals"),
         "estimate_id": estimate_id,
@@ -1285,8 +1308,44 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
         callback_payload = {**source_payload, **task_payload, "queue_id": queue_id}
         lock_fields = await _ensure_task_locks_for_payload(task, source_payload)
 
-        quote_record = _build_quote_record_from_task_payload(source_payload, queue_id)
-        psv_credentials = _extract_psv_credentials(source_payload, quote_record)
+        task_type = (
+            str(source_payload.get("task_type") or task_payload.get("task_type") or "").strip()
+            or TaskType.CREATE_ESTIMATE.value
+        )
+        handler = TASK_HANDLERS.get(task_type)
+        if handler is None:
+            error_message = f"Unknown task_type: {task_type}"
+            next_status = await _mark_task_failed_or_retry(
+                task,
+                error_message,
+                retry_allowed=False,
+            )
+            await _send_or_store_record_result(
+                task=task,
+                task_payload=callback_payload,
+                queue_id=queue_id,
+                success=False,
+                error_message=error_message,
+                task_status=next_status,
+                attempt=attempt,
+                will_retry=False,
+            )
+            logger.warning(
+                "Worker %s failed queue_id=%s reason=unknown_task_type task_type=%s",
+                worker_name,
+                queue_id,
+                task_type,
+            )
+            return
+
+        if task_type == TaskType.CREATE_ESTIMATE.value:
+            quote_record = _build_quote_record_from_task_payload(source_payload, queue_id)
+            psv_credentials = _extract_psv_credentials(source_payload, quote_record)
+            handler_arg = quote_record
+        else:
+            psv_credentials = _extract_psv_credentials(source_payload, {})
+            handler_arg = source_payload
+
         runtime_credentials = (
             _normalize_runtime_credentials(psv_credentials)
             or _build_runtime_credentials()
@@ -1300,15 +1359,16 @@ async def _process_task(task: Dict[str, Any], worker_name: str) -> None:
         )
 
         logger.info(
-            "Worker %s running Playwright queue_id=%s flow_timeout_seconds=%s",
+            "Worker %s running Playwright queue_id=%s task_type=%s flow_timeout_seconds=%s",
             worker_name,
             queue_id,
+            task_type,
             DEFAULT_TIMEOUT_SECONDS,
         )
         result = await run_in_threadpool(
-            run_estimate_flow,
+            handler,
             runtime_credentials,
-            quote_record,
+            handler_arg,
         )
 
         if result.get("status") != "success":

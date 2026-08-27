@@ -123,6 +123,7 @@ def create_app() -> FastAPI:
             "/api/v1/bot/enqueue-task",
             "/api/v1/bot/execute-task",
             "/api/v1/bot/execute-test-task",
+            "/api/v1/bot/execute-test-estimate-history-task",
         ],
     )
     app.include_router(api_router, prefix="/api/v1")
