@@ -15,7 +15,9 @@ from app.v1.modules.bot.session_runner import (
     _logout_if_possible,
 )
 from app.v1.modules.bot.pages.login_page import InvalidLoginCredentialsError
-from app.v1.modules.bot.etimate_history.pages.estimate_history_page import EstimateHistoryPage
+from app.v1.modules.bot.etimate_history.pages.estimate_history_lookup_page import (
+    EstimateHistoryLookupPage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +89,7 @@ def run_estimate_history_lookup_flow(
 
             current_step = "open_estimate_history"
             _ensure_within_timeout(started_at, current_step)
-            history_page = EstimateHistoryPage(page)
+            history_page = EstimateHistoryLookupPage(page)
             history_page.open_from_quick_access()
             _debug(f"Estimate History grid opened. URL: {page.url}")
 

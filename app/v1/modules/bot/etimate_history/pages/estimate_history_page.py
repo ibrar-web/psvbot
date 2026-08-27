@@ -1,9 +1,5 @@
 import logging
-import re
-import tempfile
-import time
 from pathlib import Path
-from urllib.parse import unquote
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -14,6 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 class EstimateHistoryPage(BasePage):
+    """Shared behavior for the Estimate History screen: opening it from
+    quick-access and clearing its filters. Export-specific (CSV download) and
+    lookup-specific (search + open one record) actions live in the subclasses
+    EstimateHistoryExportPage / EstimateHistoryLookupPage.
+    """
+
     ESTIMATE_HISTORY_MENU_ITEM = (
         "xpath=//div[contains(@class,'qa-access') and @name='menuitem_14'"
         " and .//span[contains(@class,'quick-access-item-text') and contains(normalize-space(),'Estimate History')]]"
@@ -21,12 +23,11 @@ class EstimateHistoryPage(BasePage):
     ESTIMATE_HISTORY_MENU_ITEM_TEXT = (
         ".//span[contains(@class,'quick-access-item-text') and contains(normalize-space(),'Estimate History')]"
     )
+    # Both present in the grid toolbar regardless of which action follows.
+    # DOWNLOAD_CSV_BUTTON is the proven-live "grid finished loading" readiness
+    # signal (verified across both the export and lookup flows already).
     DOWNLOAD_CSV_BUTTON = "xpath=//a[@name='downloadAsCSVButton']"
-    ESTIMATE_NUMBER_FILTER_INPUT = "xpath=//input[@name='filter_invoiceNumber_input']"
-    # The "Estimate #" cell itself (not the <tr>, which is not clickable —
-    # clicking the row alone does not navigate). Verified live: this is the
-    # element PrintSmith actually wires a click handler to.
-    ESTIMATE_NUMBER_CELL_LINK = "xpath=//a[contains(@class,'acc_info_celldata')]"
+    CLEAR_FILTERS_BUTTON = "xpath=//a[@name='reset_estimate_history_grid']"
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -130,62 +131,8 @@ class EstimateHistoryPage(BasePage):
         except PlaywrightTimeoutError:
             return False
 
-    def download_csv(self) -> Path:
-        download_timeout = max(self._timeout_ms, 120_000)
-        with self.page.expect_download(timeout=download_timeout) as download_info:
-            self.click(self.DOWNLOAD_CSV_BUTTON)
-            self._debug("Download as CSV clicked; waiting for download")
-
-        download = download_info.value
-        suggested = download.suggested_filename or f"estimate_history_{int(time.time())}.csv"
-        filename = self._sanitize_filename(suggested)
-        temp_dir = Path(tempfile.mkdtemp(prefix="psv_estimate_history_"))
-        target_path = temp_dir / filename
-
-        download.save_as(target_path)
-        self._debug(f"Estimate history CSV downloaded to: {target_path}")
-
-        failure = download.failure()
-        if failure:
-            raise RuntimeError(f"Download failed: {failure}")
-
-        return target_path
-
-    def search_by_estimate_id(self, estimate_id: str) -> None:
-        self._debug(f"Filtering Estimate History grid by Estimate #: {estimate_id}")
+    def clear_filters(self) -> None:
+        self._debug("Clearing all Estimate History grid filters")
         self.wait_for_spinner_to_disappear()
-        filter_loc = self._loc(self.ESTIMATE_NUMBER_FILTER_INPUT).first
-        filter_loc.wait_for(state="visible", timeout=self._timeout_ms)
-        filter_loc.click()
-        filter_loc.fill(str(estimate_id))
-        filter_loc.press("Enter")
+        self.click(self.CLEAR_FILTERS_BUTTON)
         self.wait_for_spinner_to_disappear()
-
-    def open_first_search_result(self, estimate_id: str = "") -> None:
-        self._debug("Waiting for filtered Estimate History row")
-        self.wait_for_spinner_to_disappear()
-        link_loc = self._loc(self.ESTIMATE_NUMBER_CELL_LINK).first
-        link_loc.wait_for(state="visible", timeout=self._timeout_ms)
-        link_loc.click()
-        if estimate_id:
-            # Confirm we actually navigated to this record, not just clicked.
-            self.page.wait_for_function(
-                """(id) => window.location.href.includes(id)""",
-                arg=str(estimate_id),
-                timeout=self._timeout_ms,
-            )
-        self.wait_for_spinner_to_disappear()
-
-    def search_and_open_by_estimate_id(self, estimate_id: str) -> None:
-        self.search_by_estimate_id(estimate_id)
-        self.open_first_search_result(estimate_id)
-        self._debug(f"Opened Estimate History record for estimate_id={estimate_id}. URL: {self.page.url}")
-
-    def _sanitize_filename(self, filename: str) -> str:
-        filename = unquote(filename)
-        filename = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._")
-        if not filename:
-            filename = f"estimate_history_{int(time.time())}"
-        if "." not in filename:
-            filename = f"{filename}.csv"
-        return filename
