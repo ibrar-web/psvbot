@@ -41,7 +41,10 @@ def _to_requirements_format(job_items: list) -> list:
     carries the actual meaningful value). Extra scraped fields
     (stock_color, location, job_comment, unit_per_side, price, notes,
     job_name) are kept alongside since they carry real information beyond
-    the original schema.
+    the original schema. Every job item stays here regardless of job
+    method (including Charges Only) — its own job_charges list is
+    unaffected by whatever also gets folded into the top-level
+    other_charges (see _build_other_charges).
     """
     requirements = []
     for item in job_items:
@@ -65,6 +68,21 @@ def _to_requirements_format(job_items: list) -> list:
             }
         )
     return requirements
+
+
+def _build_other_charges(job_items: list, direct_charges: list) -> list:
+    """Top-level other_charges = the invoice-wide charges read directly off
+    the Estimate/Invoice Summary tree table (Rush Fee, delivery, etc. — the
+    "direct charges" from that screen) PLUS every individual charge from
+    any "Charges Only" job's own charges grid folded in alongside them —
+    a Charges Only "job" isn't a real print job, it's just a charge
+    wearing a job wrapper, so its charges belong here too.
+    """
+    charges = list(direct_charges)
+    for item in job_items:
+        if (item.get("job_method") or "").strip().lower() == "charges only":
+            charges.extend(item.get("job_charges", []))
+    return charges
 
 
 def _store_invoice_detail_json_publicly(
@@ -172,10 +190,15 @@ def run_invoice_history_lookup_flow(
 
             current_step = "store_details"
             _ensure_within_timeout(started_at, current_step)
+            job_items = scraped.get("job_items", [])
+            # "direct_charges" = the invoice-wide charges read straight off the
+            # Estimate/Invoice Summary tree table, plus every Charges Only
+            # job's own job_charges folded in alongside them.
+            direct_charges = _build_other_charges(job_items, scraped.get("other_charges", []))
             formatted = {
                 "invoice_id": invoice_id,
-                "requirements": _to_requirements_format(scraped.get("job_items", [])),
-                "other_charges": scraped.get("other_charges", []),
+                "requirements": _to_requirements_format(job_items),
+                "direct_charges": direct_charges,
             }
             store_result = _store_invoice_detail_json_publicly(
                 formatted, invoice_id=invoice_id, tenant_id=tenant_id, queue_id=queue_id
@@ -192,8 +215,8 @@ def run_invoice_history_lookup_flow(
                 "current_url": page.url,
                 "logout_succeeded": logout_succeeded,
                 "logout_error": logout_error,
-                "job_items": scraped.get("job_items", []),
-                "other_charges": scraped.get("other_charges", []),
+                "job_items": job_items,
+                "direct_charges": direct_charges,
                 **store_result,
             }
 

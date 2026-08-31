@@ -1022,7 +1022,7 @@ async def _call_record_result(
         "detail_file_url": result.get("detail_file_url"),
         "detail_file_local_path": result.get("detail_file_local_path"),
         "job_items": result.get("job_items"),
-        "other_charges": result.get("other_charges"),
+        "direct_charges": result.get("direct_charges"),
         "error_message": None if success else (error_message or result.get("message")),
         "estimate_totals": result.get("estimate_totals"),
         "estimate_id": estimate_id,
