@@ -324,6 +324,19 @@ def _cleanup_browser(
         except Exception:
             pass
 
+    # 1b. A native "Leave site?" beforeunload dialog can still be armed at
+    # this point — logout only handles the one dialog right after its own
+    # click, not any that appear during the close sequence below. An
+    # unhandled dialog blocks the browser's event loop, so page.close()/
+    # context.close()/browser.close() can silently hang and get swallowed
+    # by their own try/except, leaving the process alive. Auto-accept
+    # anything that pops up from here on.
+    if page is not None:
+        try:
+            page.on("dialog", lambda dialog: dialog.accept())
+        except Exception:
+            pass
+
     # 2. Close in correct order: page -> context -> browser
     if page is not None:
         try:

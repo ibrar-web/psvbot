@@ -39,7 +39,13 @@ class LogoutPage(BasePage):
                 pass
             dialog = dialog_info.value
             self._debug(f"Browser dialog detected: {dialog.message}")
-            dialog.accept()
+            try:
+                dialog.accept()
+            except Exception:
+                # A stale listener from earlier in the session (e.g. login's
+                # once("dialog", ...)) may have already accepted this exact
+                # dialog before we got here — that's fine, it's handled.
+                self._debug("Dialog was already accepted by another listener")
             return
         except PlaywrightTimeoutError:
             pass

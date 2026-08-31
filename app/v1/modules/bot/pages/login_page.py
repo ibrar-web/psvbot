@@ -48,9 +48,31 @@ class LoginPage(BasePage):
         def _handle_dialog(dialog) -> None:
             self._last_dialog_message = (dialog.message or "").strip()
             self._debug(f"Login dialog detected: {self._last_dialog_message}")
-            dialog.accept()
+            try:
+                dialog.accept()
+            except Exception:
+                # Another listener (e.g. logout's leave-site handling, much
+                # later in the session) may have already accepted it.
+                pass
 
+        self._login_dialog_handler = _handle_dialog
         self.page.once("dialog", _handle_dialog)
+
+    def _stop_capturing_login_dialog(self) -> None:
+        """If no dialog fired during login, page.once() leaves this
+        listener armed for the rest of the page's lifetime — it would
+        otherwise silently steal the next unrelated dialog anywhere later
+        in the session (confirmed live: it intercepted logout's "Leave
+        site?" prompt, causing a spurious "already handled" error there).
+        Remove it once login has been confirmed to succeed.
+        """
+        handler = getattr(self, "_login_dialog_handler", None)
+        if handler is None:
+            return
+        try:
+            self.page.remove_listener("dialog", handler)
+        except Exception:
+            pass
 
     def _read_invalid_login_message(self) -> str | None:
         if self._last_dialog_message and self.INVALID_LOGIN_FRAGMENT in self._last_dialog_message.lower():
@@ -100,6 +122,7 @@ class LoginPage(BasePage):
             if _logged_in(self.page.url):
                 self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
                 self._debug(f"Post-login URL reached: {self.page.url}")
+                self._stop_capturing_login_dialog()
                 return
 
             self.page.wait_for_timeout(250)
