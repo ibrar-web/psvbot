@@ -38,8 +38,8 @@ from app.v1.modules.bot.services.estimate_service import run_estimate_flow
 from app.v1.modules.bot.etimate_history.estimate_history_export import (
     run_estimate_history_export_flow,
 )
-from app.v1.modules.bot.etimate_history.estimate_history_lookup import (
-    run_estimate_history_lookup_flow,
+from app.v1.modules.bot.etimate_history.invoice_history_lookup import (
+    run_invoice_history_lookup_flow,
 )
 from app.v1.modules.bot.task_types import TaskType
 
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 TASK_HANDLERS = {
     TaskType.CREATE_ESTIMATE.value: run_estimate_flow,
     TaskType.ESTIMATE_HISTORY_EXPORT.value: run_estimate_history_export_flow,
-    TaskType.ESTIMATE_HISTORY_LOOKUP.value: run_estimate_history_lookup_flow,
+    TaskType.INVOICE_HISTORY_LOOKUP.value: run_invoice_history_lookup_flow,
 }
 
 TASKS_COLLECTION = "tasks"
@@ -1021,6 +1021,8 @@ async def _call_record_result(
         "detail_file_name": result.get("detail_file_name"),
         "detail_file_url": result.get("detail_file_url"),
         "detail_file_local_path": result.get("detail_file_local_path"),
+        "job_items": result.get("job_items"),
+        "other_charges": result.get("other_charges"),
         "error_message": None if success else (error_message or result.get("message")),
         "estimate_totals": result.get("estimate_totals"),
         "estimate_id": estimate_id,

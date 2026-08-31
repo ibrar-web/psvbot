@@ -16,7 +16,7 @@ class EstimateHistoryPage(BasePage):
     """Shared behavior for the Estimate History screen: opening it from
     quick-access and clearing its filters. Export-specific (CSV download) and
     lookup-specific (search + open one record) actions live in the subclasses
-    EstimateHistoryExportPage / EstimateHistoryLookupPage.
+    EstimateHistoryExportPage / InvoiceHistoryLookupPage.
     """
 
     ESTIMATE_HISTORY_MENU_ITEM = (

@@ -26,6 +26,10 @@ ESTIMATE_DETAIL_STORAGE_ROOT = (
     os.getenv("PRINTSMITH_ESTIMATE_DETAIL_STORAGE_ROOT", "estimate-detail").strip()
     or "estimate-detail"
 )
+INVOICE_DETAIL_STORAGE_ROOT = (
+    os.getenv("PRINTSMITH_INVOICE_DETAIL_STORAGE_ROOT", "invoice-detail").strip()
+    or "invoice-detail"
+)
 WANTED_DATE_DEFAULT_WORKING_DAYS = int(
     os.getenv("PRINTSMITH_WANTED_DATE_WORKING_DAYS", "5")
 )

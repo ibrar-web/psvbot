@@ -88,7 +88,7 @@ async def execute_test_task(
 
 _ESTIMATE_HISTORY_TASK_TYPES = {
     TaskType.ESTIMATE_HISTORY_EXPORT.value,
-    TaskType.ESTIMATE_HISTORY_LOOKUP.value,
+    TaskType.INVOICE_HISTORY_LOOKUP.value,
 }
 
 
@@ -101,7 +101,7 @@ async def execute_test_estimate_history_task(
     case: str = Query(
         ...,
         description=(
-            "task_type keyword: 'estimate_history_export' or 'estimate_history_lookup'"
+            "task_type keyword: 'estimate_history_export' or 'invoice_history_lookup'"
         ),
     ),
 ) -> Dict[str, Any]:
