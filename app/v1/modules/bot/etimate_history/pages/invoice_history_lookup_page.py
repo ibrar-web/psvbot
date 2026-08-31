@@ -5,7 +5,6 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.etimate_history.pages.estimate_history_page import EstimateHistoryPage
-from app.v1.modules.bot.pages.invoice_page.estimated_summary import EstimatedSummaryTab
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +40,23 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     # transient reload that made wait_for_function throw "Target page,
     # context or browser has been closed".
     INVOICE_PAGE_URL_FRAGMENT = "#/invoicing/invoice-page"
+
+    # An estimate's line-items tab is labeled "Estimate Summary"; once
+    # converted to an invoice, PrintSmith relabels the SAME tab "Invoice
+    # Summary" — confirmed live. Match either.
+    SUMMARY_TAB = (
+        "xpath=//li[@role='tab' and "
+        "(.//span[normalize-space()='Estimate Summary'] "
+        "or .//span[normalize-space()='Invoice Summary'])]"
+    )
+    _SUMMARY_TAB_ACTIVE_JS = """() => {
+        const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
+        const target = tabs.find(t => {
+            const text = (t.innerText || "").trim();
+            return text === "Estimate Summary" || text === "Invoice Summary";
+        });
+        return !!target && target.getAttribute("aria-selected") === "true";
+    }"""
 
     _JOB_DETAILS_TAB_ACTIVE_JS = """() => {
         const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
@@ -133,8 +149,17 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         span, and the row list is re-queried fresh on every iteration since
         opening/leaving Job Details re-renders the tbody.
         """
-        summary_tab = EstimatedSummaryTab(self.page, self.timeout)
-        summary_tab.switch_to_tab()
+        self._enter_estimate_summary()
+
+        initial_row_count = self._row_count()
+        self._debug(f"Estimate/Invoice Summary tree table row count: {initial_row_count}. URL: {self.page.url}")
+        if initial_row_count == 0:
+            logger.warning(
+                "Estimate/Invoice Summary tree table has 0 rows right after "
+                "entering the tab (URL=%s) — the table may not have finished "
+                "rendering yet",
+                self.page.url,
+            )
 
         job_items: List[Dict[str, Any]] = []
         other_charges: List[Dict[str, Any]] = []
@@ -160,24 +185,50 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                 other_charges.append(charge)
             else:
                 self._debug(f"Row {index} ({label}) is a job row; opening Job Details")
-                self._open_job_row(index)
-                job_method = self._read_job_method()
-                details = self._read_job_details(job_method)
-                job_charges = self._read_job_charges()
-                job_items.append(
-                    {
-                        "job_name": label,
-                        "job_method": job_method,
-                        **details,
-                        "job_charges": job_charges,
-                    }
-                )
-                summary_tab.switch_to_tab()
+                try:
+                    self._open_job_row(index)
+                    job_method = self._read_job_method()
+                    details = self._read_job_details(job_method)
+                    job_charges = self._read_job_charges()
+                    job_items.append(
+                        {
+                            "job_name": label,
+                            "job_method": job_method,
+                            **details,
+                            "job_charges": job_charges,
+                        }
+                    )
+                except Exception:
+                    # One unreadable job row shouldn't wipe out every other
+                    # row's already-scraped data — log it and keep going.
+                    logger.exception(
+                        "Failed to scrape job row %s (%s); continuing with remaining rows",
+                        index,
+                        label,
+                    )
+                finally:
+                    self._enter_estimate_summary()
 
             index += 1
 
         self._debug(f"Scraped {len(job_items)} job item(s), {len(other_charges)} other charge(s)")
         return {"job_items": job_items, "other_charges": other_charges}
+
+    def _enter_estimate_summary(self) -> None:
+        """Land on the Estimate/Invoice Summary tree table. SUMMARY_TAB
+        matches either label so this works for both an estimate ("Estimate
+        Summary") and an already-converted invoice ("Invoice Summary") —
+        confirmed live that PrintSmith relabels the same tab on conversion.
+        """
+        self.wait_for_spinner_to_disappear()
+        tab_loc = self._loc(self.SUMMARY_TAB).first
+        tab_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        tab_loc.click()
+        self.page.wait_for_function(self._SUMMARY_TAB_ACTIVE_JS, timeout=self._timeout_ms)
+        self.wait_for_spinner_to_disappear()
+        self._loc("css=tbody.ui-treetable-tbody").first.wait_for(
+            state="visible", timeout=self._timeout_ms
+        )
 
     def _row_count(self) -> int:
         return int(
@@ -236,36 +287,32 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         }
 
     def _open_job_row(self, row_index: int) -> None:
-        self.page.evaluate(
-            """(rowIndex) => {
-                const rows = document.querySelectorAll('tbody.ui-treetable-tbody > tr');
-                const row = rows[rowIndex];
-                if (!row) return false;
-                const target = row.querySelector('.job_description') || row;
-                target.scrollIntoView({ block: 'center' });
-                target.click();
-                return true;
-            }""",
-            row_index,
-        )
+        # A JS-dispatched element.click() (as used here previously) does not
+        # reliably trigger Angular's bound click handlers — same lesson
+        # learned the hard way with the Record Lock scope dropdown. Use real
+        # Playwright locator clicks instead.
+        row_loc = self._loc("css=tbody.ui-treetable-tbody > tr").nth(row_index)
+        desc_loc = row_loc.locator(".job_description")
+
+        clicked_description = desc_loc.count() > 0
+        if clicked_description:
+            desc_loc.first.scroll_into_view_if_needed(timeout=self._timeout_ms)
+            desc_loc.first.click(timeout=self._timeout_ms)
+        else:
+            row_loc.scroll_into_view_if_needed(timeout=self._timeout_ms)
+            row_loc.click(timeout=self._timeout_ms)
+
         self.wait_for_spinner_to_disappear()
         if self._is_job_details_tab_active(timeout_ms=3000):
             return
 
         self._debug(
-            f"Row {row_index}: clicking .job_description did not open Job Details; retrying on the row itself"
+            f"Row {row_index}: clicking "
+            f"{'.job_description' if clicked_description else 'the row'} "
+            "did not open Job Details; retrying on the row itself"
         )
-        self.page.evaluate(
-            """(rowIndex) => {
-                const rows = document.querySelectorAll('tbody.ui-treetable-tbody > tr');
-                const row = rows[rowIndex];
-                if (!row) return false;
-                row.scrollIntoView({ block: 'center' });
-                row.click();
-                return true;
-            }""",
-            row_index,
-        )
+        row_loc.scroll_into_view_if_needed(timeout=self._timeout_ms)
+        row_loc.click(timeout=self._timeout_ms)
         self.wait_for_spinner_to_disappear()
         self._is_job_details_tab_active(timeout_ms=self._timeout_ms, raise_on_timeout=True)
 
