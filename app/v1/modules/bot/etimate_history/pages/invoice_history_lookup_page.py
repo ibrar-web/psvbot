@@ -22,10 +22,16 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     """
 
     INVOICE_NUMBER_FILTER_INPUT = "xpath=//input[@name='filter_convertedInvoiceNo_input']"
-    # The "Invoice #" cell link. Same grid component/class as the Estimate #
-    # column used by the previous estimate-id lookup — confirm live if
-    # PrintSmith renders a different link class for this column.
-    INVOICE_NUMBER_CELL_LINK = "xpath=//a[contains(@class,'acc_info_celldata')]"
+    # The grid renders TWO "acc_info_celldata" links per row — one in the
+    # Estimate # column (col_data_invoiceNumber, e.g. "US685-39413") and
+    # one in the Invoice # column (col_data_convertedInvoiceNo, e.g.
+    # "50059") — confirmed live. An unscoped selector's .first matches the
+    # Estimate # cell (it renders first in the row), so this MUST be
+    # scoped to the Invoice # column specifically.
+    INVOICE_NUMBER_CELL_LINK = (
+        "xpath=//td[@id='col_data_convertedInvoiceNo']"
+        "//a[contains(@class,'acc_info_celldata')]"
+    )
 
     # Confirmed exact routes: clicking a record on the grid either (a) stays
     # on the grid URL ("#/history/estimatehistory") and shows the "locked by
@@ -55,6 +61,11 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         filter_loc.click()
         filter_loc.fill(str(invoice_id))
         filter_loc.press("Enter")
+        # Same race as clear_filters(): the spinner can take a couple of
+        # seconds to actually appear after Enter triggers the grid reload,
+        # so checking immediately can pass before the filter has actually
+        # applied — leaving the previous (unfiltered) row still clickable.
+        self.page.wait_for_timeout(3000)
         self.wait_for_spinner_to_disappear()
 
     def open_first_search_result(self, invoice_id: str = "") -> None:
