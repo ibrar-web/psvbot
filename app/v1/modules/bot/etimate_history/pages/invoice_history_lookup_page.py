@@ -272,6 +272,15 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     # ------------------------------------------------------------------
 
     def _read_kendo_text(self, name: str) -> str:
+        """Read a Kendo widget's currently displayed value by its `name`
+        attribute. kendo-dropdownlist renders its value in a <span
+        class="k-input"> (read via innerText), while kendo-combobox (e.g.
+        choose_stock, finishSize, parentSize, runsize) renders it in an
+        <input class="k-input"> instead (confirmed against job_details.py's
+        own selectors for these same widgets, e.g. add_size's
+        "input.k-input" target) — its value lives in .value, not text
+        content, so innerText on it is always empty. Try both.
+        """
         locator = self._loc(
             f"xpath=//kendo-dropdownlist[@name='{name}'] | //kendo-combobox[@name='{name}']"
         ).first
@@ -279,7 +288,46 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             locator.wait_for(state="visible", timeout=3000)
         except PlaywrightTimeoutError:
             return ""
-        return (locator.locator(".k-input").inner_text() or "").strip()
+
+        input_el = locator.locator("input.k-input")
+        if input_el.count() > 0:
+            try:
+                value = input_el.first.input_value()
+                if value:
+                    return value.strip()
+            except Exception:
+                pass
+
+        span_el = locator.locator("span.k-input")
+        if span_el.count() > 0:
+            return (span_el.first.inner_text() or "").strip()
+
+        return ""
+
+    def _read_print_sides(self) -> str:
+        """Read which button ("Simplex"/"Duplex") is currently active in
+        the Print button-group next to the "Print" label — confirmed live
+        in invoice_job_details.html:594-621: this control has no name
+        attribute, so it's located via its label sibling. Returns "" if
+        this job method doesn't render a Print toggle.
+        """
+        return (
+            self.page.evaluate(
+                """() => {
+                    const labels = Array.from(document.querySelectorAll('label'));
+                    const printLabel = labels.find(
+                        l => (l.innerText || l.textContent || '').trim() === 'Print'
+                    );
+                    if (!printLabel) return '';
+                    const group = printLabel.nextElementSibling;
+                    if (!group) return '';
+                    const active = group.querySelector('button.k-state-active, button.active');
+                    if (!active) return '';
+                    return (active.innerText || active.textContent || '').trim();
+                }"""
+            )
+            or ""
+        ).strip()
 
     def _field_value(self, selector: str) -> str:
         locator = self._loc(selector).first
@@ -325,6 +373,8 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             )
             details["stock"] = self._read_kendo_text("choose_stock")
             details["stock_color"] = self._read_kendo_text("stockColorList")
+            details["finish_size"] = self._read_kendo_text("finishSize")
+            details["sides"] = self._read_print_sides()
             if not details["description"]:
                 logger.warning(
                     "Unrecognized job method '%s'; description field may "

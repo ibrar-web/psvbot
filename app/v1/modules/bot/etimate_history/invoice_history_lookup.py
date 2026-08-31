@@ -33,10 +33,13 @@ def _to_requirements_format(job_items: list) -> list:
     """Reshape scraped job items into the same requirement shape used by
     create_estimate's data model (see testdata.json's "create_estimate"
     entries / InvoicePage._build_job_data): description, stock_search,
-    quantity, size, sides, job_method, job_charges. Size/sides aren't
-    exposed by the Estimate Summary/Job Details scrape, so they come
-    through empty rather than guessed. Extra scraped fields (product,
-    stock_color, location, job_comment, unit_per_side, price, notes,
+    quantity, size, sides, job_method, job_charges. Key names match that
+    schema exactly; the values behind "size"/"sides"/"product" come from
+    the closest equivalent read off Job Details: size = Finish Size,
+    sides = the active Print button (Simplex/Duplex), product = Stock
+    (the Product dropdown is frequently empty on real invoices; Stock
+    carries the actual meaningful value). Extra scraped fields
+    (stock_color, location, job_comment, unit_per_side, price, notes,
     job_name) are kept alongside since they carry real information beyond
     the original schema.
     """
@@ -48,11 +51,11 @@ def _to_requirements_format(job_items: list) -> list:
                 "description": item.get("description", ""),
                 "stock_search": item.get("stock", ""),
                 "quantity": item.get("quantity", ""),
-                "size": "",
-                "sides": "",
+                "size": item.get("finish_size", ""),
+                "sides": item.get("sides", ""),
                 "job_method": item.get("job_method", ""),
                 "job_charges": item.get("job_charges", []),
-                "product": item.get("product", ""),
+                "product": item.get("stock", ""),
                 "stock_color": item.get("stock_color", ""),
                 "location": item.get("location", ""),
                 "job_comment": item.get("job_comment", ""),
