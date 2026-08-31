@@ -303,18 +303,38 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             row_loc.click(timeout=self._timeout_ms)
 
         self.wait_for_spinner_to_disappear()
-        if self._is_job_details_tab_active(timeout_ms=3000):
-            return
+        if not self._is_job_details_tab_active(timeout_ms=3000):
+            self._debug(
+                f"Row {row_index}: clicking "
+                f"{'.job_description' if clicked_description else 'the row'} "
+                "did not open Job Details; retrying on the row itself"
+            )
+            row_loc.scroll_into_view_if_needed(timeout=self._timeout_ms)
+            row_loc.click(timeout=self._timeout_ms)
+            self.wait_for_spinner_to_disappear()
+            self._is_job_details_tab_active(timeout_ms=self._timeout_ms, raise_on_timeout=True)
 
-        self._debug(
-            f"Row {row_index}: clicking "
-            f"{'.job_description' if clicked_description else 'the row'} "
-            "did not open Job Details; retrying on the row itself"
-        )
-        row_loc.scroll_into_view_if_needed(timeout=self._timeout_ms)
-        row_loc.click(timeout=self._timeout_ms)
-        self.wait_for_spinner_to_disappear()
-        self._is_job_details_tab_active(timeout_ms=self._timeout_ms, raise_on_timeout=True)
+        self._wait_for_job_details_form_ready()
+
+    def _wait_for_job_details_form_ready(self) -> None:
+        """The tab can report aria-selected="true" before the job-method-
+        specific sub-form has actually finished rendering/binding its
+        widgets — the Job Method dropdown renders synchronously, but
+        combobox-bound fields (Stock, Finish Size) can lag behind it.
+        Wait for Job Method to show a non-empty value as the readiness
+        signal, then give the slower comboboxes a short beat to catch up.
+        """
+        try:
+            self.page.wait_for_function(
+                """() => {
+                    const el = document.querySelector("kendo-dropdownlist[name='jobMethodList'] span.k-input");
+                    return !!(el && (el.innerText || el.textContent || '').trim());
+                }""",
+                timeout=self._timeout_ms,
+            )
+        except PlaywrightTimeoutError:
+            self._debug("Job Method field did not show a value in time; reading fields anyway")
+        self.page.wait_for_timeout(1000)
 
     def _is_job_details_tab_active(self, *, timeout_ms: int, raise_on_timeout: bool = False) -> bool:
         try:
@@ -343,7 +363,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             f"xpath=//kendo-dropdownlist[@name='{name}'] | //kendo-combobox[@name='{name}']"
         ).first
         try:
-            locator.wait_for(state="visible", timeout=3000)
+            locator.wait_for(state="visible", timeout=8000)
         except PlaywrightTimeoutError:
             return ""
 
@@ -390,7 +410,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     def _field_value(self, selector: str) -> str:
         locator = self._loc(selector).first
         try:
-            locator.wait_for(state="visible", timeout=3000)
+            locator.wait_for(state="visible", timeout=8000)
         except PlaywrightTimeoutError:
             return ""
         try:
