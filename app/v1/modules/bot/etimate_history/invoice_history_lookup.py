@@ -29,7 +29,7 @@ def _debug(message: str) -> None:
     logger.info(message)
 
 
-def _to_requirements_format(job_items: list) -> list:
+def _to_requirements_format(job_items: list, other_charges: list) -> list:
     """Reshape scraped job items into the same requirement shape used by
     create_estimate's data model (see testdata.json's "create_estimate"
     entries / InvoicePage._build_job_data): description, stock_search,
@@ -41,23 +41,32 @@ def _to_requirements_format(job_items: list) -> list:
     carries the actual meaningful value). Extra scraped fields
     (stock_color, location, job_comment, unit_per_side, price, notes,
     job_name) are kept alongside since they carry real information beyond
-    the original schema. Every job item stays here regardless of job
-    method (including Charges Only) — its own job_charges list is
-    unaffected by whatever also gets folded into the top-level
-    other_charges (see _build_other_charges).
+    the original schema.
+
+    Charges Only jobs are excluded entirely — their data already lives in
+    other_charges (see _build_other_charges), so keeping them here too
+    would just duplicate it. other_charges is attached to the first
+    remaining (non-Charges-Only) job — right after its own job_charges —
+    rather than as a separate top-level key.
     """
     requirements = []
     for item in job_items:
-        requirements.append(
+        if (item.get("job_method") or "").strip().lower() == "charges only":
+            continue
+        requirement = {
+            "job_name": item.get("job_name", ""),
+            "description": item.get("description", ""),
+            "stock_search": item.get("stock", ""),
+            "quantity": item.get("quantity", ""),
+            "size": item.get("finish_size", ""),
+            "sides": item.get("sides", ""),
+            "job_method": item.get("job_method", ""),
+            "job_charges": item.get("job_charges", []),
+        }
+        if not requirements and other_charges:
+            requirement["other_charges"] = other_charges
+        requirement.update(
             {
-                "job_name": item.get("job_name", ""),
-                "description": item.get("description", ""),
-                "stock_search": item.get("stock", ""),
-                "quantity": item.get("quantity", ""),
-                "size": item.get("finish_size", ""),
-                "sides": item.get("sides", ""),
-                "job_method": item.get("job_method", ""),
-                "job_charges": item.get("job_charges", []),
                 "product": item.get("stock", ""),
                 "stock_color": item.get("stock_color", ""),
                 "location": item.get("location", ""),
@@ -67,22 +76,32 @@ def _to_requirements_format(job_items: list) -> list:
                 "notes": item.get("notes", ""),
             }
         )
+        requirements.append(requirement)
     return requirements
 
 
-def _build_other_charges(job_items: list, direct_charges: list) -> list:
-    """Top-level other_charges = the invoice-wide charges read directly off
-    the Estimate/Invoice Summary tree table (Rush Fee, delivery, etc. — the
-    "direct charges" from that screen) PLUS every individual charge from
-    any "Charges Only" job's own charges grid folded in alongside them —
-    a Charges Only "job" isn't a real print job, it's just a charge
-    wearing a job wrapper, so its charges belong here too.
+def _build_other_charges(job_items: list) -> list:
+    """Top-level other_charges: one summary object per "Charges Only" job
+    on the invoice (there can be more than one). A Charges Only job isn't
+    a real print job — it's a charge wearing a job wrapper — so each one
+    contributes its own description/quantity/price as the charge, with
+    its individual charge lines nested inside as "job_charges". Distinct
+    from the top-level "direct_charges" (read straight off the
+    Estimate/Invoice Summary rows, no clicking involved).
     """
-    charges = list(direct_charges)
+    other_charges = []
     for item in job_items:
-        if (item.get("job_method") or "").strip().lower() == "charges only":
-            charges.extend(item.get("job_charges", []))
-    return charges
+        if (item.get("job_method") or "").strip().lower() != "charges only":
+            continue
+        other_charges.append(
+            {
+                "charge_name": item.get("description", ""),
+                "quantity": item.get("quantity", ""),
+                "charge_price": item.get("price", ""),
+                "job_charges": list(item.get("job_charges", [])),
+            }
+        )
+    return other_charges
 
 
 def _store_invoice_detail_json_publicly(
@@ -191,13 +210,18 @@ def run_invoice_history_lookup_flow(
             current_step = "store_details"
             _ensure_within_timeout(started_at, current_step)
             job_items = scraped.get("job_items", [])
-            # "direct_charges" = the invoice-wide charges read straight off the
-            # Estimate/Invoice Summary tree table, plus every Charges Only
-            # job's own job_charges folded in alongside them.
-            direct_charges = _build_other_charges(job_items, scraped.get("other_charges", []))
+            # direct_charges: invoice-wide charges read straight off the
+            # Estimate/Invoice Summary tree table rows, no clicking involved.
+            direct_charges = scraped.get("other_charges", [])
+            # other_charges: one summary object per Charges Only job,
+            # nested inside the first requirement (see
+            # _to_requirements_format) rather than kept as its own
+            # top-level key.
+            other_charges = _build_other_charges(job_items)
+            requirements = _to_requirements_format(job_items, other_charges)
             formatted = {
                 "invoice_id": invoice_id,
-                "requirements": _to_requirements_format(job_items),
+                "requirements": requirements,
                 "direct_charges": direct_charges,
             }
             store_result = _store_invoice_detail_json_publicly(
