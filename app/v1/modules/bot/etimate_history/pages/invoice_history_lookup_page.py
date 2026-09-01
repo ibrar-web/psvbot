@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -322,7 +323,9 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         widgets — the Job Method dropdown renders synchronously, but
         combobox-bound fields (Stock, Finish Size) can lag behind it.
         Wait for Job Method to show a non-empty value as the readiness
-        signal, then give the slower comboboxes a short beat to catch up.
+        signal, then wait for the spinner to settle, then give the slower
+        comboboxes a couple more seconds to catch up before anything
+        starts reading fields.
         """
         try:
             self.page.wait_for_function(
@@ -334,7 +337,8 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             )
         except PlaywrightTimeoutError:
             self._debug("Job Method field did not show a value in time; reading fields anyway")
-        self.page.wait_for_timeout(1000)
+        self.wait_for_spinner_to_disappear()
+        self.page.wait_for_timeout(2000)
 
     def _is_job_details_tab_active(self, *, timeout_ms: int, raise_on_timeout: bool = False) -> bool:
         try:
@@ -349,7 +353,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     # Job Details reads (no writes — this flow only scrapes)
     # ------------------------------------------------------------------
 
-    def _read_kendo_text(self, name: str) -> str:
+    def _read_kendo_text(self, name: str, *, timeout_ms: int = 8000) -> str:
         """Read a Kendo widget's currently displayed value by its `name`
         attribute. kendo-dropdownlist renders its value in a <span
         class="k-input"> (read via innerText), while kendo-combobox (e.g.
@@ -358,29 +362,56 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         own selectors for these same widgets, e.g. add_size's
         "input.k-input" target) — its value lives in .value, not text
         content, so innerText on it is always empty. Try both.
+
+        The widget can be visible before its value finishes async-binding
+        — confirmed live: stock/finish size intermittently came back empty
+        even though the widget itself was already visible and the job
+        method had already loaded. Poll for a non-empty value instead of
+        reading once right after visibility.
         """
         locator = self._loc(
             f"xpath=//kendo-dropdownlist[@name='{name}'] | //kendo-combobox[@name='{name}']"
         ).first
         try:
-            locator.wait_for(state="visible", timeout=8000)
+            locator.wait_for(state="visible", timeout=timeout_ms)
         except PlaywrightTimeoutError:
+            logger.warning("_read_kendo_text(%s): widget never became visible", name)
             return ""
 
-        input_el = locator.locator("input.k-input")
-        if input_el.count() > 0:
-            try:
-                value = input_el.first.input_value()
-                if value:
-                    return value.strip()
-            except Exception:
-                pass
+        def read_once() -> str:
+            input_el = locator.locator("input.k-input")
+            if input_el.count() > 0:
+                try:
+                    value = input_el.first.input_value()
+                    if value:
+                        return value.strip()
+                except Exception:
+                    pass
 
-        span_el = locator.locator("span.k-input")
-        if span_el.count() > 0:
-            return (span_el.first.inner_text() or "").strip()
+            span_el = locator.locator("span.k-input")
+            if span_el.count() > 0:
+                return (span_el.first.inner_text() or "").strip()
 
-        return ""
+            return ""
+
+        deadline = time.monotonic() + (timeout_ms / 1000)
+        last_value = ""
+        attempts = 0
+        while time.monotonic() < deadline:
+            attempts += 1
+            last_value = read_once()
+            if last_value:
+                self._debug(f"_read_kendo_text({name}): confirmed value '{last_value}' after {attempts} attempt(s)")
+                return last_value
+            self.page.wait_for_timeout(300)
+
+        logger.warning(
+            "_read_kendo_text(%s): still empty after %s attempt(s)/%sms — value was never bound",
+            name,
+            attempts,
+            timeout_ms,
+        )
+        return last_value
 
     def _read_print_sides(self) -> str:
         """Read which button ("Simplex"/"Duplex") is currently active in
@@ -458,6 +489,19 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                     "Unrecognized job method '%s'; description field may "
                     "not have been captured for this job",
                     job_method,
+                )
+            if not details["stock"] or not details["finish_size"]:
+                logger.warning(
+                    "Job method '%s': stock='%s' finish_size='%s' — one or "
+                    "both came back empty after the full poll/retry window",
+                    job_method,
+                    details["stock"],
+                    details["finish_size"],
+                )
+            else:
+                self._debug(
+                    f"Confirmed stock='{details['stock']}' "
+                    f"finish_size='{details['finish_size']}' for job_method='{job_method}'"
                 )
 
         details["quantity"] = self._field_value("xpath=//input[@name='qty-label-ctext']")
