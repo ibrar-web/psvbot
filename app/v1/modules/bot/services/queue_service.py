@@ -548,6 +548,7 @@ def _build_bot_quote_record(
                     "date",
                     requirement.get("wanted_date", requirement.get("due_date", "")),
                 ),
+                "parts": requirement.get("parts", []),
             }
         )
 

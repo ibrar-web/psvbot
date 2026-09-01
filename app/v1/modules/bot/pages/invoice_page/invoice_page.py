@@ -313,6 +313,7 @@ class InvoicePage(BasePage):
         job_details_tab = JobDetailsTab(self.page, self.timeout)
 
         method = (job_data.get("job_method") or "").strip().lower()
+        self._debug(f"Job Details dispatch: job_method='{method}'")
         if method == "sublet":
             self._complete_sublet_job_details(job_details_tab, job_data)
             return
@@ -359,6 +360,7 @@ class InvoicePage(BasePage):
         parts = job_data.get("parts") or []
         if isinstance(parts, dict):
             parts = [parts]
+        self._debug(f"Multi-Part: {len(parts)} part(s) to add: {parts!r}")
 
         for index, part in enumerate(parts, start=1):
             if not isinstance(part, dict):

@@ -173,16 +173,31 @@ class JobDetailsTab(BasePage):
         self.click(self.JOB_DETAILS_TAB)
         self.wait_for_spinner_to_disappear()
 
+        add_part_count = self._loc(self.MULTIPART_ADD_PART_BUTTON).count()
+        self._debug(
+            f"Add Part button match count: {add_part_count} (URL: {self.page.url})"
+        )
+        if add_part_count == 0:
+            raise RuntimeError(
+                "Multi-Part 'Add Part' button not found "
+                f"(selector={self.MULTIPART_ADD_PART_BUTTON!r}, URL={self.page.url})"
+            )
         self.click(self.MULTIPART_ADD_PART_BUTTON)
+        self._debug(f"Add Part clicked. URL now: {self.page.url}")
         self.wait_for_spinner_to_disappear()
 
         new_estimate_page = NewEstimatePage(self.page, self.timeout)
         new_estimate_page._select_job_method(part_job_method)
+        self._debug(
+            f"Job method '{part_job_method}' selected for this part. "
+            f"URL now: {self.page.url}"
+        )
         self.wait_for_spinner_to_disappear()
 
         self.wait_for_visible(self.JOB_PARTS_TAB)
         self.click(self.JOB_PARTS_TAB)
         self.wait_for_spinner_to_disappear()
+        self._debug(f"Switched to Job Parts tab. URL now: {self.page.url}")
 
     def wait_until_job_parts_active(self, job_method: str = "") -> None:
         self._debug("Waiting for Job Parts tab to become active")
