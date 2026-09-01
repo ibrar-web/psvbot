@@ -7,7 +7,7 @@ import socket
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Sequence
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
 
 import httpx
 from fastapi import HTTPException
@@ -989,6 +989,22 @@ def _stringify_dict_keys(value: Any) -> Any:
     return value
 
 
+_RESULT_URL_PATH_OVERRIDES = {
+    TaskType.ESTIMATE_HISTORY_EXPORT.value: "/api/v1/customer-history/job/export-result",
+    TaskType.INVOICE_HISTORY_LOOKUP.value: "/api/v1/customer-history/job/invoice-result",
+}
+
+
+def _derive_result_url(base_url: str, new_path: str) -> str:
+    """Same server as BACK_URL_RECORD_RESULT (scheme + host + port), just a
+    different path — estimate_history_export/invoice_history_lookup post
+    their results to their own endpoints there instead of the create_estimate
+    one, without needing a separate URL configured in the task payload.
+    """
+    parsed = urlsplit(base_url)
+    return urlunsplit((parsed.scheme, parsed.netloc, new_path, "", ""))
+
+
 async def _call_record_result(
     *,
     task_payload: Dict[str, Any],
@@ -1008,6 +1024,10 @@ async def _call_record_result(
     if not target_url:
         return True
 
+    path_override = _RESULT_URL_PATH_OVERRIDES.get(task_type)
+    if path_override and result_url:
+        target_url = _derive_result_url(result_url, path_override)
+
     result = result or {}
     source_payload = task_payload
     estimate_id = (
@@ -1018,6 +1038,7 @@ async def _call_record_result(
         "queue_id": queue_id,
         "task_type": task_type,
         "machine_name": machine_name,
+        "tenant_id": task_payload.get("tenant_id"),
         "success": success,
         "status": task_status or (TASK_STATUS_DONE if success else TASK_STATUS_FAILED),
         "attempt": attempt,
@@ -1039,6 +1060,7 @@ async def _call_record_result(
         "estimate_totals": _stringify_dict_keys(result.get("estimate_totals")),
         "estimate_id": estimate_id,
     }
+    logger.info("Result callback POST url=%s payload=%s", target_url, payload)
     try:
         await _post_json(target_url, payload, source_payload)
         return True
