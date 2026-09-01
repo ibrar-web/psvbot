@@ -376,6 +376,17 @@ class InvoicePage(BasePage):
         part_data: Dict[str, Any],
         method: str,
     ) -> None:
+        # configure_price_breakup/sublet_price_breakup read
+        # "price_breakup_quantity", not "quantity" — the normal top-level
+        # flow aliases this in _build_job_data, but a part dict only ever
+        # carries "quantity" as given in the source data, so alias it here
+        # too or the quantity field never gets filled for this part.
+        if "price_breakup_quantity" not in part_data:
+            part_data = {
+                **part_data,
+                "price_breakup_quantity": part_data.get("quantity", ""),
+            }
+
         if method == "charges only":
             job_details_tab.wait_until_job_parts_active(job_method="charges only")
             job_details_tab.fill_charges_only_job(
