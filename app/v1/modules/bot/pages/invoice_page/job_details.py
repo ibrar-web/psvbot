@@ -48,6 +48,18 @@ class JobDetailsTab(BasePage):
     CHARGES_ONLY_DESCRIPTION_INPUT = "xpath=//textarea[@name='charges-descriptionField']"
     CHARGES_ONLY_PRICE_INPUT = "xpath=//input[@name='price-label-text']"
     CHARGES_ONLY_QTY_INPUT = "xpath=//input[@name='qty-label-ctext']"
+    # Multi-Part: a container job holding one or more "parts", each filled
+    # in on a separate "Job Parts" tab that appears once a part is added.
+    # "Add Part" shares the same name attribute PrintSmith already uses for
+    # the ordinary "Add Job Charges" button (ADD_JOB_CHARGE_BUTTON above) —
+    # scoped to .multipart-part-container to avoid colliding with it.
+    MULTIPART_ADD_PART_BUTTON = (
+        "xpath=//div[contains(@class,'multipart-part-container')]"
+        "//a[@name='add_job_charge_btn']"
+    )
+    MULTIPART_DESCRIPTION_INPUT = "xpath=//textarea[@name='multipart-descriptionField']"
+    MULTIPART_NOTES_INPUT = "xpath=//textarea[@name='multipart-jobnotesField']"
+    JOB_PARTS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Parts']]"
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -106,6 +118,82 @@ class JobDetailsTab(BasePage):
             charge_data["price"],
             "price",
         )
+
+    def wait_until_multipart_active(self) -> None:
+        self._debug("Waiting for Multi-Part Job Details tab to become active")
+        self.wait_for_visible(self.JOB_DETAILS_TAB)
+        self.page.wait_for_function(
+            """() => {
+                const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
+                const target = tabs.find(t => (t.innerText || "").includes("Job Details"));
+                return !!target && target.getAttribute("aria-selected") === "true";
+            }""",
+            timeout=self._timeout_ms,
+        )
+        self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
+        self.wait_for_visible(self.MULTIPART_ADD_PART_BUTTON)
+
+    def fill_multipart_container(self, data: Mapping[str, Any]) -> None:
+        """Fill the Multi-Part job's own description/notes — distinct from
+        any individual part's description, which is filled separately once
+        on the Job Parts tab (see add_part / the per-part fill methods).
+        """
+        description = str(data.get("description") or "").strip()
+        if description:
+            self._debug(f"Filling Multi-Part container description: {description}")
+            self.wait_for_spinner_to_disappear()
+            desc_loc = self._loc(self.MULTIPART_DESCRIPTION_INPUT).first
+            desc_loc.wait_for(state="visible", timeout=self._timeout_ms)
+            desc_loc.fill(description)
+
+        notes = str(data.get("notes") or "").strip()
+        if notes:
+            self._debug(f"Filling Multi-Part container notes: {notes}")
+            notes_loc = self._loc(self.MULTIPART_NOTES_INPUT).first
+            notes_loc.wait_for(state="visible", timeout=self._timeout_ms)
+            notes_loc.fill(notes)
+
+    def add_part(self, part_job_method: str) -> None:
+        """Click "Add Part", pick the new part's own job method (reusing
+        NewEstimatePage's generic job-method button-group selector — no
+        customer re-selection needed, matching how adding a normal job to
+        an existing estimate already skips that step), then switch to the
+        Job Parts tab where that part's fields get filled in.
+        """
+        from app.v1.modules.bot.pages.new_estimate_page import NewEstimatePage
+
+        self._debug(f"Adding Multi-Part part with job method: {part_job_method}")
+        self.wait_for_spinner_to_disappear()
+        self.click(self.MULTIPART_ADD_PART_BUTTON)
+        self.wait_for_spinner_to_disappear()
+
+        new_estimate_page = NewEstimatePage(self.page, self.timeout)
+        new_estimate_page._select_job_method(part_job_method)
+        self.wait_for_spinner_to_disappear()
+
+        self.wait_for_visible(self.JOB_PARTS_TAB)
+        self.click(self.JOB_PARTS_TAB)
+        self.wait_for_spinner_to_disappear()
+
+    def wait_until_job_parts_active(self, job_method: str = "") -> None:
+        self._debug("Waiting for Job Parts tab to become active")
+        self.wait_for_visible(self.JOB_PARTS_TAB)
+        self.page.wait_for_function(
+            """() => {
+                const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
+                const target = tabs.find(t => (t.innerText || "").includes("Job Parts"));
+                return !!target && target.getAttribute("aria-selected") === "true";
+            }""",
+            timeout=self._timeout_ms,
+        )
+        self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
+        method_key = (job_method or "").strip().lower()
+        if method_key == "sublet":
+            self.wait_for_visible(self.SUBLET_DESCRIPTION_INPUT)
+        elif method_key == "charges only":
+            self.wait_for_visible(self.CHARGES_ONLY_DESCRIPTION_INPUT)
+        else:
+            self.wait_for_visible(self.STOCK_PICKER_BUTTON)
 
     def select_stock_from_picker(self, data: Mapping[str, str]) -> None:
         stock_search_term = " ".join((data.get("stock_search_term") or "gpa").split())

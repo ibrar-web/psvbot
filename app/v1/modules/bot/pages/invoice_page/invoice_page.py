@@ -192,6 +192,7 @@ class InvoicePage(BasePage):
             "job_method": requirement.get("job_method", ""),
             "agent_total": requirement.get("total", ""),
             "vendor_name": requirement.get("vendor_name", ""),
+            "parts": requirement.get("parts", []),
         }
 
     def _complete_single_requirement(
@@ -315,6 +316,9 @@ class InvoicePage(BasePage):
         if method == "sublet":
             self._complete_sublet_job_details(job_details_tab, job_data)
             return
+        if method == "multi-part":
+            self._complete_multipart_job_details(job_details_tab, job_data)
+            return
 
         job_details_tab.wait_until_active()
         job_details_tab.fill_job_description(job_data)
@@ -337,6 +341,64 @@ class InvoicePage(BasePage):
         job_details_tab.fill_job_description(job_data, job_method="sublet")
         job_details_tab.select_vendor(job_data.get("vendor_name", ""))
         job_details_tab.sublet_price_breakup(job_data)
+
+    def _complete_multipart_job_details(
+        self,
+        job_details_tab: JobDetailsTab,
+        job_data: Dict[str, Any],
+    ) -> None:
+        """Multi-Part: fill the container job's own description/notes, then
+        add and fill each part in turn on the Job Parts tab. Each part is
+        shaped like a normal requirement (job_method/description/
+        stock_search/size/sides/quantity/job_charges).
+        """
+        self._debug("Completing Job Details tab for Multi-Part job method")
+        job_details_tab.wait_until_multipart_active()
+        job_details_tab.fill_multipart_container(job_data)
+
+        parts = job_data.get("parts") or []
+        if isinstance(parts, dict):
+            parts = [parts]
+
+        for index, part in enumerate(parts, start=1):
+            if not isinstance(part, dict):
+                continue
+            part_method = str(part.get("job_method") or "Digital Color").strip()
+            self._debug(f"Adding Multi-Part part {index}/{len(parts)}: job_method={part_method}")
+            job_details_tab.add_part(part_method)
+            self._fill_multipart_part(job_details_tab, part, part_method.lower())
+
+    def _fill_multipart_part(
+        self,
+        job_details_tab: JobDetailsTab,
+        part_data: Dict[str, Any],
+        method: str,
+    ) -> None:
+        if method == "charges only":
+            job_details_tab.wait_until_job_parts_active(job_method="charges only")
+            job_details_tab.fill_charges_only_job(
+                {
+                    "charge_name": part_data.get("description", ""),
+                    "quantity": part_data.get("quantity", ""),
+                    "price": part_data.get("price", part_data.get("agent_total", "")),
+                }
+            )
+            return
+        if method == "sublet":
+            job_details_tab.wait_until_job_parts_active(job_method="sublet")
+            job_details_tab.fill_job_description(part_data, job_method="sublet")
+            job_details_tab.select_vendor(part_data.get("vendor_name", ""))
+            job_details_tab.sublet_price_breakup(part_data)
+            return
+
+        job_details_tab.wait_until_job_parts_active(job_method=method)
+        job_details_tab.fill_job_description(part_data)
+        job_details_tab.select_stock_from_picker(part_data)
+        job_details_tab.add_size(part_data.get("size", ""))
+        job_details_tab.add_notes(part_data.get("notes", ""))
+        job_details_tab.select_bleed()
+        job_details_tab.select_sides(part_data.get("sides", ""))
+        job_details_tab.configure_price_breakup(part_data)
 
     def _download_from_estimate_summary(
         self,
