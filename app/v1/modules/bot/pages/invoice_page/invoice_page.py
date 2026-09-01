@@ -394,6 +394,7 @@ class InvoicePage(BasePage):
                     "charge_name": part_data.get("description", ""),
                     "quantity": part_data.get("quantity", ""),
                     "price": part_data.get("price", part_data.get("agent_total", "")),
+                    "job_charges": part_data.get("job_charges", []),
                 }
             )
             return

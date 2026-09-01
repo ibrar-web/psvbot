@@ -119,6 +119,23 @@ class JobDetailsTab(BasePage):
             "price",
         )
 
+        # A Charges Only job can also carry its own job_charges list (e.g.
+        # a Multi-Part part with job_method "Charges Only") — add them via
+        # the same shared Add New Charges modal configure_price_breakup
+        # already uses for every other job method.
+        job_charges = charge.get("job_charges") if isinstance(charge, Mapping) else None
+        if not job_charges:
+            return
+        self._debug(f"Adding {len(job_charges)} job charge(s) to this Charges Only job")
+        copies_quantity = self._quantity_text(
+            charge.get("copies_quantity") if isinstance(charge, Mapping) else None
+        )
+        self._open_add_new_charges_modal()
+        self._add_job_charges(job_charges, copies_quantity=copies_quantity)
+        self.wait_for_spinner_to_disappear()
+        self.click(self.CHARGES_SAVE_BUTTON)
+        self.wait_for_spinner_to_disappear()
+
     def wait_until_multipart_active(self) -> None:
         self._debug("Waiting for Multi-Part Job Details tab to become active")
         self.wait_for_visible(self.JOB_DETAILS_TAB)
