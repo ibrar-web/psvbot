@@ -352,9 +352,14 @@ class InvoicePage(BasePage):
         add and fill each part in turn on the Job Parts tab. Each part is
         shaped like a normal requirement (job_method/description/
         stock_search/size/sides/quantity/job_charges).
+
+        Removes any pre-existing parts first (relevant when updating an
+        existing Multi-Part job) so old parts don't linger alongside
+        freshly-added ones — a no-op on a brand-new job with no parts yet.
         """
         self._debug("Completing Job Details tab for Multi-Part job method")
         job_details_tab.wait_until_multipart_active()
+        job_details_tab.remove_all_parts()
         job_details_tab.fill_multipart_container(job_data)
 
         parts = job_data.get("parts") or []

@@ -170,6 +170,84 @@ class JobDetailsTab(BasePage):
             notes_loc.wait_for(state="visible", timeout=self._timeout_ms)
             notes_loc.fill(notes)
 
+    def remove_all_parts(self) -> None:
+        """Remove every existing part from the Job Parts grid (jobparts_grid,
+        on the Job Details tab) — used when updating an existing Multi-Part
+        job so old parts don't linger alongside freshly-added ones.
+        Mirrors EstimatedSummaryTab.remove_all_items()'s exact delete +
+        "Are you sure you want to delete the Job: X.Y?" confirm-dialog
+        loop, scoped to this grid instead of the top-level Estimate Summary
+        table (confirmed live: deleting a part uses the identical
+        .ui-confirmdialog.ui-dialog / "Yes" button pattern).
+        """
+        self.wait_for_spinner_to_disappear()
+        self._debug("Removing all existing parts from Job Parts grid")
+
+        max_removals = 50  # safety limit to prevent infinite loops
+        removed = 0
+
+        for _ in range(max_removals):
+            has_items = self.page.evaluate(
+                """() => {
+                    const grid = document.querySelector("p-treetable[name='jobparts_grid']");
+                    if (!grid) return false;
+                    return !!grid.querySelector('tbody.ui-treetable-tbody span[name="delete_item"]');
+                }"""
+            )
+            if not has_items:
+                self._debug(f"No more parts to remove (total removed: {removed})")
+                break
+
+            self.page.evaluate(
+                """() => {
+                    const grid = document.querySelector("p-treetable[name='jobparts_grid']");
+                    const btn = grid && grid.querySelector(
+                        'tbody.ui-treetable-tbody span[name="delete_item"]'
+                    );
+                    if (btn) btn.click();
+                }"""
+            )
+
+            self.page.wait_for_function(
+                """() => {
+                    const dialog = document.querySelector('.ui-confirmdialog.ui-dialog');
+                    if (!dialog) return false;
+                    const style = window.getComputedStyle(dialog);
+                    return style.display !== 'none'
+                        && style.visibility !== 'hidden'
+                        && parseFloat(style.opacity || '1') > 0;
+                }""",
+                timeout=self._timeout_ms,
+            )
+
+            self.page.evaluate(
+                """() => {
+                    const dialog = document.querySelector('.ui-confirmdialog.ui-dialog');
+                    if (!dialog) return;
+                    const yesBtn = Array.from(
+                        dialog.querySelectorAll('button[pbutton] .ui-button-text')
+                    ).find(b => (b.textContent || '').trim() === 'Yes');
+                    if (yesBtn) yesBtn.click();
+                }"""
+            )
+            removed += 1
+            self._debug(f"Removed part #{removed}")
+
+            self.page.wait_for_function(
+                """() => {
+                    const dialog = document.querySelector('.ui-confirmdialog.ui-dialog');
+                    if (!dialog) return true;
+                    const style = window.getComputedStyle(dialog);
+                    return style.display === 'none'
+                        || style.visibility === 'hidden'
+                        || parseFloat(style.opacity || '0') === 0;
+                }""",
+                timeout=self._timeout_ms,
+            )
+            self.wait_for_spinner_to_disappear()
+
+        self._debug(f"Finished removing parts. Total removed: {removed}")
+
     def add_part(self, part_job_method: str) -> None:
         """Click "Add Part", pick the new part's own job method (reusing
         NewEstimatePage's generic job-method button-group selector — no
