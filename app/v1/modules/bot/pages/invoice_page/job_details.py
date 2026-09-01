@@ -159,11 +159,20 @@ class JobDetailsTab(BasePage):
         customer re-selection needed, matching how adding a normal job to
         an existing estimate already skips that step), then switch to the
         Job Parts tab where that part's fields get filled in.
+
+        "Add Part" lives on the Job Details tab, but finishing a previous
+        part leaves us sitting on the Job Parts tab — switch back to Job
+        Details first (confirmed live: without this, the second and later
+        parts silently fail to populate since the button isn't there to
+        find). A no-op if we're already on Job Details (e.g. for part 1).
         """
         from app.v1.modules.bot.pages.new_estimate_page import NewEstimatePage
 
         self._debug(f"Adding Multi-Part part with job method: {part_job_method}")
         self.wait_for_spinner_to_disappear()
+        self.click(self.JOB_DETAILS_TAB)
+        self.wait_for_spinner_to_disappear()
+
         self.click(self.MULTIPART_ADD_PART_BUTTON)
         self.wait_for_spinner_to_disappear()
 

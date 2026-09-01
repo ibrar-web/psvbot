@@ -977,6 +977,17 @@ async def _call_status_update(
         logger.exception("BACK_URL_STATUS_UPDATE callback failed: %s", exc)
 
 
+def _stringify_dict_keys(value: Any) -> Any:
+    """estimate_totals is built with int keys (1-based requirement index).
+    That's fine for JSON delivery, but if the HTTP callback fails and the
+    payload gets stored directly into Mongo as a fallback, BSON rejects
+    non-string dict keys outright — convert them so both paths work.
+    """
+    if isinstance(value, dict):
+        return {str(key): val for key, val in value.items()}
+    return value
+
+
 async def _call_record_result(
     *,
     task_payload: Dict[str, Any],
@@ -1024,7 +1035,7 @@ async def _call_record_result(
         "job_items": result.get("job_items"),
         "direct_charges": result.get("direct_charges"),
         "error_message": None if success else (error_message or result.get("message")),
-        "estimate_totals": result.get("estimate_totals"),
+        "estimate_totals": _stringify_dict_keys(result.get("estimate_totals")),
         "estimate_id": estimate_id,
     }
     try:
