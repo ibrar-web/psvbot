@@ -8,7 +8,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 from app.v1.modules.bot import csv_logger
-from app.v1.modules.bot.config import DEBUG, ESTIMATE_HISTORY_STORAGE_ROOT
+from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.session_runner import (
     _cleanup_browser,
     _ensure_browser_and_login,
@@ -19,7 +19,6 @@ from app.v1.modules.bot.pages.login_page import InvalidLoginCredentialsError
 from app.v1.modules.bot.etimate_history.pages.estimate_history_export_page import (
     EstimateHistoryExportPage,
 )
-from app.v1.modules.bot.etimate_history.public_storage import store_file_publicly
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +50,6 @@ def run_estimate_history_export_flow(
             "status": "error",
             "message": "Missing PrintSmith base url",
         }
-
-    queue_id = str(task_payload.get("queue_id") or "").strip() or "manual"
-    tenant_id = str(task_payload.get("tenant_id") or "adhoc").strip() or "adhoc"
 
     browser: Optional[Browser] = None
     context: Optional[BrowserContext] = None
@@ -95,12 +91,6 @@ def run_estimate_history_export_flow(
             csv_path = history_page.download_csv()
             _debug(f"CSV downloaded to: {csv_path}")
 
-            current_step = "store_csv"
-            _ensure_within_timeout(started_at, current_step)
-            store_result = _store_history_csv_publicly(
-                csv_path, tenant_id=tenant_id, queue_id=queue_id
-            )
-
             current_step = "logout"
             logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
 
@@ -110,7 +100,12 @@ def run_estimate_history_export_flow(
                 "step": current_step,
                 "logout_succeeded": logout_succeeded,
                 "logout_error": logout_error,
-                **store_result,
+                # Local temp file only — no public copy is made any more.
+                # The caller (queue_service._call_record_result) reads and
+                # uploads these actual bytes as a multipart file attachment,
+                # then deletes the temp file once the callback completes.
+                "history_file_name": csv_path.name,
+                "history_file_local_path": str(csv_path),
             }
 
     except InvalidLoginCredentialsError as exc:
@@ -151,7 +146,10 @@ def run_estimate_history_export_flow(
         }
 
     finally:
-        _cleanup_local_csv_file(csv_path)
+        # The temp CSV (if any) is intentionally NOT deleted here — it must
+        # still exist when queue_service._call_record_result uploads it as
+        # the result callback's file attachment. That call happens after
+        # this flow returns, and is responsible for deleting it afterward.
         _cleanup_browser(
             browser, context, page,
             flow_failed=flow_failed,
@@ -159,39 +157,3 @@ def run_estimate_history_export_flow(
             logout_error=logout_error,
         )
         del browser, context, page, csv_path
-
-
-def _store_history_csv_publicly(
-    csv_path: Path,
-    *,
-    tenant_id: str,
-    queue_id: str,
-) -> Dict[str, Optional[str]]:
-    result = store_file_publicly(
-        csv_path,
-        subfolder=ESTIMATE_HISTORY_STORAGE_ROOT,
-        tenant_id=tenant_id,
-        queue_id=queue_id,
-    )
-    return {
-        "history_file_name": result["file_name"],
-        "history_file_local_path": result["file_local_path"],
-        "history_file_url": result["file_url"],
-    }
-
-
-def _cleanup_local_csv_file(csv_path: Optional[Path]) -> None:
-    if csv_path is None:
-        return
-    try:
-        csv_path.unlink(missing_ok=True)
-    except Exception:
-        logger.exception("Failed to delete temporary estimate history CSV")
-        return
-
-    try:
-        parent = csv_path.parent
-        if parent.exists() and not any(parent.iterdir()):
-            parent.rmdir()
-    except Exception:
-        logger.exception("Failed to delete temporary estimate history directory")

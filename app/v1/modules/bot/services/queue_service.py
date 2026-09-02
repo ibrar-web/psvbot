@@ -1039,6 +1039,22 @@ def _derive_result_url(base_url: str, new_path: str) -> str:
     return urlunsplit((parsed.scheme, parsed.netloc, new_path, "", ""))
 
 
+def _cleanup_local_result_file(file_path: str) -> None:
+    """Delete a local temp result file (and its now-empty parent dir) once
+    the result callback is done with it. Never raises.
+    """
+    try:
+        os.remove(file_path)
+    except OSError:
+        return
+    try:
+        parent = os.path.dirname(file_path)
+        if parent and not os.listdir(parent):
+            os.rmdir(parent)
+    except OSError:
+        pass
+
+
 async def _call_record_result(
     *,
     task_payload: Dict[str, Any],
@@ -1085,13 +1101,14 @@ async def _call_record_result(
         }
     elif task_type == TaskType.ESTIMATE_HISTORY_EXPORT.value:
         # Same baseline (queue_id/success/error_message) plus the CSV file
-        # this task type actually produces.
+        # name. The CSV itself is never stored publicly — on success it's
+        # uploaded below as an actual multipart file attachment straight
+        # from the local temp download, so there's no public URL to send.
         payload = {
             "queue_id": queue_id,
             "success": success,
             "error_message": error_payload,
             "history_file_name": result.get("history_file_name"),
-            "history_file_url": result.get("history_file_url"),
         }
     elif task_type == TaskType.INVOICE_HISTORY_LOOKUP.value:
         # Same baseline plus the scraped record itself, matching exactly
@@ -1176,6 +1193,12 @@ async def _call_record_result(
             },
         )
         return False
+    finally:
+        # estimate_history_export never stores a public copy — the local
+        # temp download is only kept alive long enough to be read/uploaded
+        # above, then removed here regardless of whether that succeeded.
+        if task_type == TaskType.ESTIMATE_HISTORY_EXPORT.value and history_file_path:
+            _cleanup_local_result_file(history_file_path)
 
 
 async def _heartbeat(queue_id: str) -> None:

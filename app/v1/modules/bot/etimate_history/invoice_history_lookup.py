@@ -7,7 +7,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 from app.v1.modules.bot import csv_logger
-from app.v1.modules.bot.config import DEBUG, INVOICE_DETAIL_STORAGE_ROOT
+from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.session_runner import (
     _cleanup_browser,
     _ensure_browser_and_login,
@@ -18,7 +18,6 @@ from app.v1.modules.bot.pages.login_page import InvalidLoginCredentialsError
 from app.v1.modules.bot.etimate_history.pages.invoice_history_lookup_page import (
     InvoiceHistoryLookupPage,
 )
-from app.v1.modules.bot.etimate_history.public_storage import store_json_publicly
 
 logger = logging.getLogger(__name__)
 
@@ -104,27 +103,6 @@ def _build_other_charges(job_items: list) -> list:
     return other_charges
 
 
-def _store_invoice_detail_json_publicly(
-    formatted: Dict[str, Any],
-    *,
-    invoice_id: str,
-    tenant_id: str,
-    queue_id: str,
-) -> Dict[str, Optional[str]]:
-    result = store_json_publicly(
-        formatted,
-        subfolder=INVOICE_DETAIL_STORAGE_ROOT,
-        tenant_id=tenant_id,
-        queue_id=queue_id,
-        file_name=f"invoice_{invoice_id}.json",
-    )
-    return {
-        "detail_file_name": result["file_name"],
-        "detail_file_local_path": result["file_local_path"],
-        "detail_file_url": result["file_url"],
-    }
-
-
 def run_invoice_history_lookup_flow(
     tenant_credentials: Optional[Dict[str, Any]] = None,
     task_payload: Optional[Dict[str, Any]] = None,
@@ -145,8 +123,6 @@ def run_invoice_history_lookup_flow(
     company = str(tenant_credentials.get("company") or "").strip()
     base_url = str(tenant_credentials.get("printsmith_url") or "").strip()
     invoice_id = str(task_payload.get("invoice_id") or "").strip()
-    queue_id = str(task_payload.get("queue_id") or "").strip() or "manual"
-    tenant_id = str(task_payload.get("tenant_id") or "adhoc").strip() or "adhoc"
 
     if not username or not password:
         return {
@@ -207,7 +183,7 @@ def run_invoice_history_lookup_flow(
                 f"{len(scraped.get('other_charges', []))} other charge(s)"
             )
 
-            current_step = "store_details"
+            current_step = "format_result"
             _ensure_within_timeout(started_at, current_step)
             job_items = scraped.get("job_items", [])
             # direct_charges: invoice-wide charges read straight off the
@@ -224,9 +200,7 @@ def run_invoice_history_lookup_flow(
                 "requirements": requirements,
                 "direct_charges": direct_charges,
             }
-            store_result = _store_invoice_detail_json_publicly(
-                formatted, invoice_id=invoice_id, tenant_id=tenant_id, queue_id=queue_id
-            )
+            logger.info("Invoice history lookup result for invoice_id=%s: %s", invoice_id, formatted)
 
             current_step = "logout"
             logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
@@ -245,7 +219,6 @@ def run_invoice_history_lookup_flow(
                 # quantity/job_charges) — Digital Color, Multi-Part, etc.
                 "job_items": requirements,
                 "direct_charges": direct_charges,
-                **store_result,
             }
 
     except InvalidLoginCredentialsError as exc:
