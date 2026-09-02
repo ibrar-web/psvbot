@@ -369,6 +369,40 @@ async def _post_json(
         }
 
 
+async def _post_form_with_file(
+    url: str,
+    fields: Dict[str, Any],
+    *,
+    file_field_name: str,
+    file_path: str,
+    file_content_type: str,
+    source_payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    """multipart/form-data POST with an actual file attached, plus the rest
+    of the result fields as regular form fields. Content-Type is left for
+    httpx to set itself (with the multipart boundary) — the shared
+    _callback_headers() hardcodes application/json, which would conflict.
+    """
+    headers = _callback_headers(source_payload)
+    headers.pop("Content-Type", None)
+    form_fields = {key: ("" if value is None else str(value)) for key, value in fields.items()}
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        with open(file_path, "rb") as file_obj:
+            files = {file_field_name: (os.path.basename(file_path), file_obj, file_content_type)}
+            response = await client.post(url, data=form_fields, files=files, headers=headers)
+        response.raise_for_status()
+        try:
+            body = response.json()
+        except ValueError:
+            body = None
+        return {
+            "status": "success",
+            "http_status": response.status_code,
+            "response": body,
+        }
+
+
 async def fetch_main_server_record(queue_id: str) -> Dict[str, Any]:
     if not MAIN_SERVER_API_BASE_URL:
         raise HTTPException(
@@ -1034,35 +1068,101 @@ async def _call_record_result(
         task_payload.get("estimate_id")
         or result.get("estimate_id")
     )
-    payload = {
-        "queue_id": queue_id,
-        "task_type": task_type,
-        "machine_name": machine_name,
-        "tenant_id": task_payload.get("tenant_id"),
-        "success": success,
-        "status": task_status or (TASK_STATUS_DONE if success else TASK_STATUS_FAILED),
-        "attempt": attempt,
-        "max_attempts": MAX_TASK_ATTEMPTS,
-        "will_retry": will_retry,
-        "summary_file_name": result.get("summary_file_name"),
-        "summary_file_url": result.get("summary_file_url"),
-        "summary_file_storage_key": result.get("summary_file_storage_key"),
-        "history_file_name": result.get("history_file_name"),
-        "history_file_url": result.get("history_file_url"),
-        "history_file_local_path": result.get("history_file_local_path"),
-        "history_file_storage_key": result.get("history_file_storage_key"),
-        "detail_file_name": result.get("detail_file_name"),
-        "detail_file_url": result.get("detail_file_url"),
-        "detail_file_local_path": result.get("detail_file_local_path"),
-        "job_items": result.get("job_items"),
-        "direct_charges": result.get("direct_charges"),
-        "error_message": None if success else (error_message or result.get("message")),
-        "estimate_totals": _stringify_dict_keys(result.get("estimate_totals")),
-        "estimate_id": estimate_id,
-    }
+    error_payload = None if success else (error_message or result.get("message"))
+
+    if task_type == TaskType.CREATE_ESTIMATE.value:
+        # Matches the receiving endpoint's actual schema exactly (given):
+        # queue_id, success, summary_file_name, summary_file_url,
+        # error_message, estimate_totals, estimate_id — nothing else.
+        payload = {
+            "queue_id": queue_id,
+            "success": success,
+            "summary_file_name": result.get("summary_file_name"),
+            "summary_file_url": result.get("summary_file_url"),
+            "error_message": error_payload,
+            "estimate_totals": _stringify_dict_keys(result.get("estimate_totals")),
+            "estimate_id": estimate_id,
+        }
+    elif task_type == TaskType.ESTIMATE_HISTORY_EXPORT.value:
+        # Same baseline (queue_id/success/error_message) plus the CSV file
+        # this task type actually produces.
+        payload = {
+            "queue_id": queue_id,
+            "success": success,
+            "error_message": error_payload,
+            "history_file_name": result.get("history_file_name"),
+            "history_file_url": result.get("history_file_url"),
+        }
+    elif task_type == TaskType.INVOICE_HISTORY_LOOKUP.value:
+        # Same baseline plus the scraped record itself, matching exactly
+        # what's saved to public/invoice-detail/ ({invoice_id,
+        # requirements, direct_charges}) — "requirements" is shaped like
+        # create_estimate's own incoming requirements (job_method/
+        # description/stock_search/size/sides/quantity/job_charges), so
+        # the receiving server can treat it the same way it treats one it
+        # originally sent in a create_estimate request.
+        payload = {
+            "queue_id": queue_id,
+            "success": success,
+            "error_message": error_payload,
+            "invoice_id": task_payload.get("invoice_id") or result.get("invoice_id"),
+            "requirements": result.get("job_items"),
+            "direct_charges": result.get("direct_charges"),
+        }
+    else:
+        tenant_id = task_payload.get("tenant_id") or (
+            task_payload.get("quote") or {}
+        ).get("tenant_id")
+        payload = {
+            "queue_id": queue_id,
+            "task_type": task_type,
+            "machine_name": machine_name,
+            "tenant_id": tenant_id,
+            "success": success,
+            "status": task_status or (TASK_STATUS_DONE if success else TASK_STATUS_FAILED),
+            "attempt": attempt,
+            "max_attempts": MAX_TASK_ATTEMPTS,
+            "will_retry": will_retry,
+            "summary_file_name": result.get("summary_file_name"),
+            "summary_file_url": result.get("summary_file_url"),
+            "summary_file_storage_key": result.get("summary_file_storage_key"),
+            "history_file_name": result.get("history_file_name"),
+            "history_file_url": result.get("history_file_url"),
+            "history_file_local_path": result.get("history_file_local_path"),
+            "history_file_storage_key": result.get("history_file_storage_key"),
+            "detail_file_name": result.get("detail_file_name"),
+            "detail_file_url": result.get("detail_file_url"),
+            "detail_file_local_path": result.get("detail_file_local_path"),
+            "job_items": result.get("job_items"),
+            "direct_charges": result.get("direct_charges"),
+            "error_message": error_payload,
+            "estimate_totals": _stringify_dict_keys(result.get("estimate_totals")),
+            "estimate_id": estimate_id,
+        }
+    history_file_path = result.get("history_file_local_path")
+    send_csv_as_file = (
+        task_type == TaskType.ESTIMATE_HISTORY_EXPORT.value
+        and success
+        and history_file_path
+        and os.path.isfile(history_file_path)
+    )
     logger.info("Result callback POST url=%s payload=%s", target_url, payload)
     try:
-        await _post_json(target_url, payload, source_payload)
+        if send_csv_as_file:
+            await _post_form_with_file(
+                target_url,
+                {
+                    "queue_id": queue_id,
+                    "success": success,
+                    "error_message": error_payload,
+                },
+                file_field_name="file",
+                file_path=history_file_path,
+                file_content_type="text/csv",
+                source_payload=source_payload,
+            )
+        else:
+            await _post_json(target_url, payload, source_payload)
         return True
     except Exception as exc:
         logger.exception("Result callback failed queue_id=%s: %s", queue_id, exc)

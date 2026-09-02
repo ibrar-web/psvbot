@@ -239,7 +239,11 @@ def run_invoice_history_lookup_flow(
                 "current_url": page.url,
                 "logout_succeeded": logout_succeeded,
                 "logout_error": logout_error,
-                "job_items": job_items,
+                # requirements (not the raw scraped job_items) so this
+                # matches create_estimate's own incoming "requirements"
+                # shape (job_method/description/stock_search/size/sides/
+                # quantity/job_charges) — Digital Color, Multi-Part, etc.
+                "job_items": requirements,
                 "direct_charges": direct_charges,
                 **store_result,
             }
