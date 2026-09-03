@@ -65,6 +65,21 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         return !!target && target.getAttribute("aria-selected") === "true";
     }"""
 
+    # Multi-Part jobs add a 4th top-level tab ("Job Parts", between Job
+    # Details and Estimate Summary) hosting a p-treetable ("jobparts_grid")
+    # listing each part — same row shape as the outer Estimate/Invoice
+    # Summary tree table (a hidden index span wrapping "job-N"), just under
+    # its own name attribute so it doesn't collide with the outer table's.
+    JOB_PARTS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Parts']]"
+    _JOB_PARTS_TAB_ACTIVE_JS = """() => {
+        const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
+        const target = tabs.find(t => (t.innerText || "").includes("Job Parts"));
+        return !!target && target.getAttribute("aria-selected") === "true";
+    }"""
+    JOBPARTS_GRID_TBODY = "p-treetable[name='jobparts_grid'] tbody.ui-treetable-tbody"
+    MULTIPART_DESCRIPTION_FIELD = "xpath=//textarea[@name='multipart-descriptionField']"
+    MULTIPART_NOTES_FIELD = "xpath=//textarea[@name='multipart-jobnotesField']"
+
     def _debug(self, message: str) -> None:
         if DEBUG:
             print(f"[PrintSmith][InvoiceHistoryLookupPage] {message}")
@@ -231,21 +246,122 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             state="visible", timeout=self._timeout_ms
         )
 
-    def _row_count(self) -> int:
+    # ------------------------------------------------------------------
+    # Multi-Part: "Job Parts" tab + jobparts_grid scrape
+    # ------------------------------------------------------------------
+
+    def _enter_job_parts_tab(self) -> None:
+        """Land on the "Job Parts" tab's jobparts_grid list. Also used to
+        get BACK to the list after opening one part's fields — opening a
+        part happens within this same already-active tab (unlike Job
+        Details -> Estimate Summary, there's no separate tab to switch
+        back to), so this re-clicks JOB_PARTS_TAB every time.
+        """
+        self.wait_for_spinner_to_disappear()
+        tab_loc = self._loc(self.JOB_PARTS_TAB).first
+        tab_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        tab_loc.click()
+        self.page.wait_for_function(self._JOB_PARTS_TAB_ACTIVE_JS, timeout=self._timeout_ms)
+        self.wait_for_spinner_to_disappear()
+        self._loc(f"css={self.JOBPARTS_GRID_TBODY}").first.wait_for(
+            state="visible", timeout=self._timeout_ms
+        )
+
+    def _open_part_row(self, row_index: int) -> None:
+        """Open one jobparts_grid row's fields. Unlike _open_job_row, this
+        does NOT check for a "Job Details" tab becoming active — opening a
+        part stays on the "Job Parts" tab throughout, only its own
+        sub-form content changes, so _wait_for_job_details_form_ready()
+        (tab-agnostic — just waits for Job Method to show a value) is the
+        only readiness signal needed.
+        """
+        row_loc = self._loc(f"css={self.JOBPARTS_GRID_TBODY} > tr").nth(row_index)
+        desc_loc = row_loc.locator(".job_description")
+
+        if desc_loc.count() > 0:
+            desc_loc.first.scroll_into_view_if_needed(timeout=self._timeout_ms)
+            desc_loc.first.click(timeout=self._timeout_ms)
+        else:
+            row_loc.scroll_into_view_if_needed(timeout=self._timeout_ms)
+            row_loc.click(timeout=self._timeout_ms)
+
+        self.wait_for_spinner_to_disappear()
+        self._wait_for_job_details_form_ready()
+
+    def _read_multipart_parts(self) -> List[Dict[str, Any]]:
+        """Walk a Multi-Part job's own "Job Parts" tab (jobparts_grid) and
+        read every part, reusing _read_job_details/_read_job_charges for
+        each one exactly like scrape_invoice does for top-level jobs.
+        """
+        self._enter_job_parts_tab()
+
+        parts: List[Dict[str, Any]] = []
+        index = 0
+        while True:
+            self.wait_for_spinner_to_disappear()
+            if index >= self._row_count(table_selector=self.JOBPARTS_GRID_TBODY):
+                break
+
+            classification = self._classify_row(
+                index,
+                table_selector=self.JOBPARTS_GRID_TBODY,
+                index_span_name="multipart_job_charge_index",
+            )
+            if not classification:
+                self._debug(f"Part row {index} did not classify as a job; skipping")
+                index += 1
+                continue
+
+            label = classification["label"]
+            self._debug(f"Part row {index} ({label}): opening")
+            try:
+                self._open_part_row(index)
+                part_method = self._read_job_method()
+                part_details = self._read_job_details(part_method, top_level=False)
+                part_charges = self._read_job_charges()
+                parts.append(
+                    {
+                        "job_name": label,
+                        "job_method": part_method,
+                        **part_details,
+                        "job_charges": part_charges,
+                    }
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to scrape multi-part part %s (%s); continuing with remaining parts",
+                    index,
+                    label,
+                )
+            finally:
+                self._enter_job_parts_tab()
+
+            index += 1
+
+        self._debug(f"Scraped {len(parts)} multi-part part(s)")
+        return parts
+
+    def _row_count(self, table_selector: str = "tbody.ui-treetable-tbody") -> int:
         return int(
             self.page.evaluate(
-                "() => document.querySelectorAll('tbody.ui-treetable-tbody > tr').length"
+                "(sel) => document.querySelectorAll(sel + ' > tr').length",
+                table_selector,
             )
             or 0
         )
 
-    def _classify_row(self, row_index: int) -> Optional[Dict[str, str]]:
+    def _classify_row(
+        self,
+        row_index: int,
+        table_selector: str = "tbody.ui-treetable-tbody",
+        index_span_name: str = "job_charge_index",
+    ) -> Optional[Dict[str, str]]:
         return self.page.evaluate(
-            """(rowIndex) => {
-                const rows = document.querySelectorAll('tbody.ui-treetable-tbody > tr');
+            """({tableSelector, rowIndex, indexSpanName}) => {
+                const rows = document.querySelectorAll(tableSelector + ' > tr');
                 const row = rows[rowIndex];
                 if (!row) return null;
-                const indexSpan = row.querySelector("span[name='job_charge_index']");
+                const indexSpan = row.querySelector(`span[name='${indexSpanName}']`);
                 if (!indexSpan) return null;
                 const jobSpan = indexSpan.querySelector("span[name^='job-']");
                 if (jobSpan) {
@@ -257,7 +373,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                 }
                 return null;
             }""",
-            row_index,
+            {"tableSelector": table_selector, "rowIndex": row_index, "indexSpanName": index_span_name},
         )
 
     def _read_charge_row(self, row_index: int) -> Dict[str, str]:
@@ -452,15 +568,28 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     def _read_job_method(self) -> str:
         return self._read_kendo_text("jobMethodList")
 
-    def _read_job_details(self, job_method: str) -> Dict[str, str]:
+    def _read_job_details(self, job_method: str, *, top_level: bool = True) -> Dict[str, Any]:
         method_key = (job_method or "").strip().lower()
-        details: Dict[str, str] = {
+        details: Dict[str, Any] = {
             "product": self._read_kendo_text("productsList"),
             "location": self._read_kendo_text("locationList"),
             "job_comment": self._field_value("xpath=//input[@name='job_comment']"),
         }
 
-        if method_key == "charges only":
+        if method_key == "multi-part":
+            if not top_level:
+                logger.warning(
+                    "Nested multi-part part encountered; not supported, "
+                    "returning no sub-parts"
+                )
+                details["description"] = ""
+                details["notes"] = ""
+                details["parts"] = []
+            else:
+                details["description"] = self._field_value(self.MULTIPART_DESCRIPTION_FIELD)
+                details["notes"] = self._field_value(self.MULTIPART_NOTES_FIELD)
+                details["parts"] = self._read_multipart_parts()
+        elif method_key == "charges only":
             details["description"] = self._field_value(
                 "xpath=//textarea[@name='charges-descriptionField']"
             )

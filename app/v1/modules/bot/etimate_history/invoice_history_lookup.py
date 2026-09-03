@@ -28,53 +28,77 @@ def _debug(message: str) -> None:
     logger.info(message)
 
 
+def _reshape_job_item(item: Dict[str, Any], *, parts: Optional[list] = None) -> Dict[str, Any]:
+    """Reshape one scraped job item (or one multi-part part, same shape)
+    into the requirement schema used by create_estimate's data model (see
+    testdata.json's "create_estimate" entries / InvoicePage._build_job_data):
+    description, stock_search, quantity, size, sides, job_method,
+    job_charges. Key names match that schema exactly; the values behind
+    "size"/"sides"/"product" come from the closest equivalent read off Job
+    Details: size = Finish Size, sides = the active Print button
+    (Simplex/Duplex), product = Stock (the Product dropdown is frequently
+    empty on real invoices; Stock carries the actual meaningful value).
+    Extra scraped fields (stock_color, location, job_comment,
+    unit_per_side, price, notes, job_name) are kept alongside since they
+    carry real information beyond the original schema.
+
+    `parts`, when given, is inserted right after job_charges — mirrors a
+    Multi-Part job's own "parts" key (see _build_job_data on the write
+    side), each part reshaped through this same function.
+    """
+    requirement: Dict[str, Any] = {
+        "job_name": item.get("job_name", ""),
+        "description": item.get("description", ""),
+        "stock_search": item.get("stock", ""),
+        "quantity": item.get("quantity", ""),
+        "size": item.get("finish_size", ""),
+        "sides": item.get("sides", ""),
+        "job_method": item.get("job_method", ""),
+        "job_charges": item.get("job_charges", []),
+    }
+    if parts is not None:
+        requirement["parts"] = parts
+    requirement.update(
+        {
+            "product": item.get("stock", ""),
+            "stock_color": item.get("stock_color", ""),
+            "location": item.get("location", ""),
+            "job_comment": item.get("job_comment", ""),
+            "unit_per_side": item.get("unit_per_side", ""),
+            "price": item.get("price", ""),
+            "notes": item.get("notes", ""),
+        }
+    )
+    return requirement
+
+
 def _to_requirements_format(job_items: list, other_charges: list) -> list:
-    """Reshape scraped job items into the same requirement shape used by
-    create_estimate's data model (see testdata.json's "create_estimate"
-    entries / InvoicePage._build_job_data): description, stock_search,
-    quantity, size, sides, job_method, job_charges. Key names match that
-    schema exactly; the values behind "size"/"sides"/"product" come from
-    the closest equivalent read off Job Details: size = Finish Size,
-    sides = the active Print button (Simplex/Duplex), product = Stock
-    (the Product dropdown is frequently empty on real invoices; Stock
-    carries the actual meaningful value). Extra scraped fields
-    (stock_color, location, job_comment, unit_per_side, price, notes,
-    job_name) are kept alongside since they carry real information beyond
-    the original schema.
+    """Reshape scraped job items into requirements (see _reshape_job_item).
 
     Charges Only jobs are excluded entirely — their data already lives in
     other_charges (see _build_other_charges), so keeping them here too
     would just duplicate it. other_charges is attached to the first
     remaining (non-Charges-Only) job — right after its own job_charges —
     rather than as a separate top-level key.
+
+    A Multi-Part job's own "parts" list is reshaped the same way, part by
+    part — including a Charges Only part, which is NOT excluded/hoisted
+    the way a top-level Charges Only job is; it stays inside "parts" as-is,
+    matching the write side's own data shape.
     """
     requirements = []
     for item in job_items:
         if (item.get("job_method") or "").strip().lower() == "charges only":
             continue
-        requirement = {
-            "job_name": item.get("job_name", ""),
-            "description": item.get("description", ""),
-            "stock_search": item.get("stock", ""),
-            "quantity": item.get("quantity", ""),
-            "size": item.get("finish_size", ""),
-            "sides": item.get("sides", ""),
-            "job_method": item.get("job_method", ""),
-            "job_charges": item.get("job_charges", []),
-        }
+        is_multipart = (item.get("job_method") or "").strip().lower() == "multi-part"
+        parts = (
+            [_reshape_job_item(part) for part in item.get("parts", [])]
+            if is_multipart
+            else None
+        )
+        requirement = _reshape_job_item(item, parts=parts)
         if not requirements and other_charges:
             requirement["other_charges"] = other_charges
-        requirement.update(
-            {
-                "product": item.get("stock", ""),
-                "stock_color": item.get("stock_color", ""),
-                "location": item.get("location", ""),
-                "job_comment": item.get("job_comment", ""),
-                "unit_per_side": item.get("unit_per_side", ""),
-                "price": item.get("price", ""),
-                "notes": item.get("notes", ""),
-            }
-        )
         requirements.append(requirement)
     return requirements
 
