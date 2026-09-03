@@ -19,6 +19,7 @@ class EstimateHistoryExportPage(EstimateHistoryPage):
 
     def download_csv(self) -> Path:
         download_timeout = max(self._timeout_ms, 120_000)
+        self._nudge_mouse()
         with self.page.expect_download(timeout=download_timeout) as download_info:
             self.click(self.DOWNLOAD_CSV_BUTTON)
             self._debug("Download as CSV clicked; waiting for download")

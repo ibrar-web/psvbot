@@ -205,6 +205,22 @@ class BasePage:
             timeout=self._timeout_ms,
         )
 
+    def _nudge_mouse(self) -> None:
+        """Move the real mouse cursor to reset a lingering hover/busy state.
+
+        Observed live on the Estimate History grid: after a reload (e.g.
+        clear filters), the next click (Download as CSV) can hang
+        indefinitely even though wait_for_spinner_to_disappear() already
+        passed — Playwright's click() waits for the target to receive
+        pointer events, but something from the reload keeps intercepting
+        them at the cursor's last position. Manually moving the mouse
+        anywhere on screen unblocks it every time; this reproduces that
+        instead of relying on a human being at the keyboard.
+        """
+        viewport = self.page.viewport_size or {"width": 1280, "height": 720}
+        self.page.mouse.move(10, 10)
+        self.page.mouse.move(viewport["width"] // 2, viewport["height"] // 2)
+
     # ------------------------------------------------------------------
     # Kendo combobox helper
     # ------------------------------------------------------------------

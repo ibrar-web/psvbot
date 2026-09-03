@@ -146,6 +146,10 @@ class EstimateHistoryPage(BasePage):
         # that it's finished.
         self.page.wait_for_timeout(3000)
         self.wait_for_spinner_to_disappear()
+        # Observed live: once all records finish loading here, the next
+        # click (Download as CSV) can hang until the mouse cursor actually
+        # moves — see BasePage._nudge_mouse().
+        self._nudge_mouse()
 
     def _sanitize_filename(self, filename: str, default_extension: str = "") -> str:
         filename = unquote(filename)
