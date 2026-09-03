@@ -20,7 +20,7 @@ if [[ ! -x ".venv/bin/python" ]]; then
 fi
 
 source .venv/bin/activate
-.venv/bin/python -m uvicorn main:app --env-file .env.staging --host 0.0.0.0 --port 8001
+.venv/bin/python -m uvicorn main:app --env-file .env.local --host 0.0.0.0 --port 8001 --reload
 
 # sudo systemctl daemon-reload
 # sudo systemctl restart psvbot

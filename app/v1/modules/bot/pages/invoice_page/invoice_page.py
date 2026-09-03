@@ -314,7 +314,7 @@ class InvoicePage(BasePage):
 
         method = (job_data.get("job_method") or "").strip().lower()
         self._debug(f"Job Details dispatch: job_method='{method}'")
-        if method == "sublet":
+        if method.startswith("sublet"):
             self._complete_sublet_job_details(job_details_tab, job_data)
             return
         if method == "multi-part":
@@ -403,7 +403,7 @@ class InvoicePage(BasePage):
                 }
             )
             return
-        if method == "sublet":
+        if method.startswith("sublet"):
             job_details_tab.wait_until_job_parts_active(job_method="sublet")
             job_details_tab.fill_job_description(part_data, job_method="sublet")
             job_details_tab.select_vendor(part_data.get("vendor_name", ""))

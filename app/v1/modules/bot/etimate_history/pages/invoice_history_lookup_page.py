@@ -65,12 +65,18 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         return !!target && target.getAttribute("aria-selected") === "true";
     }"""
 
-    # Multi-Part jobs add a 4th top-level tab ("Job Parts", between Job
-    # Details and Estimate Summary) hosting a p-treetable ("jobparts_grid")
-    # listing each part — same row shape as the outer Estimate/Invoice
-    # Summary tree table (a hidden index span wrapping "job-N"), just under
-    # its own name attribute so it doesn't collide with the outer table's.
-    JOB_PARTS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Parts']]"
+    # Multi-Part: the jobparts_grid list (Item/Description/Price/Qty/Item
+    # Total) is rendered directly on the container job's own "Job Details"
+    # tab — the SAME tab _open_job_row already lands us on — right
+    # alongside the "Add Part" button. There is no separate tab click
+    # needed to see the list. Clicking a part ROW navigates INTO the
+    # "Job Parts" tab to show that part's own fields (confirmed: same
+    # interaction as clicking a top-level job row on Estimate Summary
+    # navigating into Job Details); clicking JOB_DETAILS_TAB again returns
+    # to the container job and its list for the next part — mirrors the
+    # write side's own add_part() fix (Add Part/the list live on Job
+    # Details, not Job Parts).
+    JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
     _JOB_PARTS_TAB_ACTIVE_JS = """() => {
         const tabs = Array.from(document.querySelectorAll("li[role='tab']"));
         const target = tabs.find(t => (t.innerText || "").includes("Job Parts"));
@@ -79,6 +85,15 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     JOBPARTS_GRID_TBODY = "p-treetable[name='jobparts_grid'] tbody.ui-treetable-tbody"
     MULTIPART_DESCRIPTION_FIELD = "xpath=//textarea[@name='multipart-descriptionField']"
     MULTIPART_NOTES_FIELD = "xpath=//textarea[@name='multipart-jobnotesField']"
+
+    # Sublet (and its family: Sublet Printing/Promo/Signs/Sign Install — all
+    # share the same "outside job" sub-form, matched by a "sublet" prefix)
+    # is like Charges Only in that it's a simple non-print job, but it ALSO
+    # has its own Vendor/Unit Cost/Markup fields that Charges Only lacks —
+    # confirmed against the write side's own select_vendor/
+    # sublet_price_breakup (job_details.py).
+    SUBLET_DESCRIPTION_FIELD = "xpath=//textarea[@name='outside-descriptionField']"
+    SUBLET_UNIT_COST_FIELD = "xpath=//input[@name='unit_cost']"
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -250,35 +265,43 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     # Multi-Part: "Job Parts" tab + jobparts_grid scrape
     # ------------------------------------------------------------------
 
-    def _enter_job_parts_tab(self) -> None:
-        """Land on the "Job Parts" tab's jobparts_grid list. Also used to
-        get BACK to the list after opening one part's fields — opening a
-        part happens within this same already-active tab (unlike Job
-        Details -> Estimate Summary, there's no separate tab to switch
-        back to), so this re-clicks JOB_PARTS_TAB every time.
+    def _return_to_container_job_details_tab(self) -> None:
+        """Get back to the Multi-Part container's own "Job Details" tab —
+        where the jobparts_grid list lives — after opening a part (which
+        navigates into "Job Parts"). Used both to establish the initial
+        list view and to return to it before opening the next part.
         """
         self.wait_for_spinner_to_disappear()
-        tab_loc = self._loc(self.JOB_PARTS_TAB).first
+        tab_loc = self._loc(self.JOB_DETAILS_TAB).first
         tab_loc.wait_for(state="visible", timeout=self._timeout_ms)
         tab_loc.click()
-        self.page.wait_for_function(self._JOB_PARTS_TAB_ACTIVE_JS, timeout=self._timeout_ms)
+        self.page.wait_for_function(self._JOB_DETAILS_TAB_ACTIVE_JS, timeout=self._timeout_ms)
         self.wait_for_spinner_to_disappear()
         self._loc(f"css={self.JOBPARTS_GRID_TBODY}").first.wait_for(
             state="visible", timeout=self._timeout_ms
         )
 
+    def _is_job_parts_tab_active(self, *, timeout_ms: int, raise_on_timeout: bool = False) -> bool:
+        try:
+            self.page.wait_for_function(self._JOB_PARTS_TAB_ACTIVE_JS, timeout=timeout_ms)
+            return True
+        except PlaywrightTimeoutError:
+            if raise_on_timeout:
+                raise
+            return False
+
     def _open_part_row(self, row_index: int) -> None:
-        """Open one jobparts_grid row's fields. Unlike _open_job_row, this
-        does NOT check for a "Job Details" tab becoming active — opening a
-        part stays on the "Job Parts" tab throughout, only its own
-        sub-form content changes, so _wait_for_job_details_form_ready()
-        (tab-agnostic — just waits for Job Method to show a value) is the
-        only readiness signal needed.
+        """Open one jobparts_grid row — clicking it navigates INTO the
+        "Job Parts" tab to show that part's own fields, the same way
+        clicking a top-level job row on Estimate Summary navigates into
+        Job Details. Mirrors _open_job_row's click + confirm + retry
+        pattern, just checking for "Job Parts" becoming active instead.
         """
         row_loc = self._loc(f"css={self.JOBPARTS_GRID_TBODY} > tr").nth(row_index)
         desc_loc = row_loc.locator(".job_description")
 
-        if desc_loc.count() > 0:
+        clicked_description = desc_loc.count() > 0
+        if clicked_description:
             desc_loc.first.scroll_into_view_if_needed(timeout=self._timeout_ms)
             desc_loc.first.click(timeout=self._timeout_ms)
         else:
@@ -286,14 +309,29 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             row_loc.click(timeout=self._timeout_ms)
 
         self.wait_for_spinner_to_disappear()
+        if not self._is_job_parts_tab_active(timeout_ms=3000):
+            self._debug(
+                f"Part row {row_index}: clicking "
+                f"{'.job_description' if clicked_description else 'the row'} "
+                "did not open Job Parts; retrying on the row itself"
+            )
+            row_loc.scroll_into_view_if_needed(timeout=self._timeout_ms)
+            row_loc.click(timeout=self._timeout_ms)
+            self.wait_for_spinner_to_disappear()
+            self._is_job_parts_tab_active(timeout_ms=self._timeout_ms, raise_on_timeout=True)
+
         self._wait_for_job_details_form_ready()
 
     def _read_multipart_parts(self) -> List[Dict[str, Any]]:
-        """Walk a Multi-Part job's own "Job Parts" tab (jobparts_grid) and
-        read every part, reusing _read_job_details/_read_job_charges for
-        each one exactly like scrape_invoice does for top-level jobs.
+        """Walk a Multi-Part job's jobparts_grid (rendered on the
+        container's own Job Details tab — we're already there) and read
+        every part, reusing _read_job_details/_read_job_charges for each
+        one exactly like scrape_invoice does for top-level jobs.
         """
-        self._enter_job_parts_tab()
+        self.wait_for_spinner_to_disappear()
+        self._loc(f"css={self.JOBPARTS_GRID_TBODY}").first.wait_for(
+            state="visible", timeout=self._timeout_ms
+        )
 
         parts: List[Dict[str, Any]] = []
         index = 0
@@ -334,7 +372,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                     label,
                 )
             finally:
-                self._enter_job_parts_tab()
+                self._return_to_container_job_details_tab()
 
             index += 1
 
@@ -570,9 +608,15 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
 
     def _read_job_details(self, job_method: str, *, top_level: bool = True) -> Dict[str, Any]:
         method_key = (job_method or "").strip().lower()
+        # Charges Only and Sublet (any variant) never render Product/
+        # Location dropdowns at all — confirmed live, every single read
+        # against a real invoice times out empty after the full 8s poll.
+        # Skipping them here avoids wasting ~16s per Charges-Only/Sublet
+        # job, which adds up fast on a multi-part job with several parts.
+        has_product_location = method_key != "charges only" and not method_key.startswith("sublet")
         details: Dict[str, Any] = {
-            "product": self._read_kendo_text("productsList"),
-            "location": self._read_kendo_text("locationList"),
+            "product": self._read_kendo_text("productsList") if has_product_location else "",
+            "location": self._read_kendo_text("locationList") if has_product_location else "",
             "job_comment": self._field_value("xpath=//input[@name='job_comment']"),
         }
 
@@ -596,15 +640,10 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             details["notes"] = self._field_value(
                 "xpath=//textarea[@name='charges-jobnotesField']"
             )
-        elif method_key == "sublet":
-            details["description"] = self._field_value(
-                "xpath=//textarea[@name='outside-descriptionField']"
-            )
-            logger.warning(
-                "Sublet job method scraping is best-effort and not fully "
-                "verified against a live invoice: %s",
-                job_method,
-            )
+        elif method_key.startswith("sublet"):
+            details["description"] = self._field_value(self.SUBLET_DESCRIPTION_FIELD)
+            details["vendor_name"] = self._read_kendo_text("vendor")
+            details["agent_total"] = self._field_value(self.SUBLET_UNIT_COST_FIELD)
         else:
             details["description"] = self._field_value(
                 "xpath=//textarea[@name='digital-descriptionField']"

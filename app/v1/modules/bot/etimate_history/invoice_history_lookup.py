@@ -67,6 +67,10 @@ def _reshape_job_item(item: Dict[str, Any], *, parts: Optional[list] = None) -> 
             "unit_per_side": item.get("unit_per_side", ""),
             "price": item.get("price", ""),
             "notes": item.get("notes", ""),
+            # Sublet-family only (Sublet/Sublet Printing/Promo/Signs/Sign
+            # Install) — empty string for every other job method.
+            "vendor_name": item.get("vendor_name", ""),
+            "agent_total": item.get("agent_total", ""),
         }
     )
     return requirement

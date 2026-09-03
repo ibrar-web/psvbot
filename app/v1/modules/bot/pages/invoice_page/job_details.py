@@ -78,7 +78,7 @@ class JobDetailsTab(BasePage):
             timeout=self._timeout_ms,
         )
         self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
-        if (job_method or "").strip().lower() == "sublet":
+        if (job_method or "").strip().lower().startswith("sublet"):
             self.wait_for_visible(self.SUBLET_DESCRIPTION_INPUT)
         else:
             self.wait_for_visible(self.STOCK_PICKER_BUTTON)
@@ -307,7 +307,7 @@ class JobDetailsTab(BasePage):
         )
         self.page.wait_for_load_state("domcontentloaded", timeout=self._timeout_ms)
         method_key = (job_method or "").strip().lower()
-        if method_key == "sublet":
+        if method_key.startswith("sublet"):
             self.wait_for_visible(self.SUBLET_DESCRIPTION_INPUT)
         elif method_key == "charges only":
             self.wait_for_visible(self.CHARGES_ONLY_DESCRIPTION_INPUT)
@@ -333,12 +333,12 @@ class JobDetailsTab(BasePage):
 
         self._debug("Filling job description before opening Stock Picker")
         self.wait_for_spinner_to_disappear()
-        
-        if (job_method or "").strip().lower() == "sublet":
+
+        if (job_method or "").strip().lower().startswith("sublet"):
             description_loc = self._loc(self.SUBLET_DESCRIPTION_INPUT).first
         else:
             description_loc = self._loc(self.JOB_DESCRIPTION_INPUT).first
-        
+
         description_loc.wait_for(state="visible", timeout=self._timeout_ms)
         description_loc.fill(description)
         self.page.evaluate(
