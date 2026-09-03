@@ -95,6 +95,16 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     SUBLET_DESCRIPTION_FIELD = "xpath=//textarea[@name='outside-descriptionField']"
     SUBLET_UNIT_COST_FIELD = "xpath=//input[@name='unit_cost']"
 
+    # Stock Picker modal — same one the write side uses to SET stock
+    # (job_details.py's STOCK_PICKER_BUTTON/STOCK_CANCEL_BUTTON). Reading
+    # stock via the "choose_stock" combobox's own displayed text isn't
+    # reliable/exact enough to round-trip back into a stock_search later —
+    # opening this modal shows the job's current stock already
+    # pre-selected/highlighted in the grid, in the exact same text format
+    # _select_matching_stock_row() matches against when setting it.
+    STOCK_PICKER_BUTTON = "xpath=//a[@ptooltip='Stock Picker']"
+    STOCK_CANCEL_BUTTON = "xpath=//button[@name='cancel_stock_details']"
+
     def _debug(self, message: str) -> None:
         if DEBUG:
             print(f"[PrintSmith][InvoiceHistoryLookupPage] {message}")
@@ -606,6 +616,68 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     def _read_job_method(self) -> str:
         return self._read_kendo_text("jobMethodList")
 
+    def _read_stock_from_picker(self) -> str:
+        """Open the Stock Picker modal and read whichever row is already
+        pre-selected/highlighted — no search needed, PrintSmith highlights
+        this job's current stock as soon as the modal opens. Read-only:
+        always closes via Cancel, never Save, so nothing on the job
+        changes.
+        """
+        self._debug("Opening Stock Picker modal to read selected stock")
+        self.wait_for_spinner_to_disappear()
+        self.click(self.STOCK_PICKER_BUTTON)
+
+        try:
+            self.page.wait_for_function(
+                """() => {
+                    const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                      .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                    return !!btn;
+                }""",
+                timeout=self._timeout_ms,
+            )
+        except PlaywrightTimeoutError:
+            logger.warning("_read_stock_from_picker: Stock Picker modal never opened")
+            return ""
+
+        self.wait_for_spinner_to_disappear()
+
+        stock_name = ""
+        try:
+            stock_name = self.page.wait_for_function(
+                """() => {
+                    const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                      .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                    if (!btn) return "";
+                    const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
+                    const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"));
+                    const selectedRow = rows.find(row =>
+                        row.getAttribute("aria-selected") === "true" ||
+                        row.classList.contains("k-selected") ||
+                        row.classList.contains("k-state-selected") ||
+                        row.classList.contains("highlightedRow") ||
+                        row.querySelector("[aria-selected='true'], .k-selected, .k-state-selected")
+                    );
+                    if (!selectedRow) return "";
+                    const cell = selectedRow.querySelector("td[aria-colindex='1']");
+                    return (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim();
+                }""",
+                timeout=self._timeout_ms,
+            ).json_value()
+        except PlaywrightTimeoutError:
+            logger.warning("_read_stock_from_picker: no pre-selected stock row found in the modal")
+
+        self._debug(f"Stock Picker modal shows selected stock: '{stock_name}'")
+        self._close_stock_picker()
+        return stock_name
+
+    def _close_stock_picker(self) -> None:
+        self.wait_for_spinner_to_disappear()
+        cancel_loc = self._loc(self.STOCK_CANCEL_BUTTON).first
+        cancel_loc.wait_for(state="visible", timeout=self._timeout_ms)
+        cancel_loc.click(timeout=self._timeout_ms)
+        self.wait_for_spinner_to_disappear()
+
     def _read_job_details(self, job_method: str, *, top_level: bool = True) -> Dict[str, Any]:
         method_key = (job_method or "").strip().lower()
         # Charges Only and Sublet (any variant) never render Product/
@@ -648,7 +720,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             details["description"] = self._field_value(
                 "xpath=//textarea[@name='digital-descriptionField']"
             )
-            details["stock"] = self._read_kendo_text("choose_stock")
+            details["stock"] = self._read_stock_from_picker()
             details["stock_color"] = self._read_kendo_text("stockColorList")
             details["finish_size"] = self._read_kendo_text("finishSize")
             details["sides"] = self._read_print_sides()
