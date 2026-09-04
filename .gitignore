@@ -29,3 +29,7 @@ app/v1/modules/bot/screenshots/*.png
 *.json
 
 *.github
+
+# VM-only credential file for the development deployment. Should only ever
+# exist on the VM, but ignored here so a local copy can never be committed.
+.env.secrets

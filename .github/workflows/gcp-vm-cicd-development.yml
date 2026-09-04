@@ -92,24 +92,43 @@ jobs:
               exit 1
             fi
 
-            # Later duplicate keys win in systemd EnvironmentFile parsing, so
-            # the secret's values override .env.development. The secret is
-            # optional: values may live in either place.
+            # .env is composed from up to three sources, each overriding the
+            # one before it -- duplicate keys resolve last-wins in both systemd
+            # EnvironmentFile parsing and python-dotenv:
+            #
+            #   1. .env.development   committed, non-secret config
+            #   2. .env.secrets       lives ONLY on this VM, placed by hand
+            #                         once (like sa.json). Never in git, never
+            #                         in GitHub. Survives every deploy: scp
+            #                         runs with rm:false and does not carry it.
+            #   3. DEV_APP_ENV_FILE   optional GitHub environment secret
+            #
             cp .env.development .env
+
+            if [ -f .env.secrets ]; then
+              echo "" >> .env
+              cat .env.secrets >> .env
+              echo "" >> .env
+              echo "layered in .env.secrets from the VM"
+            fi
+
             if [ -n "${DEV_ENV_SECRETS:-}" ]; then
               echo "" >> .env
               echo "$DEV_ENV_SECRETS" >> .env
+              echo "layered in the DEV_APP_ENV_FILE secret"
             fi
 
-            # A secret pasted from Windows can carry CR line endings,
-            # which would leave trailing carriage returns in every value
-            # and fail the string comparisons in settings.py.
+            # Either source can arrive with CR line endings (a file edited on
+            # Windows, or a secret pasted from one). A trailing carriage return
+            # fails every string comparison in settings.py.
             sed -i 's/\r$//' .env
 
             # Refuse to restart on an incomplete .env: settings.py falls back
             # to a hardcoded production Mongo URI when MONGO_URL is absent.
             if ! grep -q "^MONGO_URL=." .env; then
-              echo "composed .env has no MONGO_URL - aborting before restart"
+              echo "composed .env has no MONGO_URL - aborting before restart."
+              echo "Add it to ~/psvbot-development/.env.secrets on the VM,"
+              echo "or to the DEV_APP_ENV_FILE environment secret."
               exit 1
             fi
 
