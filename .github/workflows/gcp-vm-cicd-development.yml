@@ -60,7 +60,7 @@ jobs:
           username: ${{ secrets.DEV_VM_USER }}
           key: ${{ secrets.DEV_VM_SSH_KEY }}
           port: ${{ env.SSH_PORT }}
-          source: "app,scripts,.github,main.py,requirements.txt,README.md,run.sh,dockerfile,.env.example"
+          source: "app,scripts,.github,main.py,requirements.txt,README.md,run.sh,dockerfile,.env.example,.env.development"
           target: ${{ env.APP_DIR }}
           overwrite: true
           rm: false
@@ -74,15 +74,43 @@ jobs:
           SERVICE_NAME: ${{ env.SERVICE_NAME }}
           APP_HOST: ${{ env.APP_HOST }}
           APP_PORT: ${{ env.APP_PORT }}
-          APP_ENV_FILE: ${{ secrets.DEV_APP_ENV_FILE }}
+          DEV_ENV_SECRETS: ${{ secrets.DEV_APP_ENV_FILE }}
           EXPECTED_BUILD_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.DEV_VM_HOST }}
           username: ${{ secrets.DEV_VM_USER }}
           key: ${{ secrets.DEV_VM_SSH_KEY }}
           port: ${{ env.SSH_PORT }}
-          envs: APP_DIR,SERVICE_NAME,APP_HOST,APP_PORT,APP_ENV_FILE,EXPECTED_BUILD_SHA
+          envs: APP_DIR,SERVICE_NAME,APP_HOST,APP_PORT,DEV_ENV_SECRETS,EXPECTED_BUILD_SHA
           script: |
+            set -euo pipefail
             cd "$APP_DIR"
+            umask 077
+
+            if [ ! -f .env.development ]; then
+              echo ".env.development is missing on the VM - aborting before restart"
+              exit 1
+            fi
+
+            # Fail loudly rather than let the service boot on settings.py's
+            # hardcoded production Mongo URI fallback.
+            if [ -z "${DEV_ENV_SECRETS:-}" ]; then
+              echo "DEV_APP_ENV_FILE secret is empty - aborting before restart"
+              exit 1
+            fi
+
+            # Later duplicate keys win in systemd EnvironmentFile parsing,
+            # so the secret's values override .env.development.
+            cp .env.development .env
+            echo "" >> .env
+            echo "$DEV_ENV_SECRETS" >> .env
+
+            # A secret pasted from Windows can carry CR line endings,
+            # which would leave trailing carriage returns in every value
+            # and fail the string comparisons in settings.py.
+            sed -i 's/\r$//' .env
+
+            chmod 600 .env
+
             chmod +x scripts/deploy_gcp_vm.sh
             ./scripts/deploy_gcp_vm.sh
