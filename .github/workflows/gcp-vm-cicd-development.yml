@@ -92,23 +92,26 @@ jobs:
               exit 1
             fi
 
-            # Fail loudly rather than let the service boot on settings.py's
-            # hardcoded production Mongo URI fallback.
-            if [ -z "${DEV_ENV_SECRETS:-}" ]; then
-              echo "DEV_APP_ENV_FILE secret is empty - aborting before restart"
-              exit 1
-            fi
-
-            # Later duplicate keys win in systemd EnvironmentFile parsing,
-            # so the secret's values override .env.development.
+            # Later duplicate keys win in systemd EnvironmentFile parsing, so
+            # the secret's values override .env.development. The secret is
+            # optional: values may live in either place.
             cp .env.development .env
-            echo "" >> .env
-            echo "$DEV_ENV_SECRETS" >> .env
+            if [ -n "${DEV_ENV_SECRETS:-}" ]; then
+              echo "" >> .env
+              echo "$DEV_ENV_SECRETS" >> .env
+            fi
 
             # A secret pasted from Windows can carry CR line endings,
             # which would leave trailing carriage returns in every value
             # and fail the string comparisons in settings.py.
             sed -i 's/\r$//' .env
+
+            # Refuse to restart on an incomplete .env: settings.py falls back
+            # to a hardcoded production Mongo URI when MONGO_URL is absent.
+            if ! grep -q "^MONGO_URL=." .env; then
+              echo "composed .env has no MONGO_URL - aborting before restart"
+              exit 1
+            fi
 
             chmod 600 .env
 
