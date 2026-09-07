@@ -430,12 +430,22 @@ class InvoicePage(BasePage):
         self._debug(
             f"Estimate Summary tab active/visible: {estimated_summary_tab.is_visible()}"
         )
-        # Add the delivery charge (if any) before finalizing so it lands on the
-        # generated estimate/invoice.
+        # Add the delivery charge (if any) and any direct_charges from the
+        # payload before finalizing so they land on the generated
+        # estimate/invoice. Both go through the same "Add" menu -> "Add
+        # Charge" modal, so they're combined into one call/one modal
+        # session rather than opening it twice.
+        summary_charges = []
         delivery_charge = self._build_delivery_charge(quote_record or {})
         if delivery_charge:
-            self._debug(f"Adding delivery charge: {delivery_charge}")
-            estimated_summary_tab.add_charges([delivery_charge])
+            summary_charges.append(delivery_charge)
+        direct_charges = (quote_record or {}).get("direct_charges") or []
+        if isinstance(direct_charges, dict):
+            direct_charges = [direct_charges]
+        summary_charges.extend(c for c in direct_charges if c)
+        if summary_charges:
+            self._debug(f"Adding {len(summary_charges)} direct/delivery charge(s): {summary_charges}")
+            estimated_summary_tab.add_charges(summary_charges)
         # Set the wanted/due date before finalizing the estimate.
         estimated_summary_tab.set_wanted_date(quote_record or {})
         self._debug("Downloading invoice from Estimate Summary")
