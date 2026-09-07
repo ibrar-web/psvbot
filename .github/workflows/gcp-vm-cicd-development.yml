@@ -1,0 +1,138 @@
+name: CI/CD to Development VM
+
+on:
+  pull_request:
+    branches:
+      - development-deploy
+  push:
+    branches:
+      - development-deploy
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.11"
+  APP_DIR: ${{ vars.DEV_VM_APP_DIR || format('/home/{0}/psvbot-development', secrets.DEV_VM_USER) }}
+  SERVICE_NAME: ${{ vars.DEV_VM_SERVICE_NAME || 'psvbot-development' }}
+  SSH_PORT: ${{ vars.DEV_VM_SSH_PORT || '22' }}
+  APP_HOST: ${{ vars.DEV_VM_APP_HOST || '127.0.0.1' }}
+  APP_PORT: ${{ vars.DEV_VM_APP_PORT || '8001' }}
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run smoke checks
+        run: |
+          python -m compileall app main.py
+          python -c "import main"
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/development-deploy'
+    environment: development
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy project to VM
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_VM_HOST }}
+          username: ${{ secrets.DEV_VM_USER }}
+          key: ${{ secrets.DEV_VM_SSH_KEY }}
+          port: ${{ env.SSH_PORT }}
+          source: "app,scripts,.github,main.py,requirements.txt,README.md,run.sh,dockerfile,.env.example,.env.development"
+          target: ${{ env.APP_DIR }}
+          overwrite: true
+          rm: false
+          strip_components: 0
+          tar_dereference: true
+
+      - name: Deploy on VM
+        uses: appleboy/ssh-action@v1.2.4
+        env:
+          APP_DIR: ${{ env.APP_DIR }}
+          SERVICE_NAME: ${{ env.SERVICE_NAME }}
+          APP_HOST: ${{ env.APP_HOST }}
+          APP_PORT: ${{ env.APP_PORT }}
+          DEV_ENV_SECRETS: ${{ secrets.DEV_APP_ENV_FILE }}
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.DEV_VM_HOST }}
+          username: ${{ secrets.DEV_VM_USER }}
+          key: ${{ secrets.DEV_VM_SSH_KEY }}
+          port: ${{ env.SSH_PORT }}
+          envs: APP_DIR,SERVICE_NAME,APP_HOST,APP_PORT,DEV_ENV_SECRETS,EXPECTED_BUILD_SHA
+          script: |
+            set -euo pipefail
+            cd "$APP_DIR"
+            umask 077
+
+            if [ ! -f .env.development ]; then
+              echo ".env.development is missing on the VM - aborting before restart"
+              exit 1
+            fi
+
+            # .env is composed from up to three sources, each overriding the
+            # one before it -- duplicate keys resolve last-wins in both systemd
+            # EnvironmentFile parsing and python-dotenv:
+            #
+            #   1. .env.development   committed, non-secret config
+            #   2. .env.secrets       lives ONLY on this VM, placed by hand
+            #                         once (like sa.json). Never in git, never
+            #                         in GitHub. Survives every deploy: scp
+            #                         runs with rm:false and does not carry it.
+            #   3. DEV_APP_ENV_FILE   optional GitHub environment secret
+            #
+            cp .env.development .env
+
+            if [ -f .env.secrets ]; then
+              echo "" >> .env
+              cat .env.secrets >> .env
+              echo "" >> .env
+              echo "layered in .env.secrets from the VM"
+            fi
+
+            if [ -n "${DEV_ENV_SECRETS:-}" ]; then
+              echo "" >> .env
+              echo "$DEV_ENV_SECRETS" >> .env
+              echo "layered in the DEV_APP_ENV_FILE secret"
+            fi
+
+            # Either source can arrive with CR line endings (a file edited on
+            # Windows, or a secret pasted from one). A trailing carriage return
+            # fails every string comparison in settings.py.
+            sed -i 's/\r$//' .env
+
+            # Refuse to restart on an incomplete .env: settings.py falls back
+            # to a hardcoded production Mongo URI when MONGO_URL is absent.
+            if ! grep -q "^MONGO_URL=." .env; then
+              echo "composed .env has no MONGO_URL - aborting before restart."
+              echo "Add it to ~/psvbot-development/.env.secrets on the VM,"
+              echo "or to the DEV_APP_ENV_FILE environment secret."
+              exit 1
+            fi
+
+            chmod 600 .env
+
+            chmod +x scripts/deploy_gcp_vm.sh
+            ./scripts/deploy_gcp_vm.sh
