@@ -83,8 +83,19 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         return !!target && target.getAttribute("aria-selected") === "true";
     }"""
     JOBPARTS_GRID_TBODY = "p-treetable[name='jobparts_grid'] tbody.ui-treetable-tbody"
-    MULTIPART_DESCRIPTION_FIELD = "xpath=//textarea[@name='multipart-descriptionField']"
-    MULTIPART_NOTES_FIELD = "xpath=//textarea[@name='multipart-jobnotesField']"
+    # PrintSmith wraps these description/notes textareas in an
+    # <app-expandable-textarea name="..."> component on some screens — the
+    # inner <textarea> itself then carries NO name attribute at all, only
+    # the wrapper does (confirmed live). Older screens still render the
+    # name directly on the <textarea>. Match either, same as job_details.py.
+    MULTIPART_DESCRIPTION_FIELD = (
+        "xpath=//textarea[@name='multipart-descriptionField'] | "
+        "//app-expandable-textarea[@name='multipart-descriptionField']//textarea"
+    )
+    MULTIPART_NOTES_FIELD = (
+        "xpath=//textarea[@name='multipart-jobnotesField'] | "
+        "//app-expandable-textarea[@name='multipart-jobnotesField']//textarea"
+    )
 
     # Sublet (and its family: Sublet Printing/Promo/Signs/Sign Install — all
     # share the same "outside job" sub-form, matched by a "sublet" prefix)
@@ -92,7 +103,10 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     # has its own Vendor/Unit Cost/Markup fields that Charges Only lacks —
     # confirmed against the write side's own select_vendor/
     # sublet_price_breakup (job_details.py).
-    SUBLET_DESCRIPTION_FIELD = "xpath=//textarea[@name='outside-descriptionField']"
+    SUBLET_DESCRIPTION_FIELD = (
+        "xpath=//textarea[@name='outside-descriptionField'] | "
+        "//app-expandable-textarea[@name='outside-descriptionField']//textarea"
+    )
     SUBLET_UNIT_COST_FIELD = "xpath=//input[@name='unit_cost']"
 
     # Stock Picker modal — same one the write side uses to SET stock
@@ -707,10 +721,12 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                 details["parts"] = self._read_multipart_parts()
         elif method_key == "charges only":
             details["description"] = self._field_value(
-                "xpath=//textarea[@name='charges-descriptionField']"
+                "xpath=//textarea[@name='charges-descriptionField'] | "
+                "//app-expandable-textarea[@name='charges-descriptionField']//textarea"
             )
             details["notes"] = self._field_value(
-                "xpath=//textarea[@name='charges-jobnotesField']"
+                "xpath=//textarea[@name='charges-jobnotesField'] | "
+                "//app-expandable-textarea[@name='charges-jobnotesField']//textarea"
             )
         elif method_key.startswith("sublet"):
             details["description"] = self._field_value(self.SUBLET_DESCRIPTION_FIELD)
@@ -718,7 +734,8 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             details["agent_total"] = self._field_value(self.SUBLET_UNIT_COST_FIELD)
         else:
             details["description"] = self._field_value(
-                "xpath=//textarea[@name='digital-descriptionField']"
+                "xpath=//textarea[@name='digital-descriptionField'] | "
+                "//app-expandable-textarea[@name='digital-descriptionField']//textarea"
             )
             details["stock"] = self._read_stock_from_picker()
             details["stock_color"] = self._read_kendo_text("stockColorList")

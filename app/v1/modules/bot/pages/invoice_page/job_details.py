@@ -23,14 +23,33 @@ class JobDetailsTab(BasePage):
         "Laminate 11 x 17",
     )
     JOB_DETAILS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Details']]"
-    JOB_DESCRIPTION_INPUT = "xpath=//textarea[@name='digital-descriptionField']"
-    SUBLET_DESCRIPTION_INPUT = "xpath=//textarea[@name='outside-descriptionField']"
+    # PrintSmith wraps these description/notes textareas in an
+    # <app-expandable-textarea name="..."> component on some screens — the
+    # inner <textarea> itself then carries NO name attribute at all, only
+    # the wrapper does (confirmed live). Older screens still render the
+    # name directly on the <textarea>. Match either so this keeps working
+    # regardless of which one PrintSmith renders.
+    JOB_DESCRIPTION_INPUT = (
+        "xpath=//textarea[@name='digital-descriptionField'] | "
+        "//app-expandable-textarea[@name='digital-descriptionField']//textarea"
+    )
+    SUBLET_DESCRIPTION_INPUT = (
+        "xpath=//textarea[@name='outside-descriptionField'] | "
+        "//app-expandable-textarea[@name='outside-descriptionField']//textarea"
+    )
     SUBLET_VENDOR_LABEL = (
         "xpath=//label[contains(@class,'dot-form__label') and normalize-space()='Vendor']"
     )
     STOCK_PICKER_BUTTON = "xpath=//a[@ptooltip='Stock Picker']"
     STOCK_CONFIRM_BUTTON = "xpath=//button[@name='save_stock_details']"
     STOCK_CANCEL_BUTTON = "xpath=//button[@name='cancel_stock_details']"
+    # "Reset" button in the modal's Group/Type filter header — clears a
+    # stale Group/Type filter left over from a previous stock search that
+    # could otherwise hide the stock we're about to search for.
+    STOCK_RESET_FILTER_BUTTON = (
+        "xpath=//div[contains(@class,'stock_picker_header')]"
+        "//button[.//span[normalize-space()='Reset']]"
+    )
     CHARGES_MODAL = "xpath=//div[@id='charges_popup']"
     CHARGES_SEARCH_INPUT = (
         "xpath=//div[@id='charges_popup']"
@@ -45,7 +64,10 @@ class JobDetailsTab(BasePage):
     SUBLET_QTY_INPUT = "xpath=//input[@name='qty-label-ctext']"
     SUBLET_UNIT_COST_INPUT = "xpath=//input[@name='unit_cost']"
     SUBLET_MARKUP_INPUT = "xpath=//input[@name='markup']"
-    CHARGES_ONLY_DESCRIPTION_INPUT = "xpath=//textarea[@name='charges-descriptionField']"
+    CHARGES_ONLY_DESCRIPTION_INPUT = (
+        "xpath=//textarea[@name='charges-descriptionField'] | "
+        "//app-expandable-textarea[@name='charges-descriptionField']//textarea"
+    )
     CHARGES_ONLY_PRICE_INPUT = "xpath=//input[@name='price-label-text']"
     CHARGES_ONLY_QTY_INPUT = "xpath=//input[@name='qty-label-ctext']"
     # Multi-Part: a container job holding one or more "parts", each filled
@@ -57,8 +79,14 @@ class JobDetailsTab(BasePage):
         "xpath=//div[contains(@class,'multipart-part-container')]"
         "//a[@name='add_job_charge_btn']"
     )
-    MULTIPART_DESCRIPTION_INPUT = "xpath=//textarea[@name='multipart-descriptionField']"
-    MULTIPART_NOTES_INPUT = "xpath=//textarea[@name='multipart-jobnotesField']"
+    MULTIPART_DESCRIPTION_INPUT = (
+        "xpath=//textarea[@name='multipart-descriptionField'] | "
+        "//app-expandable-textarea[@name='multipart-descriptionField']//textarea"
+    )
+    MULTIPART_NOTES_INPUT = (
+        "xpath=//textarea[@name='multipart-jobnotesField'] | "
+        "//app-expandable-textarea[@name='multipart-jobnotesField']//textarea"
+    )
     JOB_PARTS_TAB = "xpath=//li[@role='tab' and .//span[normalize-space()='Job Parts']]"
 
     def _debug(self, message: str) -> None:
@@ -343,7 +371,10 @@ class JobDetailsTab(BasePage):
         description_loc.fill(description)
         self.page.evaluate(
             """(value) => {
-                const field = document.querySelector("textarea[name='digital-descriptionField']");
+                const wrapper = document.querySelector("app-expandable-textarea[name='digital-descriptionField']");
+                const field = wrapper
+                    ? wrapper.querySelector("textarea")
+                    : document.querySelector("textarea[name='digital-descriptionField']");
                 if (!field) return false;
                 field.value = value;
                 field.dispatchEvent(new Event("input", { bubbles: true }));
@@ -774,6 +805,20 @@ class JobDetailsTab(BasePage):
         self.click(self.STOCK_PICKER_BUTTON)
         self._wait_for_stock_confirm_button_visible()
         self._wait_for_stock_name_filter_input()
+        self._clear_stock_group_filter()
+
+    def _clear_stock_group_filter(self) -> None:
+        """Clear the modal's Group/Type filter (the "Reset" button) before
+        searching — a stale filter left over from a previous stock search
+        can otherwise hide the stock we're about to search for.
+        """
+        self._debug("Clearing Stock Picker group/type filter")
+        reset_loc = self._loc(self.STOCK_RESET_FILTER_BUTTON).first
+        if reset_loc.count() == 0:
+            self._debug("Stock Picker Reset button not found; skipping")
+            return
+        reset_loc.click(timeout=self._timeout_ms)
+        self.wait_for_spinner_to_disappear()
 
     def _search_stock(self, term: str) -> None:
         self._debug(f"Starting search for stock term: '{term}'")
