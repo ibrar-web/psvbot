@@ -605,6 +605,7 @@ def _build_bot_quote_record(
         "contact_phone": quote.get("contact_phone", ""),
         "delivery": quote.get("delivery") or {},
         "requirements": requirements,
+        "direct_charges": payload.get("direct_charges") or [],
         "notes": payload.get("notes", quote.get("notes", "")),
         "wanted_date": (
             payload.get("wanted_date")
@@ -632,6 +633,8 @@ def _build_quote_record_from_task_payload(
         if "delivery" not in normalized_record:
             quote = payload.get("quote") or {}
             normalized_record["delivery"] = quote.get("delivery") or {}
+        if "direct_charges" not in normalized_record and "direct_charges" in payload:
+            normalized_record["direct_charges"] = payload.get("direct_charges")
         return normalized_record
 
     return _build_bot_quote_record(payload, queue_id)
