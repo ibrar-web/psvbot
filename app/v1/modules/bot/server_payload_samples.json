@@ -1,0 +1,190 @@
+{
+  "_comment": "Two directions are documented per task_type below. incoming_request = what the external server POSTs to /api/v1/bot/execute-task to enqueue a job (envelope shape: {task_type, machine_name, data}; machine_name is optional). outgoing_result_response = what THIS bot POSTs back to the server once the job finishes, built by _call_record_result() in services/queue_service.py — marked with _direction so it's unambiguous which way each block flows.",
+
+  "create_estimate": {
+    "incoming_request": {
+      "_direction": "INCOMING — server sends this to the bot",
+      "task_type": "create_estimate",
+      "machine_name": "ibrarpc",
+      "data": {
+        "queue_id": "6a1416213a96293ce1db0552",
+        "BACK_URL_STATUS_UPDATE": "http://localhost:8000/api/v1/quotation/job/6a1416213a96293ce1db0552/quote-detail",
+        "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/quotation/job/result",
+        "quote": {
+          "_id": "6a0f11cf1d8b5bc19f59d944",
+          "tenant_id": "6a0ac09549e818e8e4b8b447",
+          "user_email": "qatestingadmin@yopmail.com",
+          "company_name": "blacklion",
+          "street": "",
+          "city": "",
+          "account_name": "QATestingAdmin",
+          "contact_person": "QATestingAdmin",
+          "contact_email": "qatestingadmin@yopmail.com",
+          "contact_phone": "",
+          "customer_name": null,
+          "chat_id": "ce794443-4421-4baf-a658-e149b6c31118",
+          "message_id": "45d6aff5-ff58-4359-b5e6-b39217289dfe"
+        },
+        "requirements": [
+          {
+            "stock_search": "][ PVC 3mm Black",
+            "quantity": 100.0,
+            "size": "3\" x 4\"",
+            "sides": "duplex",
+            "description": "50 double-sided 3\" x 4\" PVC name tags with one hole and plastic sleeves",
+            "job_method": "Large Format",
+            "job_charges": [
+              {
+                "charge_name": "1 Hole Punch",
+                "charge_price": 0.03,
+                "quantity": 50.0
+              },
+              {
+                "charge_name": "Lanyards",
+                "charge_price": 1.5,
+                "quantity": 50.0
+              },
+              {
+                "charge_name": "Routing Knife 4 strt sides-Foam/Coroplast/PVC/Styrene",
+                "charge_price": 6.0,
+                "quantity": 1.0
+              }
+            ],
+            "other_charges": [
+              {
+                "charge_name": "plastic sleeves",
+                "charge_price": 0.5,
+                "quantity": 50.0
+              }
+            ],
+            "rush_fee": 0.0,
+            "total": 321.0,
+            "estimate_totals": {}
+          }
+        ],
+        "tenant_credentials": {
+          "printsmith_username": "AijazAsif",
+          "printsmith_password": "Howard@530SF",
+          "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
+          "printsmith_company": "alphagraphics685"
+        }
+      }
+    },
+    "outgoing_result_response": {
+      "_direction": "OUTGOING — bot POSTs this back to the server once the job finishes",
+      "posted_to": "the literal BACK_URL_RECORD_RESULT from the request above (http://localhost:8000/api/v1/quotation/job/result) — create_estimate is the only task_type NOT redirected to a customer-history endpoint",
+      "_note": "Matches the receiving endpoint's actual schema exactly, as given: queue_id, success, summary_file_name, summary_file_url, error_message, estimate_totals, estimate_id — nothing else. file/status/attempt metadata that the other two task types' payloads carry (task_type, machine_name, tenant_id, status, attempt, max_attempts, will_retry, storage_key, etc.) is deliberately NOT sent here since this endpoint doesn't expect it (see the else-branch in _call_record_result for those). Values (summary_file_name/url, estimate_totals) are from a real run, queue_id 6a1416213a96293ce1db0552. estimate_id is null because this was a brand-new estimate creation (no estimate_id in the incoming request) — run_estimate_flow never captures a newly-created estimate's own ID.",
+      "payload": {
+        "queue_id": "6a1416213a96293ce1db0552",
+        "success": true,
+        "summary_file_name": "Estimate_39488.pdf",
+        "summary_file_url": "estimates/6a0ac09549e818e8e4b8b447/6a0f11cf1d8b5bc19f59d944/c3a974fc8e1f4c47aa276cfe0032febe_Estimate_39488.pdf",
+        "error_message": null,
+        "estimate_totals": {
+          "1": "706.20"
+        },
+        "estimate_id": null
+      }
+    }
+  },
+
+  "estimate_history_export": {
+    "incoming_request": {
+      "_direction": "INCOMING — server sends this to the bot",
+      "task_type": "estimate_history_export",
+      "machine_name": "ibrarpc",
+      "data": {
+        "queue_id": "6a13ef0d4aff298d8c33da99",
+        "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/quotation/job/result",
+        "tenant_credentials": {
+          "printsmith_username": "AijazAsif",
+          "printsmith_password": "Howard@530SF",
+          "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
+          "printsmith_company": "alphagraphics685"
+        }
+      }
+    },
+    "outgoing_result_response": {
+      "_direction": "OUTGOING — bot POSTs this back to the server once the job finishes",
+      "posted_to": "derived from BACK_URL_RECORD_RESULT: same scheme/host/port, path replaced with /api/v1/customer-history/job/export-result (see http://localhost:8000/api/v1/customer-history/job/export-result) — see _derive_result_url() in services/queue_service.py",
+      "content_type": "multipart/form-data — NOT application/json. See _post_form_with_file() in services/queue_service.py.",
+      "_note": "No public copy of the CSV is ever created — the bot uploads the local temp download's actual bytes as a file attachment (field name 'file') on success, then deletes that temp file once the callback POST completes (success or failure), see _cleanup_local_result_file() in services/queue_service.py. On failure (or if the local file is missing for any reason), this falls back to a plain application/json POST with just queue_id/success/error_message/history_file_name since there's no file to attach and no URL to send.",
+      "form_fields": {
+        "queue_id": "6a13ef0d4aff298d8c33da99",
+        "success": "true",
+        "error_message": ""
+      },
+      "files": {
+        "file": {
+          "filename": "2026-09-02_EstimateHistory.csv",
+          "content_type": "text/csv",
+          "content": "<raw CSV bytes read from the file at result['history_file_local_path']>"
+        }
+      }
+    }
+  },
+
+  "invoice_history_lookup": {
+    "incoming_request": {
+      "_direction": "INCOMING — server sends this to the bot",
+      "task_type": "invoice_history_lookup",
+      "machine_name": "ibrarpc",
+      "data": {
+        "queue_id": "6a13ef0d4aff298d8c33da9a",
+        "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/quotation/job/result",
+        "tenant_credentials": {
+          "printsmith_username": "AijazAsif",
+          "printsmith_password": "Howard@530SF",
+          "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
+          "printsmith_company": "alphagraphics685"
+        },
+        "invoice_id": "50059"
+      }
+    },
+    "outgoing_result_response": {
+      "_direction": "OUTGOING — bot POSTs this back to the server once the job finishes",
+      "posted_to": "derived from BACK_URL_RECORD_RESULT: same scheme/host/port, path replaced with /api/v1/customer-history/job/invoice-result (see http://localhost:8000/api/v1/customer-history/job/invoice-result) — see _derive_result_url() in services/queue_service.py",
+      "_note": "Trimmed to queue_id/success/error_message plus invoice_id and the scraped record itself — no JSON file is written to disk any more, the scraped result is only logger.info()'d for local debugging and sent straight through in this callback ({invoice_id, requirements, direct_charges}). requirements is shaped exactly like create_estimate's incoming 'requirements' (job_method/description/stock_search/size/sides/quantity/job_charges/product/stock_color/location/job_comment/unit_per_side/price) so the receiving server can treat a Digital Color, Multi-Part, etc. entry here the same way it treats one it originally sent in a create_estimate request — see _to_requirements_format() in etimate_history/invoice_history_lookup.py. A Multi-Part job's requirements entry additionally carries an 'other_charges' key (Charges-Only parts folded in), right after its own job_charges.",
+      "payload": {
+        "queue_id": "6a13ef0d4aff298d8c33da9a",
+        "success": true,
+        "error_message": null,
+        "invoice_id": "50059",
+        "requirements": [
+          {
+            "job_name": "Job-1",
+            "description": "2,000 stickers printed and delivered to Pier 48 San Francisco, CA 94158",
+            "stock_search": "100# Kelly Dig Silk Cvr 100 95M 19 X13 410/cs",
+            "quantity": "272",
+            "size": "3\" x 4\"",
+            "sides": "Duplex",
+            "job_method": "Digital Color",
+            "job_charges": [
+              {
+                "charge_name": "Card Stock Cutting",
+                "quantity": "8.00",
+                "charge_price": "18.00"
+              }
+            ],
+            "product": "100# Kelly Dig Silk Cvr 100 95M 19 X13 410/cs",
+            "stock_color": "White",
+            "location": "",
+            "job_comment": "",
+            "unit_per_side": "$ 1.4461",
+            "price": "$ 280.55",
+            "notes": ""
+          }
+        ],
+        "direct_charges": [
+          {
+            "charge_name": "Rush Fee - Invoice - 35%",
+            "charge_price": "333.12",
+            "quantity": "0"
+          }
+        ]
+      }
+    }
+  }
+}
