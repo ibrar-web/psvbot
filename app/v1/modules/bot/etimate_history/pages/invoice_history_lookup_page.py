@@ -665,13 +665,20 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                     if (!btn) return "";
                     const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
                     const rows = Array.from(modalRoot.querySelectorAll("tbody[kendogridtablebody] tr"));
-                    const selectedRow = rows.find(row =>
+                    // "highlightedRow" is NOT a reliable selected-row marker —
+                    // confirmed live it's present on most/all rows in the
+                    // grid, not just the actual current stock. k-state-selected
+                    // (or k-selected/aria-selected) is the real signal, so it
+                    // must be tried first and exclusively; only fall back to
+                    // highlightedRow if none of the real markers are present
+                    // anywhere (better than nothing, but a weak last resort).
+                    const strongSelected = rows.find(row =>
                         row.getAttribute("aria-selected") === "true" ||
                         row.classList.contains("k-selected") ||
                         row.classList.contains("k-state-selected") ||
-                        row.classList.contains("highlightedRow") ||
                         row.querySelector("[aria-selected='true'], .k-selected, .k-state-selected")
                     );
+                    const selectedRow = strongSelected || rows.find(row => row.classList.contains("highlightedRow"));
                     if (!selectedRow) return "";
                     const cell = selectedRow.querySelector("td[aria-colindex='1']");
                     return (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim();

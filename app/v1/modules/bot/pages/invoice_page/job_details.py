@@ -906,10 +906,25 @@ class JobDetailsTab(BasePage):
                         .replace(/\\s+/g, " ").trim()
                     })).filter(entry => entry.text);
 
+                    // When several rows match the same search term (e.g. a
+                    // shared "Kelly Labels - DiversiPrint" prefix across
+                    // several finish variants), PrintSmith marks exactly
+                    // one of them as k-state-selected (confirmed live) —
+                    // prefer that one within whichever priority tier
+                    // matches, instead of just the first in DOM order.
+                    const isPreselected = (row) =>
+                      row.classList.contains('k-state-selected') ||
+                      row.classList.contains('k-selected') ||
+                      row.getAttribute('aria-selected') === 'true';
+                    const pickBest = (list) => {
+                      if (!list.length) return null;
+                      return list.find(entry => isPreselected(entry.node)) || list[0];
+                    };
+
                     const termNorm = term.replace(/\\s+/g, " ").trim().toLowerCase();
-                    let target = entries.find(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase() === termNorm) || null;
-                    if (!target) target = entries.find(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase().startsWith(termNorm)) || null;
-                    if (!target) target = entries.find(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase().includes(termNorm)) || null;
+                    let target = pickBest(entries.filter(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase() === termNorm));
+                    if (!target) target = pickBest(entries.filter(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase().startsWith(termNorm)));
+                    if (!target) target = pickBest(entries.filter(entry => entry.text.replace(/\\s+/g, " ").trim().toLowerCase().includes(termNorm)));
                     if (!target) return "__NO_MATCH__";
 
                     const clickable = target.cell || target.node;
