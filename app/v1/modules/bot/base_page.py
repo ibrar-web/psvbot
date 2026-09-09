@@ -205,6 +205,30 @@ class BasePage:
             timeout=self._timeout_ms,
         )
 
+    def wait_for_spinner_to_appear(self, timeout_ms: int = 600) -> None:
+        """Best-effort: give the spinner a short window to actually render
+        before a caller checks for it to disappear. Right after a click
+        there's a brief window where the spinner hasn't been added to the
+        DOM yet, so wait_for_spinner_to_disappear() called immediately can
+        trivially pass (it sees "no spinner" because none has shown up
+        yet, not because the work finished). If it never appears within
+        timeout_ms (e.g. a fast in-modal AJAX call that shows no spinner
+        at all), just return — there's nothing to wait for.
+        """
+        try:
+            self.page.wait_for_function(
+                """() => {
+                    const overlay = document.querySelector('.spinner-overlay');
+                    const progress = document.querySelector('.ng-progress');
+                    const overlayVisible = overlay && window.getComputedStyle(overlay).display !== 'none';
+                    const progressActive = progress && progress.classList.contains('active');
+                    return !!(overlayVisible || progressActive);
+                }""",
+                timeout=timeout_ms,
+            )
+        except PlaywrightTimeoutError:
+            pass
+
     def _nudge_mouse(self) -> None:
         """Move the real mouse cursor to reset a lingering hover/busy state.
 

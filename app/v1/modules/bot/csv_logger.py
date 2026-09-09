@@ -10,6 +10,11 @@ def init() -> None:
     """
     bot_logger = logging.getLogger("app.v1.modules.bot")
     bot_logger.setLevel(logging.INFO)
+    # Without this, every record also bubbles up to the root logger (which
+    # app/__init__.py's logging.basicConfig() attaches its own handler to),
+    # so each log line gets printed twice — once here, once via the root
+    # handler after propagating up.
+    bot_logger.propagate = False
 
     # Ensure exactly one terminal StreamHandler exists
     has_terminal_handler = any(

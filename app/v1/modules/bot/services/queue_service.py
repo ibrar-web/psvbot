@@ -80,6 +80,10 @@ _scheduler_task: Optional[asyncio.Task] = None
 _worker_tasks: list[asyncio.Task] = []
 _stop_event: Optional[asyncio.Event] = None
 _local_queue: Optional[asyncio.Queue] = None
+# Set by enqueue_task_payload() so the scheduler wakes immediately for a
+# newly-enqueued task instead of waiting out the rest of its poll interval
+# (QUEUE_POLL_INTERVAL_SECONDS) when the queue was idle.
+_new_task_event: Optional[asyncio.Event] = None
 _worker_semaphore: Optional[asyncio.Semaphore] = None
 _active_tasks = 0
 
@@ -751,6 +755,8 @@ async def enqueue_task_payload(raw_payload: Dict[str, Any]) -> Dict[str, str]:
         task_type,
         machine_name,
     )
+    if _new_task_event is not None:
+        _new_task_event.set()
     return {"status": "queued", "queue_id": queue_id}
 
 
@@ -1240,13 +1246,23 @@ def _build_callback_delivery(
     attempt: Optional[int] = None,
     will_retry: bool = False,
 ) -> Dict[str, Any]:
+    # This dict gets persisted as-is into Mongo (callback_delivery, see
+    # _mark_callback_delivery_failed_or_retry) when the callback POST
+    # fails — estimate_totals' int keys (1-based requirement index) must
+    # be stringified here too, not just in _call_record_result's own
+    # payload, or BSON rejects the whole document.
+    normalized_result = dict(result or {})
+    if "estimate_totals" in normalized_result:
+        normalized_result["estimate_totals"] = _stringify_dict_keys(
+            normalized_result["estimate_totals"]
+        )
     return {
         "task_payload": task_payload,
         "queue_id": queue_id,
         "task_type": task_type,
         "machine_name": machine_name,
         "success": success,
-        "result": result or {},
+        "result": normalized_result,
         "error_message": error_message,
         "task_status": task_status or (TASK_STATUS_DONE if success else TASK_STATUS_FAILED),
         "attempt": attempt,
@@ -1751,13 +1767,21 @@ async def _task_scheduler() -> None:
                     await _local_queue.put(task)
                     continue
 
+            assert _new_task_event is not None
+            stop_wait = asyncio.ensure_future(_stop_event.wait())
+            new_task_wait = asyncio.ensure_future(_new_task_event.wait())
             try:
-                await asyncio.wait_for(
-                    _stop_event.wait(),
+                await asyncio.wait(
+                    {stop_wait, new_task_wait},
                     timeout=QUEUE_POLL_INTERVAL_SECONDS,
+                    return_when=asyncio.FIRST_COMPLETED,
                 )
-            except asyncio.TimeoutError:
-                pass
+            finally:
+                for pending in (stop_wait, new_task_wait):
+                    if not pending.done():
+                        pending.cancel()
+                await asyncio.gather(stop_wait, new_task_wait, return_exceptions=True)
+                _new_task_event.clear()
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -1769,7 +1793,7 @@ async def start_queue_workers(
     mongo_client: Optional[AsyncIOMotorClient] = None,
 ) -> None:
     global _scheduler_task, _worker_tasks, _stop_event, _local_queue
-    global _worker_semaphore, _active_tasks
+    global _worker_semaphore, _active_tasks, _new_task_event
 
     if _scheduler_task is not None and not _scheduler_task.done():
         return
@@ -1779,6 +1803,7 @@ async def start_queue_workers(
     await recover_incomplete_jobs()
 
     _stop_event = asyncio.Event()
+    _new_task_event = asyncio.Event()
     _active_tasks = 0
     _local_queue = asyncio.Queue(maxsize=max(QUEUE_WORKER_CONCURRENCY * 2, 1))
     _worker_semaphore = asyncio.Semaphore(QUEUE_WORKER_CONCURRENCY)
@@ -1800,7 +1825,7 @@ async def stop_queue_workers() -> None:
     global _scheduler_task, _worker_tasks, _stop_event, _local_queue
     global _worker_semaphore, _mongo_client, _tasks_collection, _owns_mongo_client
     global _task_locks_collection
-    global _active_tasks
+    global _active_tasks, _new_task_event
 
     if _stop_event is not None:
         _stop_event.set()
@@ -1819,6 +1844,7 @@ async def stop_queue_workers() -> None:
     _scheduler_task = None
     _worker_tasks = []
     _stop_event = None
+    _new_task_event = None
     _local_queue = None
     _worker_semaphore = None
     _active_tasks = 0

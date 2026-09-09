@@ -1326,7 +1326,7 @@ class JobDetailsTab(BasePage):
             timeout=self._timeout_ms,
         )
         confirm_loc.click(timeout=self._timeout_ms)
-        self.page.wait_for_timeout(500)
+        self.wait_for_spinner_to_appear()
         self.wait_for_spinner_to_disappear()
 
     def _get_ready_charges_search_input(self):
