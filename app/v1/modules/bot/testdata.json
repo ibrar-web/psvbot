@@ -492,6 +492,96 @@
         "printsmith_company": "alphagraphics685"
       },
       "estimate_id": "39457"
+    },
+
+    "8": {
+      "task_type": "create_estimate",
+      "machine_name": "ibrarpc",
+      "queue_id": "6a13ef234aff298d8c33da86",
+      "BACK_URL_STATUS_UPDATE": "http://localhost:8000/api/v1/quotation/job/6a13ef234aff298d8c33da86/quote-detail",
+      "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/quotation/job/result",
+      "quote": {
+        "chat_id": "1c104a6d-4862-4b79-b450-aa9209aa4e61",
+        "quote_version": 1,
+        "tenant_id": "6aac042817643f0b08590ae9",
+        "user_email": "copymat_admin@alphagraphics.com",
+        "account_name": "Admin",
+        "company_name": "Dolby",
+        "street": "",
+        "city": "",
+        "contact_person": "Admin",
+        "contact_email": "Sarayah.Rogers@dolby.com",
+        "contact_phone": "17772225555",
+        "customer_name": "Sarayah Rogers",
+        "created_by": "6aac07ec17643f0b08590af9",
+        "message_id": "71ab078c-718e-4f73-af23-15801b237f68",
+        "delivery": {
+          "charge_name": "pickup",
+          "charge_price": 0,
+          "quantity": 1,
+          "subtotal": 0
+        }
+      },
+      "requirements": [
+        {
+          "stock_search": "Gatorboard - 1\" Black H",
+          "quantity": 2,
+          "size": "24x36",
+          "sides": "simplex",
+          "description": "2 single-sided 24x36 in photo release signs on 1 inch black gatorboard, loose for existing setup",
+          "job_method": "Large Format",
+          "job_charges": [],
+          "other_charges": [],
+          "rush_fee": 0,
+          "total": 3.72,
+          "estimate_totals": {},
+          "vendor_name": null,
+          "product_type": "foam board"
+        },
+        {
+          "stock_search": "Gatorboard - 1\" Black H",
+          "quantity": 2,
+          "size": "24x36",
+          "sides": "simplex",
+          "description": "2 single-sided 24x36 in staff only signs on 1 inch black gatorboard, loose for existing setup",
+          "job_method": "Large Format",
+          "job_charges": [],
+          "other_charges": [],
+          "rush_fee": 0,
+          "total": 3.72,
+          "estimate_totals": {},
+          "vendor_name": null,
+          "product_type": "foam board"
+        },
+        {
+          "stock_search": "Gatorboard - 1\" Black H",
+          "quantity": 2,
+          "size": "23.5x38.125",
+          "sides": "simplex",
+          "description": "2 single-sided 23.5x38.125 in monolith headers on 1 inch black gatorboard, loose for existing setup",
+          "job_method": "Large Format",
+          "job_charges": [],
+          "other_charges": [],
+          "rush_fee": 0,
+          "total": 3.72,
+          "estimate_totals": {},
+          "vendor_name": null,
+          "product_type": "foam board"
+        }
+      ],
+      "complete_total": 11.16,
+      "notes": "",
+      "due_date": "Tuesday, September 22, 2026",
+      "delivery_fee": 0,
+      "total": 11.16,
+      "summary_file_name": null,
+      "summary_file_url": null,
+      "tenant_credentials": {
+        "printsmith_username": "haroon",
+        "printsmith_password": "Howard@530SF",
+        "printsmith_url": "https://agus879-psv.myprintdesk.net/PrintSmith/PrintSmith.html",
+        "printsmith_company": "alphagraphics685"
+      }
     }
   },
 
