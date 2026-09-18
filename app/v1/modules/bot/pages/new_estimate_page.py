@@ -184,10 +184,28 @@ class NewEstimatePage(BasePage):
                 const nodes = Array.from(document.querySelectorAll(
                   ".k-animation-container .k-item, .k-list .k-item, li.k-item, .k-list-item"
                 ));
-                const target = nodes.find(node => {
-                  const text = (node.innerText || node.textContent || "").trim().toLowerCase();
-                  return text.includes("walk-in") || text.includes("walk in");
-                });
+                const normalize = (t) => (t || "").trim().toLowerCase();
+                // Confirmed live: an account's customer list can have SEVERAL
+                // "walk-in"-ish entries (e.g. "Walk-in . - CASH SALES", "No
+                // Name Walk-in - CASH SALES") alongside the actual generic
+                // one PrintSmith itself marks with a bracketed style
+                // ("<<< WALK-IN >>>", no other text). A loose substring
+                // match grabs whichever comes first in the list, which is
+                // rarely the right one. Prefer, in order: a plain exact
+                // "walk-in" match, then the bracketed form with nothing
+                // else around it, then fall back to the old loose substring
+                // match for accounts that have no clean entry at all.
+                const isBracketWalkIn = (t) => /^<{2,3}\\s*walk[\\s-]?in\\s*>{2,3}$/i.test((t || "").trim());
+                const getText = (node) => node.innerText || node.textContent || "";
+
+                let target = nodes.find(node => normalize(getText(node)) === "walk-in");
+                if (!target) target = nodes.find(node => isBracketWalkIn(getText(node)));
+                if (!target) {
+                  target = nodes.find(node => {
+                    const text = normalize(getText(node));
+                    return text.includes("walk-in") || text.includes("walk in");
+                  });
+                }
                 if (!target) return false;
                 target.scrollIntoView({ block: "center" });
                 target.click();

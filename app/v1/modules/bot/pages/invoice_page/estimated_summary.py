@@ -32,10 +32,12 @@ class EstimatedSummaryTab(BasePage):
     )
     CREATE_PROSPECT_LINK = "xpath=//a[@name='create_account_button' and .//span[normalize-space()='Create Prospect']]"
     THREE_DOTS_BUTTON = "xpath=//div[contains(@class,'dot-more-options-icon')]"
-    US685_E_ESTIMATE_BUTTON = (
-        "xpath=//div[@name='print_btn_group']//button[@name='print_btn'"
-        " and .//span[normalize-space()='US685 E-Estimate']]"
-    )
+    # The button's own label reflects whichever print/document format is
+    # currently selected for this tenant (e.g. "US685 E-Estimate no
+    # totals", "Copymat Estimate") — confirmed live these vary per
+    # account, so match on the stable name="print_btn" attribute only,
+    # not the label text.
+    US685_E_ESTIMATE_BUTTON = "xpath=//div[@name='print_btn_group']//button[@name='print_btn']"
     WANTED_DATE_INPUT = "xpath=//input[@name='wantedDate']"
 
     def _debug(self, message: str) -> None:
