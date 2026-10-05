@@ -616,5 +616,35 @@
       },
       "invoice_id": "49968"
     }
+  },
+  "stock_material_pricing": {
+    "1": {
+      "task_type": "stock_material_pricing",
+      "machine_name": "ibrarpc",
+      "queue_id": "test-stock_material_pricing-1",
+      "tenant_id": "6a0ac09549e818e8e4b8b447",
+      "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/stock-mapping/job/stock-material-result",
+      "tenant_credentials": {
+        "printsmith_username": "AijazAsif",
+        "printsmith_password": "Howard@530SF",
+        "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
+        "printsmith_company": "alphagraphics685"
+      }
+    }
+  },
+  "job_charges_pricing": {
+    "1": {
+      "task_type": "job_charges_pricing",
+      "machine_name": "ibrarpc",
+      "queue_id": "test-job_charges_pricing-1",
+      "tenant_id": "6a0ac09549e818e8e4b8b447",
+      "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/stock-mapping/job/job-charges-result",
+      "tenant_credentials": {
+        "printsmith_username": "AijazAsif",
+        "printsmith_password": "Howard@530SF",
+        "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
+        "printsmith_company": "alphagraphics685"
+      }
+    }
   }
 }

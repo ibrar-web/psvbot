@@ -1,6 +1,5 @@
 {
   "_comment": "Two directions are documented per task_type below. incoming_request = what the external server POSTs to /api/v1/bot/execute-task to enqueue a job (envelope shape: {task_type, machine_name, data}; machine_name is optional). outgoing_result_response = what THIS bot POSTs back to the server once the job finishes, built by _call_record_result() in services/queue_service.py — marked with _direction so it's unambiguous which way each block flows.",
-
   "create_estimate": {
     "incoming_request": {
       "_direction": "INCOMING — server sends this to the bot",
@@ -87,7 +86,6 @@
       }
     }
   },
-
   "estimate_history_export": {
     "incoming_request": {
       "_direction": "INCOMING — server sends this to the bot",
@@ -124,7 +122,6 @@
       }
     }
   },
-
   "invoice_history_lookup": {
     "incoming_request": {
       "_direction": "INCOMING — server sends this to the bot",
@@ -182,6 +179,135 @@
             "charge_name": "Rush Fee - Invoice - 35%",
             "charge_price": "333.12",
             "quantity": "0"
+          }
+        ]
+      }
+    }
+  },
+  "stock_material_pricing": {
+    "incoming_request": {
+      "_direction": "INCOMING — server sends this to the bot",
+      "task_type": "stock_material_pricing",
+      "machine_name": "ibrarpc",
+      "data": {
+        "queue_id": "6a13ef0d4aff298d8c33daa0",
+        "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/stock-mapping/job/stock-material-result",
+        "tenant_credentials": {
+          "printsmith_username": "<username>",
+          "printsmith_password": "<password>",
+          "printsmith_url": "https://<company>.myprintdesk.net/PrintSmith/PrintSmith.html",
+          "printsmith_company": "<company>"
+        }
+      }
+    },
+    "outgoing_result_response": {
+      "_direction": "OUTGOING — bot POSTs this back to the server once the job finishes",
+      "posted_to": "derived from BACK_URL_RECORD_RESULT: same scheme/host/port, path replaced with /api/v1/stock-mapping/job/stock-material-result — see _derive_result_url() in services/queue_service.py",
+      "_note": "data is the full pricing snapshot for the tenant (trimmed here). failed lists rows PSV wouldn't return details for; on success=false data/failed are [] and error_message is set.",
+      "payload": {
+        "queue_id": "6a13ef0d4aff298d8c33daa0",
+        "task_type": "stock_material_pricing",
+        "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "success": true,
+        "error_message": null,
+        "total_rows": 2,
+        "data": [
+          {
+            "name": "Tango Digital C2S SBS 14pt 90M 18 X12 450/cs",
+            "size": "18 x 12",
+            "price": 1.5006599999999999,
+            "job_method": "Digital Color",
+            "stock_level_charge": []
+          },
+          {
+            "name": "EcoFoil Glossy Card 1 (GC1)",
+            "size": "17.75 x 12.5",
+            "price": 4.87956,
+            "job_method": "Digital Color",
+            "stock_level_charge": [
+              {
+                "command": "Pre Press",
+                "category": "Design Services",
+                "name": "5th color separation and setup - IF needed",
+                "method": "Always Ask",
+                "charge_level": "job",
+                "production_location": "",
+                "sales_category": "Pre-Press",
+                "price": 130
+              }
+            ]
+          }
+        ],
+        "failed_rows": 1,
+        "failed": [
+          {
+            "id": 1234,
+            "name": "Example stock",
+            "reason": "HTTP 500"
+          }
+        ]
+      }
+    }
+  },
+  "job_charges_pricing": {
+    "incoming_request": {
+      "_direction": "INCOMING — server sends this to the bot",
+      "task_type": "job_charges_pricing",
+      "machine_name": "ibrarpc",
+      "data": {
+        "queue_id": "6a13ef0d4aff298d8c33daa0",
+        "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/stock-mapping/job/job-charges-result",
+        "tenant_credentials": {
+          "printsmith_username": "<username>",
+          "printsmith_password": "<password>",
+          "printsmith_url": "https://<company>.myprintdesk.net/PrintSmith/PrintSmith.html",
+          "printsmith_company": "<company>"
+        }
+      }
+    },
+    "outgoing_result_response": {
+      "_direction": "OUTGOING — bot POSTs this back to the server once the job finishes",
+      "posted_to": "derived from BACK_URL_RECORD_RESULT: same scheme/host/port, path replaced with /api/v1/stock-mapping/job/job-charges-result — see _derive_result_url() in services/queue_service.py",
+      "_note": "data is the full pricing snapshot for the tenant (trimmed here). failed lists rows PSV wouldn't return details for; on success=false data/failed are [] and error_message is set.",
+      "payload": {
+        "queue_id": "6a13ef0d4aff298d8c33daa0",
+        "task_type": "job_charges_pricing",
+        "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "success": true,
+        "error_message": null,
+        "total_rows": 2,
+        "data": [
+          {
+            "command": "Pre Press",
+            "category": "Design Services",
+            "name": "File Review and Setup: 3-5 files",
+            "method": "Flat Rate",
+            "charge_level": "job",
+            "production_location": "2 - Design - Cam",
+            "sales_category": "Pre-Press",
+            "price": 50
+          },
+          {
+            "command": "Pre Press",
+            "category": "Design Services",
+            "name": "File Review and Setup: 6-10 files",
+            "method": "Flat Rate",
+            "charge_level": "job",
+            "production_location": "2 - Design - Cam",
+            "sales_category": "Pre-Press",
+            "price": 100
+          }
+        ],
+        "failed_rows": 1,
+        "failed": [
+          {
+            "id": 5678,
+            "command": "Pre Press",
+            "category": "Design Services",
+            "name": "Example charge",
+            "reason": "HTTP 500"
           }
         ]
       }

@@ -41,6 +41,12 @@ from app.v1.modules.bot.etimate_history.estimate_history_export import (
 from app.v1.modules.bot.etimate_history.invoice_history_lookup import (
     run_invoice_history_lookup_flow,
 )
+from app.v1.modules.bot.pricing_fetch.job_charges_pricing import (
+    run_job_charges_pricing_flow,
+)
+from app.v1.modules.bot.pricing_fetch.stock_material_pricing import (
+    run_stock_material_pricing_flow,
+)
 from app.v1.modules.bot.task_types import TaskType
 
 logger = logging.getLogger(__name__)
@@ -49,6 +55,8 @@ TASK_HANDLERS = {
     TaskType.CREATE_ESTIMATE.value: run_estimate_flow,
     TaskType.ESTIMATE_HISTORY_EXPORT.value: run_estimate_history_export_flow,
     TaskType.INVOICE_HISTORY_LOOKUP.value: run_invoice_history_lookup_flow,
+    TaskType.STOCK_MATERIAL_PRICING.value: run_stock_material_pricing_flow,
+    TaskType.JOB_CHARGES_PRICING.value: run_job_charges_pricing_flow,
 }
 
 TASKS_COLLECTION = "tasks"
@@ -1035,6 +1043,14 @@ def _stringify_dict_keys(value: Any) -> Any:
 _RESULT_URL_PATH_OVERRIDES = {
     TaskType.ESTIMATE_HISTORY_EXPORT.value: "/api/v1/customer-history/job/export-result",
     TaskType.INVOICE_HISTORY_LOOKUP.value: "/api/v1/customer-history/job/invoice-result",
+    TaskType.STOCK_MATERIAL_PRICING.value: "/api/v1/stock-mapping/job/stock-material-result",
+    TaskType.JOB_CHARGES_PRICING.value: "/api/v1/stock-mapping/job/job-charges-result",
+}
+
+
+_PRICING_FETCH_TASK_TYPES = {
+    TaskType.STOCK_MATERIAL_PRICING.value,
+    TaskType.JOB_CHARGES_PRICING.value,
 }
 
 
@@ -1134,6 +1150,20 @@ async def _call_record_result(
             "invoice_id": task_payload.get("invoice_id") or result.get("invoice_id"),
             "requirements": result.get("job_items"),
             "direct_charges": result.get("direct_charges"),
+        }
+    elif task_type in _PRICING_FETCH_TASK_TYPES:
+        # Full pricing snapshot for the tenant: "data" holds every fetched
+        # stock/charge row, "failed" the rows PSV wouldn't return details for.
+        payload = {
+            "queue_id": queue_id,
+            "task_type": task_type,
+            "tenant_id": task_payload.get("tenant_id"),
+            "success": success,
+            "error_message": error_payload,
+            "total_rows": result.get("total_rows", 0),
+            "data": result.get("data", []),
+            "failed_rows": result.get("failed_rows", 0),
+            "failed": result.get("failed", []),
         }
     else:
         tenant_id = task_payload.get("tenant_id") or (

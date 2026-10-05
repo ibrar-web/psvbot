@@ -121,3 +121,36 @@ async def execute_test_estimate_history_task(
     logger.info(f"Parsed {normalized_case} test payload for id={id}: {envelope}")
 
     return await enqueue_task_payload(envelope)
+
+
+_PRICING_FETCH_TASK_TYPES = {
+    TaskType.STOCK_MATERIAL_PRICING.value,
+    TaskType.JOB_CHARGES_PRICING.value,
+}
+
+
+@router.get(
+    "/execute-test-pricing-fetch-task",
+    summary="Execute pricing fetch bot job with test data",
+)
+async def execute_test_pricing_fetch_task(
+    id: str = Query(..., description="Test payload id"),
+    case: str = Query(
+        ...,
+        description="'stock_material_pricing' or 'job_charges_pricing'",
+    ),
+) -> Dict[str, Any]:
+    normalized_case = (case or "").strip().lower()
+    if normalized_case not in _PRICING_FETCH_TASK_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unknown case '{case}'; expected one of: "
+                f"{', '.join(sorted(_PRICING_FETCH_TASK_TYPES))}"
+            ),
+        )
+
+    data = _load_test_payload(normalized_case, id)
+    envelope = _build_envelope(normalized_case, data)
+    logger.info("Parsed %s test payload for id=%s", normalized_case, id)
+    return await enqueue_task_payload(envelope)
