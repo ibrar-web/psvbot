@@ -1,12 +1,13 @@
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from playwright.sync_api import Page
 
 from app.v1.modules.bot.pricing_fetch.flow_runner import (
     FetchResult,
     run_pricing_flow,
+    split_known,
 )
 from app.v1.modules.bot.pricing_fetch.job_charges_pricing import (
     INVOICE_MARKUP_TYPE,
@@ -143,12 +144,13 @@ def _build_stock(details: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _fetch_stock_material_pricing(
-    page: Page, task_payload: Dict[str, Any]
-) -> FetchResult:
-    logger.info("Fetching stock material pricing from PSV API")
-    api = PsvApi(page)
-    stocks = _fetch_stock_list(api)
+def _stock_label(stock: Dict[str, Any]) -> str:
+    return stock.get("name") or ""
+
+
+def _fetch_stock_details(
+    api: PsvApi, stocks: List[Dict[str, Any]]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     results = api.get_many(
         [STOCK_DETAILS_PATH.format(stock["id"]) for stock in stocks],
         DETAILS_CONCURRENCY,
@@ -184,6 +186,26 @@ def _fetch_stock_material_pricing(
     return rows, failed
 
 
+def _fetch_stock_material_pricing(
+    page: Page, task_payload: Dict[str, Any]
+) -> FetchResult:
+    logger.info("Fetching stock material pricing from PSV API")
+    api = PsvApi(page)
+    rows, failed = _fetch_stock_details(api, _fetch_stock_list(api))
+    return rows, failed, {}
+
+
+def _refresh_stock_material_pricing(
+    page: Page, task_payload: Dict[str, Any]
+) -> FetchResult:
+    logger.info("Refreshing stock material pricing from PSV API")
+    api = PsvApi(page)
+    stocks = {stock["id"]: stock for stock in _fetch_stock_list(api)}
+    new_stocks, extra = split_known(stocks, _stock_label, task_payload)
+    rows, failed = _fetch_stock_details(api, list(new_stocks.values()))
+    return rows, failed, extra
+
+
 def run_stock_material_pricing_flow(
     tenant_credentials: Dict[str, Any],
     task_payload: Dict[str, Any],
@@ -191,6 +213,18 @@ def run_stock_material_pricing_flow(
     return run_pricing_flow(
         "Stock material pricing",
         _fetch_stock_material_pricing,
+        tenant_credentials,
+        task_payload,
+    )
+
+
+def run_stock_material_refresh_flow(
+    tenant_credentials: Dict[str, Any],
+    task_payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    return run_pricing_flow(
+        "Stock material refresh",
+        _refresh_stock_material_pricing,
         tenant_credentials,
         task_payload,
     )

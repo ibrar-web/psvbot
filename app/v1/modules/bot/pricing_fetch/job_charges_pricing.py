@@ -1,11 +1,12 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from playwright.sync_api import Page
 
 from app.v1.modules.bot.pricing_fetch.flow_runner import (
     FetchResult,
     run_pricing_flow,
+    split_known,
 )
 from app.v1.modules.bot.pricing_fetch.psv_api import PsvApi
 
@@ -96,6 +97,10 @@ def _charge_identity(charge: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _charge_label(charge: Dict[str, Any]) -> str:
+    return _charge_identity(charge)["name"]
+
+
 def _build_charge(
     charge: Dict[str, Any], details: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -112,11 +117,7 @@ def _build_charge(
     }
 
 
-def _fetch_job_charges_pricing(
-    page: Page, task_payload: Dict[str, Any]
-) -> FetchResult:
-    logger.info("Fetching job charges pricing from PSV API")
-    api = PsvApi(page)
+def _fetch_shown_charges(api: PsvApi) -> Dict[int, Dict[str, Any]]:
     all_charges = _fetch_charge_tree(api)
     charges = {
         charge_id: charge
@@ -128,6 +129,12 @@ def _fetch_job_charges_pricing(
         len(all_charges),
         len(charges),
     )
+    return charges
+
+
+def _fetch_charge_details(
+    api: PsvApi, charges: Dict[int, Dict[str, Any]]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     results = api.get_many(
         [CHARGE_DETAILS_PATH.format(charge_id) for charge_id in charges],
         DETAILS_CONCURRENCY,
@@ -148,7 +155,7 @@ def _fetch_job_charges_pricing(
                 }
             )
 
-    if not rows:
+    if failed and not rows:
         raise RuntimeError(
             f"All {len(failed)} charge detail requests failed, "
             f"first reason: {failed[0]['reason']}"
@@ -159,6 +166,29 @@ def _fetch_job_charges_pricing(
     return rows, failed
 
 
+def _fetch_job_charges_pricing(
+    page: Page, task_payload: Dict[str, Any]
+) -> FetchResult:
+    logger.info("Fetching job charges pricing from PSV API")
+    api = PsvApi(page)
+    charges = _fetch_shown_charges(api)
+    if not charges:
+        raise RuntimeError("PSV returned no shown job charges")
+    rows, failed = _fetch_charge_details(api, charges)
+    return rows, failed, {}
+
+
+def _refresh_job_charges_pricing(
+    page: Page, task_payload: Dict[str, Any]
+) -> FetchResult:
+    logger.info("Refreshing job charges pricing from PSV API")
+    api = PsvApi(page)
+    charges = _fetch_shown_charges(api)
+    new_charges, extra = split_known(charges, _charge_label, task_payload)
+    rows, failed = _fetch_charge_details(api, new_charges)
+    return rows, failed, extra
+
+
 def run_job_charges_pricing_flow(
     tenant_credentials: Dict[str, Any],
     task_payload: Dict[str, Any],
@@ -166,6 +196,18 @@ def run_job_charges_pricing_flow(
     return run_pricing_flow(
         "Job charges pricing",
         _fetch_job_charges_pricing,
+        tenant_credentials,
+        task_payload,
+    )
+
+
+def run_job_charges_refresh_flow(
+    tenant_credentials: Dict[str, Any],
+    task_payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    return run_pricing_flow(
+        "Job charges refresh",
+        _refresh_job_charges_pricing,
         tenant_credentials,
         task_payload,
     )

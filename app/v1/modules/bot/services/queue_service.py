@@ -43,9 +43,11 @@ from app.v1.modules.bot.etimate_history.invoice_history_lookup import (
 )
 from app.v1.modules.bot.pricing_fetch.job_charges_pricing import (
     run_job_charges_pricing_flow,
+    run_job_charges_refresh_flow,
 )
 from app.v1.modules.bot.pricing_fetch.stock_material_pricing import (
     run_stock_material_pricing_flow,
+    run_stock_material_refresh_flow,
 )
 from app.v1.modules.bot.task_types import TaskType
 
@@ -57,6 +59,8 @@ TASK_HANDLERS = {
     TaskType.INVOICE_HISTORY_LOOKUP.value: run_invoice_history_lookup_flow,
     TaskType.STOCK_MATERIAL_PRICING.value: run_stock_material_pricing_flow,
     TaskType.JOB_CHARGES_PRICING.value: run_job_charges_pricing_flow,
+    TaskType.STOCK_MATERIAL_REFRESH.value: run_stock_material_refresh_flow,
+    TaskType.JOB_CHARGES_REFRESH.value: run_job_charges_refresh_flow,
 }
 
 TASKS_COLLECTION = "tasks"
@@ -1045,12 +1049,19 @@ _RESULT_URL_PATH_OVERRIDES = {
     TaskType.INVOICE_HISTORY_LOOKUP.value: "/api/v1/customer-history/job/invoice-result",
     TaskType.STOCK_MATERIAL_PRICING.value: "/api/v1/stock-mapping/job/stock-material-result",
     TaskType.JOB_CHARGES_PRICING.value: "/api/v1/stock-mapping/job/job-charges-result",
+    TaskType.STOCK_MATERIAL_REFRESH.value: "/api/v1/stock-mapping/job/stock-material-refresh-result",
+    TaskType.JOB_CHARGES_REFRESH.value: "/api/v1/stock-mapping/job/job-charges-refresh-result",
 }
 
 
+_PRICING_REFRESH_TASK_TYPES = {
+    TaskType.STOCK_MATERIAL_REFRESH.value,
+    TaskType.JOB_CHARGES_REFRESH.value,
+}
 _PRICING_FETCH_TASK_TYPES = {
     TaskType.STOCK_MATERIAL_PRICING.value,
     TaskType.JOB_CHARGES_PRICING.value,
+    *_PRICING_REFRESH_TASK_TYPES,
 }
 
 
@@ -1165,6 +1176,11 @@ async def _call_record_result(
             "failed_rows": result.get("failed_rows", 0),
             "failed": result.get("failed", []),
         }
+        if task_type in _PRICING_REFRESH_TASK_TYPES:
+            # Refresh only fetched rows whose label wasn't in known_labels;
+            # removed_labels are known labels PSV no longer has.
+            payload["known_rows"] = result.get("known_rows", 0)
+            payload["removed_labels"] = result.get("removed_labels", [])
     else:
         tenant_id = task_payload.get("tenant_id") or (
             task_payload.get("quote") or {}

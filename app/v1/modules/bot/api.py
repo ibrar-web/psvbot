@@ -126,6 +126,8 @@ async def execute_test_estimate_history_task(
 _PRICING_FETCH_TASK_TYPES = {
     TaskType.STOCK_MATERIAL_PRICING.value,
     TaskType.JOB_CHARGES_PRICING.value,
+    TaskType.STOCK_MATERIAL_REFRESH.value,
+    TaskType.JOB_CHARGES_REFRESH.value,
 }
 
 
@@ -137,7 +139,10 @@ async def execute_test_pricing_fetch_task(
     id: str = Query(..., description="Test payload id"),
     case: str = Query(
         ...,
-        description="'stock_material_pricing' or 'job_charges_pricing'",
+        description=(
+            "'stock_material_pricing', 'job_charges_pricing', "
+            "'stock_material_refresh' or 'job_charges_refresh'"
+        ),
     ),
 ) -> Dict[str, Any]:
     normalized_case = (case or "").strip().lower()
