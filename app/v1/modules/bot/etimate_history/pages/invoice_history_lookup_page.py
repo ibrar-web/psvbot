@@ -118,6 +118,11 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     # _select_matching_stock_row() matches against when setting it.
     STOCK_PICKER_BUTTON = "xpath=//a[@ptooltip='Stock Picker']"
     STOCK_CANCEL_BUTTON = "xpath=//button[@name='cancel_stock_details']"
+    # Reading stock used to wait the full default timeout (120s) per step,
+    # which looked like a hang on jobs with no pre-selected stock. Instead,
+    # make a bounded number of short attempts and fall back to "".
+    STOCK_READ_ATTEMPTS = 2
+    STOCK_READ_TIMEOUT_MS = 10000
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -636,10 +641,50 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         this job's current stock as soon as the modal opens. Read-only:
         always closes via Cancel, never Save, so nothing on the job
         changes.
+
+        Tries at most STOCK_READ_ATTEMPTS times, each bounded by
+        STOCK_READ_TIMEOUT_MS; returns "" if no stock was found.
         """
+        for attempt in range(1, self.STOCK_READ_ATTEMPTS + 1):
+            try:
+                stock_name = self._try_read_stock_from_picker()
+            except Exception as exc:
+                logger.warning(
+                    "_read_stock_from_picker: attempt %s/%s failed (%s)",
+                    attempt,
+                    self.STOCK_READ_ATTEMPTS,
+                    exc,
+                )
+                stock_name = ""
+                if self.is_visible("xpath=//button[@name='save_stock_details']"):
+                    try:
+                        self._close_stock_picker()
+                    except Exception:
+                        logger.warning("_read_stock_from_picker: could not close Stock Picker modal")
+            if stock_name:
+                return stock_name
+            self._debug(
+                f"Stock not found on attempt {attempt}/{self.STOCK_READ_ATTEMPTS}"
+            )
+        logger.warning(
+            "_read_stock_from_picker: no stock found after %s attempt(s); using empty string",
+            self.STOCK_READ_ATTEMPTS,
+        )
+        return ""
+
+    def _try_read_stock_from_picker(self) -> str:
         self._debug("Opening Stock Picker modal to read selected stock")
         self.wait_for_spinner_to_disappear()
-        self.click(self.STOCK_PICKER_BUTTON)
+        picker_loc = self._loc(self.STOCK_PICKER_BUTTON).first
+        try:
+            picker_loc.wait_for(state="visible", timeout=self.STOCK_READ_TIMEOUT_MS)
+        except PlaywrightTimeoutError:
+            logger.warning("_read_stock_from_picker: Stock Picker button not visible")
+            return ""
+        try:
+            picker_loc.click(timeout=self.STOCK_READ_TIMEOUT_MS)
+        except PlaywrightTimeoutError:
+            picker_loc.evaluate("el => el.click()")
 
         try:
             self.page.wait_for_function(
@@ -648,7 +693,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                       .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
                     return !!btn;
                 }""",
-                timeout=self._timeout_ms,
+                timeout=self.STOCK_READ_TIMEOUT_MS,
             )
         except PlaywrightTimeoutError:
             logger.warning("_read_stock_from_picker: Stock Picker modal never opened")
@@ -683,7 +728,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                     const cell = selectedRow.querySelector("td[aria-colindex='1']");
                     return (cell?.innerText || cell?.textContent || "").replace(/\\s+/g, " ").trim();
                 }""",
-                timeout=self._timeout_ms,
+                timeout=self.STOCK_READ_TIMEOUT_MS,
             ).json_value()
         except PlaywrightTimeoutError:
             logger.warning("_read_stock_from_picker: no pre-selected stock row found in the modal")
@@ -695,8 +740,13 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     def _close_stock_picker(self) -> None:
         self.wait_for_spinner_to_disappear()
         cancel_loc = self._loc(self.STOCK_CANCEL_BUTTON).first
-        cancel_loc.wait_for(state="visible", timeout=self._timeout_ms)
-        cancel_loc.click(timeout=self._timeout_ms)
+        try:
+            cancel_loc.wait_for(state="visible", timeout=self.STOCK_READ_TIMEOUT_MS)
+            cancel_loc.click(timeout=self.STOCK_READ_TIMEOUT_MS)
+        except PlaywrightTimeoutError:
+            # Don't leave the modal blocking the rest of the scrape.
+            logger.warning("_close_stock_picker: Cancel button not clickable; pressing Escape")
+            self.page.keyboard.press("Escape")
         self.wait_for_spinner_to_disappear()
 
     def _read_job_details(self, job_method: str, *, top_level: bool = True) -> Dict[str, Any]:
@@ -781,8 +831,11 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                 const rows = Array.from(document.querySelectorAll("div[id^='charge_index_']"));
                 const results = [];
                 for (const row of rows) {
-                    const hasPressBadge = !!row.querySelector('.charge-desc .badge-container .tag_press');
-                    if (hasPressBadge) continue;
+                    // Skip press-level ("P") and stock-level ("S") charges.
+                    const hasLevelBadge = !!row.querySelector(
+                        '.charge-desc .badge-container .tag_press, .charge-desc .badge-container .tag_stock'
+                    );
+                    if (hasLevelBadge) continue;
                     const nameEl = row.querySelector('.charge_desc_label');
                     const cols = row.querySelectorAll(':scope > div');
                     const qtyEl = cols[1] ? cols[1].querySelector('span') : null;
