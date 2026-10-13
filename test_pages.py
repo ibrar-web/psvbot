@@ -64,16 +64,16 @@ QUOTE_RECORD = {
    },
    "requirements": [
       {
-         "stock_search": "Kelly Dig Silk Cvr 100 83M 18 X12 410/cs",
+         "stock_search": "][ PVC 2mm White",
          "quantity": 5.0,
          "size": "3x4",
          "sides": "duplex",
         #  "date": "2026-07-01",
          "description": "50 double-sided 3x4 laminated badges with one hole at the top for a lanyard and round corners",
-         "job_method": "Sublet",
+         "job_method": "Large Format",
          "job_charges": [
             {"charge_name": "1 Hole Punch (Laminated)", "charge_price": 0.1,  "quantity": 50.0},
-            {"charge_name": "Lanyards",                 "charge_price": 1.5,  "quantity": 50.0},
+            {"charge_name": "Base FlatBed Setup V3.1",  "charge_price": 20,  "quantity": 1},
             {"charge_name": "Laminate 12 x 18",         "charge_price": 8.0,  "quantity": 50.0},
             {"charge_name": "Round 4 Corners: Laminated","charge_price": 0.6,  "quantity": 50.0},
          ],

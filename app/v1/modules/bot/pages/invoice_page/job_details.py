@@ -158,11 +158,7 @@ class JobDetailsTab(BasePage):
         copies_quantity = self._quantity_text(
             charge.get("copies_quantity") if isinstance(charge, Mapping) else None
         )
-        self._open_add_new_charges_modal()
-        self._add_job_charges(job_charges, copies_quantity=copies_quantity)
-        self.wait_for_spinner_to_disappear()
-        self.click(self.CHARGES_SAVE_BUTTON)
-        self.wait_for_spinner_to_disappear()
+        self._add_new_job_charges(job_charges, copies_quantity=copies_quantity)
 
     def wait_until_multipart_active(self) -> None:
         self._debug("Waiting for Multi-Part Job Details tab to become active")
@@ -508,12 +504,7 @@ class JobDetailsTab(BasePage):
             self._debug("No charges provided; skipping charges modal")
             return
 
-        self._open_add_new_charges_modal()
-        self._add_job_charges(job_charges, copies_quantity=copies_quantity)
-        self._debug("Saving selected charges")
-        self.wait_for_spinner_to_disappear()
-        self.click(self.CHARGES_SAVE_BUTTON)
-        self.wait_for_spinner_to_disappear()
+        self._add_new_job_charges(job_charges, copies_quantity=copies_quantity)
 
     def sublet_price_breakup(self, data: Mapping[str, Any]) -> None:
         """Fill the Sublet price breakup: quantity, then unit cost, then markup.
@@ -564,12 +555,7 @@ class JobDetailsTab(BasePage):
             self._debug("No charges provided; skipping charges modal")
             return
 
-        self._open_add_new_charges_modal()
-        self._add_job_charges(job_charges, copies_quantity=copies_quantity)
-        self._debug("Saving selected charges")
-        self.wait_for_spinner_to_disappear()
-        self.click(self.CHARGES_SAVE_BUTTON)
-        self.wait_for_spinner_to_disappear()
+        self._add_new_job_charges(job_charges, copies_quantity=copies_quantity)
 
     def _sublet_decimal_text(self, value: Any) -> str:
         text = str(value if value is not None else "").replace(",", "").strip()
@@ -1023,6 +1009,53 @@ class JobDetailsTab(BasePage):
         self._loc(self.CHARGES_SEARCH_INPUT).first.wait_for(
             state="visible", timeout=self._timeout_ms
         )
+
+    def _read_existing_charge_names(self) -> list[str]:
+        """Return the names of charges already listed in the Charges grid.
+
+        Selecting a stock (or setting the quantity) can make PrintSmith
+        auto-add stock/press level charges, so these are read right before
+        the Add New Charges modal is opened.
+        """
+        self.wait_for_spinner_to_disappear()
+        names = self.page.evaluate(
+            """() => Array.from(document.querySelectorAll("div[id^='charge_index_']"))
+                .filter(row => row.offsetParent !== null)
+                .map(row => {
+                    const nameEl = row.querySelector('.charge_desc_label');
+                    return (nameEl?.textContent || '').trim();
+                })
+                .filter(Boolean)"""
+        ) or []
+        return [str(name) for name in names]
+
+    def _filter_existing_charges(self, charges: list) -> list:
+        existing_names = self._read_existing_charge_names()
+        self._debug(f"Charges already on the job: {existing_names}")
+        existing_keys = {self._charge_match_key(name) for name in existing_names}
+
+        remaining = []
+        for charge in charges:
+            term = self._normalize_charge(charge)["charge_name"]
+            if term and self._charge_match_key(term) in existing_keys:
+                self._debug(f"Skipping charge already on the job: {term}")
+                continue
+            remaining.append(charge)
+        return remaining
+
+    def _add_new_job_charges(self, charges: list, *, copies_quantity: Any = None) -> None:
+        """Open the Add New Charges modal and add only charges not already on the job."""
+        charges = self._filter_existing_charges(charges)
+        if not charges:
+            self._debug("All provided charges already exist on the job; skipping charges modal")
+            return
+
+        self._open_add_new_charges_modal()
+        self._add_job_charges(charges, copies_quantity=copies_quantity)
+        self._debug("Saving selected charges")
+        self.wait_for_spinner_to_disappear()
+        self.click(self.CHARGES_SAVE_BUTTON)
+        self.wait_for_spinner_to_disappear()
 
     def _add_job_charges(self, charges: list, *, copies_quantity: Any = None) -> None:
         if not charges:
