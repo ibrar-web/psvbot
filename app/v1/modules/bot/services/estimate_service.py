@@ -231,7 +231,7 @@ def run_estimate_flow(
                 for attempt in range(2):
                     try:
                         _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                        invoice_path, estimate_totals = invoice_page.complete_information_tabs(
+                        invoice_path, estimate_totals, invoice_total = invoice_page.complete_information_tabs(
                             resume_from="estimate_summary",
                             quote_record=quote_record,
                             customer_selection_status=customer_selection_status,
@@ -293,7 +293,7 @@ def run_estimate_flow(
                 for attempt in range(2):
                     try:
                         _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                        invoice_path, estimate_totals = invoice_page.complete_information_tabs(
+                        invoice_path, estimate_totals, invoice_total = invoice_page.complete_information_tabs(
                             resume_from="auto",
                             quote_record=quote_record,
                             customer_selection_status=customer_selection_status,
@@ -312,6 +312,7 @@ def run_estimate_flow(
             _debug(f"Invoice tab flow completed. URL: {page.url}")
             _debug(f"Estimate totals collected: {estimate_totals}")
             logger.info("Estimate totals: %s", estimate_totals)
+            _debug(f"Invoice total collected: {invoice_total}")
 
             current_step = "save_summary"
             _ensure_within_timeout(started_at, current_step)
@@ -332,6 +333,7 @@ def run_estimate_flow(
                 "browser_open": False,
                 "customer_selection": customer_selection_status,
                 "estimate_totals": estimate_totals,
+                "invoice_total": invoice_total,
                 **upload_result,
             }
 

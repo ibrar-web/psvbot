@@ -39,6 +39,10 @@ class EstimatedSummaryTab(BasePage):
     # not the label text.
     US685_E_ESTIMATE_BUTTON = "xpath=//div[@name='print_btn_group']//button[@name='print_btn']"
     WANTED_DATE_INPUT = "xpath=//input[@name='wantedDate']"
+    # Final estimate total in the bottom-right summary panel (below Net Sub,
+    # Shipping, Sales Tax and Deposits), e.g. "$ 1,393.11".
+    INVOICE_TOTAL_VALUE = "css=label[name='total_value']:visible"
+    INVOICE_TOTAL_TIMEOUT_MS = 10000
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -93,6 +97,24 @@ class EstimatedSummaryTab(BasePage):
         )
         self._debug(f"Collected estimate totals: {totals}")
         return totals or {}
+
+    def read_invoice_total(self) -> str:
+        """Read the final total from the bottom-right summary panel.
+
+        Returns the amount without currency symbol or commas ("1393.11"),
+        or "" if the total is not shown.
+        """
+        self.wait_for_spinner_to_disappear()
+        try:
+            total_loc = self._loc(self.INVOICE_TOTAL_VALUE).first
+            total_loc.wait_for(state="visible", timeout=self.INVOICE_TOTAL_TIMEOUT_MS)
+            total_text = total_loc.inner_text()
+        except PlaywrightTimeoutError:
+            logger.warning("Invoice total label not found on Estimate Summary")
+            return ""
+        invoice_total = total_text.replace("$", "").replace(",", "").strip()
+        self._debug(f"Invoice total: {invoice_total}")
+        return invoice_total
 
     def remove_all_items(self) -> None:
         """Remove all job items from the Estimate Summary table.

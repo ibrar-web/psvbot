@@ -1125,7 +1125,8 @@ async def _call_record_result(
     if task_type == TaskType.CREATE_ESTIMATE.value:
         # Matches the receiving endpoint's actual schema exactly (given):
         # queue_id, success, summary_file_name, summary_file_url,
-        # error_message, estimate_totals, estimate_id — nothing else.
+        # error_message, estimate_totals, invoice_total, estimate_id —
+        # nothing else.
         payload = {
             "queue_id": queue_id,
             "success": success,
@@ -1133,6 +1134,7 @@ async def _call_record_result(
             "summary_file_url": result.get("summary_file_url"),
             "error_message": error_payload,
             "estimate_totals": _stringify_dict_keys(result.get("estimate_totals")),
+            "invoice_total": result.get("invoice_total"),
             "estimate_id": estimate_id,
         }
     elif task_type == TaskType.ESTIMATE_HISTORY_EXPORT.value:

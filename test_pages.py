@@ -83,27 +83,7 @@ QUOTE_RECORD = {
          "estimate_totals": {},
          "vendor_name" : "Print 2 Fly",
       },
-      {
-         "stock_search": "][ PVC 3mm Black",
-         "quantity": 75.0,
-         "size": "3x4",
-         "sides": "duplex",
-        #  "date": "2026-07-01",
-         "description": "75 double-sided 3x4 PVC name tags with one hole at the top for a lanyard, lamination, and round corners",
-         "job_method": "Large Format",
-         "job_charges": [
-            {"charge_name": "1 Hole Punch",                                          "charge_price": 0.03, "quantity": 75.0},
-            {"charge_name": "Lanyards",                                              "charge_price": 1.5,  "quantity": 75.0},
-            {"charge_name": "Laminate 12 x 18",                                     "charge_price": 8.0,  "quantity": 75.0},
-            {"charge_name": "Round 4 Corners: Laminated",                           "charge_price": 0.6,  "quantity": 75.0},
-            {"charge_name": "Routing Knife 4 strt sides-Foam/Coroplast/PVC/Styrene","charge_price": 6.0,  "quantity": 1.0},
-         ],
-         "other_charges": [],
-         "rush_fee": 0.0,
-         "total": 1042.25,
-         "estimate_totals": {},
-         "vendor_name" : None,
-      },
+      
    ],
    "tenant_credentials": {
       "printsmith_username": "raza",
@@ -401,6 +381,7 @@ def test_full_flow() -> bool:
     browser = context = page = None
     invoice_path: Optional[Path] = None
     estimate_totals: Dict[int, str] = {}
+    invoice_total = ""
     customer_selection_status: Optional[Dict[str, Any]] = None
     current_step = "starting"
     started_at = time.monotonic()
@@ -462,7 +443,7 @@ def test_full_flow() -> bool:
                         for attempt in range(2):
                             try:
                                 _check_timeout(f"{current_step}_attempt_{attempt + 1}")
-                                invoice_path, estimate_totals = invoice_page.complete_information_tabs(
+                                invoice_path, estimate_totals, invoice_total = invoice_page.complete_information_tabs(
                                     resume_from="estimate_summary",
                                     quote_record=quote_record,
                                     customer_selection_status=customer_selection_status,
@@ -477,6 +458,7 @@ def test_full_flow() -> bool:
                                 raise
                         print(f"  [PASS] Invoice tabs done — PDF: {invoice_path}")
                         print(f"  [INFO] Estimate totals: {estimate_totals}")
+                        print(f"  [INFO] Invoice total: {invoice_total}")
 
                     else:
                         # ----------------------------------------------------------------
@@ -523,7 +505,7 @@ def test_full_flow() -> bool:
                         for attempt in range(2):
                             try:
                                 _check_timeout(f"{current_step}_attempt_{attempt + 1}")
-                                invoice_path, estimate_totals = invoice_page.complete_information_tabs(
+                                invoice_path, estimate_totals, invoice_total = invoice_page.complete_information_tabs(
                                     resume_from="auto",
                                     quote_record=quote_record,
                                     customer_selection_status=customer_selection_status,
@@ -538,6 +520,7 @@ def test_full_flow() -> bool:
                                 raise
                         print(f"  [PASS] Invoice tabs done — PDF: {invoice_path}")
                         print(f"  [INFO] Estimate totals: {estimate_totals}")
+                        print(f"  [INFO] Invoice total: {invoice_total}")
 
                     # ----------------------------------------------------------------
                     # Step 6 — Logout (both branches)
@@ -552,6 +535,7 @@ def test_full_flow() -> bool:
                     print(f"  branch              : {'existing-estimate' if use_existing_estimate else 'new-estimate'}")
                     print(f"  invoice_file        : {invoice_path}")
                     print(f"  estimate_totals     : {estimate_totals}")
+                    print(f"  invoice_total       : {invoice_total}")
                     print(f"  customer_selection  : {customer_selection_status}")
 
                 except InvalidLoginCredentialsError as exc:
