@@ -1,11 +1,14 @@
 import logging
+import re
 import time
 from typing import Any, Dict, List, Optional
 
+from playwright.sync_api import Page, Response
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from app.v1.modules.bot.config import DEBUG
 from app.v1.modules.bot.etimate_history.pages.estimate_history_page import EstimateHistoryPage
+from app.v1.modules.bot.pricing_fetch.psv_api import index_jsog_objects, resolve_jsog_ref
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +127,20 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
     STOCK_READ_ATTEMPTS = 2
     STOCK_READ_TIMEOUT_MS = 10000
 
+    # Opening a record makes PSV's own UI call getInvoice, whose JSON holds
+    # every top-level job with its assigned stock (job.stock.name, absent
+    # when the job has no stock) — confirmed live. The Stock Picker grid is
+    # paged 20 rows at a time, so a job's selected stock is often on page
+    # 2/3 and never in the DOM; reading it from this response avoids the
+    # picker entirely. jobIndex N matches the Summary row's "Job-N" label.
+    GET_INVOICE_API_PATH = "/rest/html5/invoice/getInvoice?"
+    JOB_LABEL_INDEX_PATTERN = re.compile(r"^Job-(\d+)$", re.IGNORECASE)
+
+    def __init__(self, page: Page, *args: Any, **kwargs: Any) -> None:
+        super().__init__(page, *args, **kwargs)
+        # None means getInvoice wasn't captured — fall back to the picker.
+        self._stock_by_job_index: Optional[Dict[int, str]] = None
+
     def _debug(self, message: str) -> None:
         if DEBUG:
             print(f"[PrintSmith][InvoiceHistoryLookupPage] {message}")
@@ -193,8 +210,54 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
         # out entirely.
         self.clear_filters()
         self.search_by_invoice_id(invoice_id)
-        self.open_first_search_result(invoice_id)
+        self.page.on("response", self._capture_invoice_response)
+        try:
+            self.open_first_search_result(invoice_id)
+        finally:
+            self.page.remove_listener("response", self._capture_invoice_response)
         self._debug(f"Opened invoice record for invoice_id={invoice_id}. URL: {self.page.url}")
+        if self._stock_by_job_index is None:
+            logger.warning(
+                "getInvoice response not captured for invoice_id=%s; "
+                "stock will be read from the Stock Picker",
+                invoice_id,
+            )
+
+    def _capture_invoice_response(self, response: Response) -> None:
+        if self.GET_INVOICE_API_PATH not in response.url or not response.ok:
+            return
+        try:
+            invoice = response.json()
+        except Exception as exc:
+            logger.warning("Could not parse getInvoice response: %s", exc)
+            return
+        objects = index_jsog_objects(invoice)
+        stock_by_job_index: Dict[int, str] = {}
+        for raw_job in invoice.get("jobs") or []:
+            job = resolve_jsog_ref(raw_job, objects)
+            job_index = job.get("jobIndex")
+            if not isinstance(job_index, int):
+                continue
+            stock = resolve_jsog_ref(job.get("stock"), objects)
+            stock_name = stock.get("name") or job.get("stockName") or ""
+            # Same whitespace collapsing the picker read applies, so the
+            # value round-trips into stock_search unchanged.
+            stock_by_job_index[job_index] = " ".join(str(stock_name).split())
+        self._stock_by_job_index = stock_by_job_index
+        self._debug(f"Captured stock for {len(stock_by_job_index)} job(s) from getInvoice")
+
+    def _stock_from_invoice_api(self, job_label: str) -> Optional[str]:
+        """Stock for a top-level "Job-N" row from the captured getInvoice
+        response: "" when the job has no stock, None when the response
+        has no answer (not captured, or label not found) so the caller
+        falls back to the Stock Picker.
+        """
+        if self._stock_by_job_index is None:
+            return None
+        match = self.JOB_LABEL_INDEX_PATTERN.match((job_label or "").strip())
+        if not match:
+            return None
+        return self._stock_by_job_index.get(int(match.group(1)))
 
     # ------------------------------------------------------------------
     # Estimate Summary tree-table scrape
@@ -248,7 +311,7 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                 try:
                     self._open_job_row(index)
                     job_method = self._read_job_method()
-                    details = self._read_job_details(job_method)
+                    details = self._read_job_details(job_method, job_label=label)
                     job_charges = self._read_job_charges()
                     job_items.append(
                         {
@@ -745,7 +808,9 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
             self.page.keyboard.press("Escape")
         self.wait_for_spinner_to_disappear()
 
-    def _read_job_details(self, job_method: str, *, top_level: bool = True) -> Dict[str, Any]:
+    def _read_job_details(
+        self, job_method: str, *, top_level: bool = True, job_label: str = ""
+    ) -> Dict[str, Any]:
         method_key = (job_method or "").strip().lower()
         # Charges Only and Sublet (any variant) never render Product/
         # Location dropdowns at all — confirmed live, every single read
@@ -790,7 +855,13 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                 "xpath=//textarea[@name='digital-descriptionField'] | "
                 "//app-expandable-textarea[@name='digital-descriptionField']//textarea"
             )
-            details["stock"] = self._read_stock_from_picker()
+            # Multi-part parts carry no job_label, so they still use the picker.
+            api_stock = self._stock_from_invoice_api(job_label) if top_level else None
+            if api_stock is None:
+                details["stock"] = self._read_stock_from_picker()
+            else:
+                self._debug(f"{job_label}: stock from getInvoice: '{api_stock}'")
+                details["stock"] = api_stock
             details["stock_color"] = self._read_kendo_text("stockColorList")
             details["finish_size"] = self._read_kendo_text("finishSize")
             details["sides"] = self._read_print_sides()

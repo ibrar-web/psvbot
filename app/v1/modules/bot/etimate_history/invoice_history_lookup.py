@@ -177,8 +177,8 @@ def run_invoice_history_lookup_flow(
     logout_succeeded = False
     logout_error: Optional[str] = None
 
-    try:
-        with sync_playwright() as playwright:
+    with sync_playwright() as playwright:
+        try:
             csv_logger.init()
             _debug(f"Starting invoice history lookup flow for invoice_id={invoice_id}")
 
@@ -211,8 +211,10 @@ def run_invoice_history_lookup_flow(
                 f"{len(scraped.get('other_charges', []))} other charge(s)"
             )
 
+            # No _ensure_within_timeout here: the scrape is already done, and
+            # failing now would throw away every job read off a large
+            # invoice (~45s per job) and make the queue retry the whole run.
             current_step = "format_result"
-            _ensure_within_timeout(started_at, current_step)
             job_items = scraped.get("job_items", [])
             # direct_charges: invoice-wide charges read straight off the
             # Estimate/Invoice Summary tree table rows, no clicking involved.
@@ -249,48 +251,48 @@ def run_invoice_history_lookup_flow(
                 "direct_charges": direct_charges,
             }
 
-    except InvalidLoginCredentialsError as exc:
-        flow_failed = True
-        logger.warning("Invoice history lookup stopped due to invalid login credentials")
-        return {
-            "status": "error",
-            "message": str(exc),
-            "step": current_step,
-            "logout_succeeded": False,
-            "logout_error": None,
-        }
+        except InvalidLoginCredentialsError as exc:
+            flow_failed = True
+            logger.warning("Invoice history lookup stopped due to invalid login credentials")
+            return {
+                "status": "error",
+                "message": str(exc),
+                "step": current_step,
+                "logout_succeeded": False,
+                "logout_error": None,
+            }
 
-    except PlaywrightTimeoutError as exc:
-        flow_failed = True
-        if page is not None:
-            logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
-        logger.exception("Invoice history lookup failed with Playwright timeout error")
-        return {
-            "status": "error",
-            "message": str(exc),
-            "step": current_step,
-            "logout_succeeded": logout_succeeded,
-            "logout_error": logout_error,
-        }
+        except PlaywrightTimeoutError as exc:
+            flow_failed = True
+            if page is not None:
+                logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
+            logger.exception("Invoice history lookup failed with Playwright timeout error")
+            return {
+                "status": "error",
+                "message": str(exc),
+                "step": current_step,
+                "logout_succeeded": logout_succeeded,
+                "logout_error": logout_error,
+            }
 
-    except Exception as exc:
-        flow_failed = True
-        if page is not None:
-            logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
-        logger.exception("Invoice history lookup failed")
-        return {
-            "status": "error",
-            "message": f"Unexpected error: {exc}",
-            "step": current_step,
-            "logout_succeeded": logout_succeeded,
-            "logout_error": logout_error,
-        }
+        except Exception as exc:
+            flow_failed = True
+            if page is not None:
+                logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
+            logger.exception("Invoice history lookup failed")
+            return {
+                "status": "error",
+                "message": f"Unexpected error: {exc}",
+                "step": current_step,
+                "logout_succeeded": logout_succeeded,
+                "logout_error": logout_error,
+            }
 
-    finally:
-        _cleanup_browser(
-            browser, context, page,
-            flow_failed=flow_failed,
-            logout_succeeded=logout_succeeded,
-            logout_error=logout_error,
-        )
-        del browser, context, page
+        finally:
+            _cleanup_browser(
+                browser, context, page,
+                flow_failed=flow_failed,
+                logout_succeeded=logout_succeeded,
+                logout_error=logout_error,
+            )
+            del browser, context, page
