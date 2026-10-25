@@ -1,5 +1,4 @@
 import logging
-import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from playwright.sync_api import Page
@@ -22,7 +21,7 @@ from app.v1.modules.bot.pricing_fetch.psv_api import (
 logger = logging.getLogger(__name__)
 
 STOCK_LIST_PATH = (
-    "stockdefinition/getStockDefinitionList?pricingMethod=&doPrint=false"
+    "stockdefinition/getStockDefinitionList?pricingMethod={}&doPrint=false"
 )
 # lock=false so reading a stock never locks it for PSV users.
 STOCK_DETAILS_PATH = (
@@ -35,21 +34,11 @@ DETAILS_CONCURRENCY = 5
 BLANK_SHEET_ROWS = range(1, 7)
 BLANK_SHEET_PRICE_QTY = 1
 
-DIGITAL_COLOR = "Digital Color"
-LARGE_FORMAT = "Large Format"
-DIGITAL_COLOR_MAX_WIDTH = 40
-SIZE_NUMBER_PATTERN = re.compile(r"\d+(?:\.\d+)?")
-
-
-def _infer_job_method(size: str) -> Optional[str]:
-    dimensions = SIZE_NUMBER_PATTERN.findall(size)
-    if not dimensions:
-        return None
-    if len(dimensions) == 1:
-        return LARGE_FORMAT
-    if float(dimensions[0]) <= DIGITAL_COLOR_MAX_WIDTH:
-        return DIGITAL_COLOR
-    return LARGE_FORMAT
+# Stocks don't store an estimator: PSV's job stock picker filters the stock
+# list by the job's estimator. These two split the stocks (Large Format/Rigid
+# groups vs Paper); BW and sheet press return the same stocks as color, and
+# the other estimators don't filter.
+ESTIMATORS = ("LFCopierDefinitions", "ColorCopierDefinitions")
 
 
 def _list_request(skip: int) -> Dict[str, Any]:
@@ -75,22 +64,36 @@ def _list_request(skip: int) -> Dict[str, Any]:
     }
 
 
-def _fetch_stock_list(api: PsvApi) -> List[Dict[str, Any]]:
+def _fetch_stock_list(
+    api: PsvApi, estimator: str = ""
+) -> List[Dict[str, Any]]:
     stocks: List[Dict[str, Any]] = []
     skip = 0
     while True:
-        list_page = api.post(STOCK_LIST_PATH, _list_request(skip))
+        list_page = api.post(
+            STOCK_LIST_PATH.format(estimator), _list_request(skip)
+        )
         page_stocks = list_page["stockDefinitionList"]
         stocks.extend(page_stocks)
         skip += LIST_PAGE_SIZE
         total = list_page["currentTotalResultsCount"]
         if not page_stocks or skip >= total:
             logger.info(
-                "Found %s inventory stocks (PSV reports %s)",
+                "Found %s inventory stocks for estimator '%s' "
+                "(PSV reports %s)",
                 len(stocks),
+                estimator,
                 total,
             )
             return stocks
+
+
+def _fetch_stock_estimators(api: PsvApi) -> Dict[int, str]:
+    stock_estimators: Dict[int, str] = {}
+    for estimator in ESTIMATORS:
+        for stock in _fetch_stock_list(api, estimator):
+            stock_estimators.setdefault(stock["id"], estimator)
+    return stock_estimators
 
 
 def _blank_sheet_price(details: Dict[str, Any]) -> Optional[float]:
@@ -122,7 +125,7 @@ def _build_stock_charge(
     }
 
 
-def _build_stock(details: Dict[str, Any]) -> Dict[str, Any]:
+def _build_stock(details: Dict[str, Any], estimator: str) -> Dict[str, Any]:
     objects = index_jsog_objects(details)
     size = _name_of(details.get("parentsize"), objects)
     stock_charges = [
@@ -135,7 +138,7 @@ def _build_stock(details: Dict[str, Any]) -> Dict[str, Any]:
         "name": details.get("name") or "",
         "size": size,
         "price": _blank_sheet_price(details),
-        "job_method": _infer_job_method(size),
+        "estimator": estimator,
         "stock_level_charge": [
             _build_stock_charge(charge, objects)
             for charge in stock_charges
@@ -151,6 +154,7 @@ def _stock_label(stock: Dict[str, Any]) -> str:
 def _fetch_stock_details(
     api: PsvApi, stocks: List[Dict[str, Any]]
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    stock_estimators = _fetch_stock_estimators(api)
     results = api.get_many(
         [STOCK_DETAILS_PATH.format(stock["id"]) for stock in stocks],
         DETAILS_CONCURRENCY,
@@ -159,7 +163,11 @@ def _fetch_stock_details(
     rows, failed = [], []
     for stock, result in zip(stocks, results):
         if result["ok"]:
-            rows.append(_build_stock(result["data"]))
+            rows.append(
+                _build_stock(
+                    result["data"], stock_estimators.get(stock["id"], "")
+                )
+            )
         else:
             failed.append(
                 {
@@ -176,11 +184,12 @@ def _fetch_stock_details(
         )
     logger.info(
         "Fetched %s stocks (%s without a qty %s blank sheet price, "
-        "%s with stock level charges), %s failed",
+        "%s with stock level charges, %s with an estimator), %s failed",
         len(rows),
         sum(row["price"] is None for row in rows),
         BLANK_SHEET_PRICE_QTY,
         sum(bool(row["stock_level_charge"]) for row in rows),
+        sum(bool(row["estimator"]) for row in rows),
         len(failed),
     )
     return rows, failed
