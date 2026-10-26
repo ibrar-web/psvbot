@@ -584,43 +584,52 @@ class JobDetailsTab(BasePage):
         self.wait_for_spinner_to_disappear()
 
         self._debug("Activating Bleed popup")
-        self.page.wait_for_function(
-            """() => {
-                const labels = Array.from(document.querySelectorAll("label, span, div"))
-                    .filter(el => (el.innerText || el.textContent || "").trim().toLowerCase() === "bleed");
-                for (const label of labels) {
-                    const container = label.closest("div, li, tr, .dot-form__row") || label.parentElement;
-                    if (!container) continue;
-                    const slider = container.querySelector(".dot-switch-slider");
-                    if (slider) return true;
+
+        find_bleed_switch_js = """() => {
+            const isVisible = el => !!el && el.getClientRects().length > 0;
+            const switches = Array.from(document.querySelectorAll("label[name='bleed_toggle_label']"));
+            let label = switches.find(isVisible);
+            if (!label) {
+                const texts = Array.from(document.querySelectorAll("label, span"))
+                    .filter(el => isVisible(el) && (el.textContent || "").trim().toLowerCase() === "bleed");
+                for (const text of texts) {
+                    let node = text.parentElement;
+                    while (node && node !== document.body && !node.querySelector(".dot-switch-slider")) {
+                        node = node.parentElement;
+                    }
+                    if (node && node !== document.body) {
+                        label = node.querySelector(".dot-switch-slider").closest("label") || node;
+                        break;
+                    }
                 }
-                return false;
-            }""",
+            }
+            if (!label) return null;
+            return {
+                input: label.querySelector("input[type='checkbox']"),
+                slider: label.querySelector(".dot-switch-slider"),
+            };
+        }"""
+        self.page.wait_for_function(
+            f"() => !!({find_bleed_switch_js})()",
             timeout=self._timeout_ms,
         )
         self._debug("Activating Bleed slider")
-        activated = self.page.evaluate(
-            """() => {
-                const labels = Array.from(document.querySelectorAll("label, span, div"))
-                    .filter(el => (el.innerText || el.textContent || "").trim().toLowerCase() === "bleed");
-                for (const label of labels) {
-                    const container = label.closest("div, li, tr, .dot-form__row") || label.parentElement;
-                    if (!container) continue;
-                    const slider = container.querySelector(".dot-switch-slider");
-                    if (!slider) continue;
-                    const toggle = container.querySelector("input[type='checkbox']") || slider.previousElementSibling;
-                    if (toggle && toggle.tagName === "INPUT") {
-                        if (!toggle.checked) toggle.click();
-                    } else {
-                        slider.click();
-                    }
-                    return true;
-                }
-                return false;
-            }"""
+        state = self.page.evaluate(
+            f"""() => {{
+                const found = ({find_bleed_switch_js})();
+                if (!found) return "not_found";
+                const {{ input, slider }} = found;
+                if (input && input.checked) return "already_active";
+                if (input) input.click();
+                else if (slider) slider.click();
+                else return "not_found";
+                return "activated";
+            }}"""
         )
-        if not activated:
+        if state == "not_found":
             self._debug("Bleed slider not found; skipping")
+        elif state == "already_active":
+            self._debug("Bleed already active; leaving it on")
 
         self._debug("Clicking Confirm after enabling bleed")
         self.wait_for_spinner_to_disappear()
