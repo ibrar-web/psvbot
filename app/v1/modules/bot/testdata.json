@@ -646,5 +646,21 @@
         "printsmith_company": "alphagraphics685"
       }
     }
+  },
+
+  "job_methods": {
+    "1": {
+      "task_type": "job_methods",
+      "machine_name": "ibrarpc",
+      "queue_id": "test-job_methods-1",
+      "tenant_id": "6a0ac09549e818e8e4b8b447",
+      "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/stock-mapping/job/job-methods-result",
+      "tenant_credentials": {
+        "printsmith_username": "AijazAsif",
+        "printsmith_password": "Howard@530SF",
+        "printsmith_url": "https://alphagraphics685.myprintdesk.net/PrintSmith/PrintSmith.html",
+        "printsmith_company": "alphagraphics685"
+      }
+    }
   }
 }

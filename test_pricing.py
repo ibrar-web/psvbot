@@ -6,7 +6,8 @@ to a local capture server that prints exactly what the backend would get.
 Usage:
     python test_pricing.py --flow stock
     python test_pricing.py --flow charges --id 1 --headless
-    python test_pricing.py --flow both
+    python test_pricing.py --flow methods
+    python test_pricing.py --flow all
 """
 
 import argparse
@@ -23,6 +24,7 @@ TESTDATA_PATH = Path("app/v1/modules/bot/testdata.json")
 FLOW_TASK_TYPES = {
     "stock": "stock_material_pricing",
     "charges": "job_charges_pricing",
+    "methods": "job_methods",
 }
 
 
@@ -51,7 +53,7 @@ class CaptureHandler(BaseHTTPRequestHandler):
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Test pricing tasks")
     parser.add_argument(
-        "--flow", choices=[*FLOW_TASK_TYPES, "both"], default="stock"
+        "--flow", choices=[*FLOW_TASK_TYPES, "all"], default="stock"
     )
     parser.add_argument("--id", default="1", help="testdata.json payload id")
     parser.add_argument("--headless", action="store_true")
@@ -103,7 +105,7 @@ def main() -> None:
     from app.v1.modules.bot.services import queue_service as queue
 
     result_url = _start_capture_server()
-    flows = FLOW_TASK_TYPES if args.flow == "both" else [args.flow]
+    flows = FLOW_TASK_TYPES if args.flow == "all" else [args.flow]
     for flow in flows:
         _run_task(queue, FLOW_TASK_TYPES[flow], args.id, result_url)
 

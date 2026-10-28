@@ -9,3 +9,4 @@ class TaskType(str, Enum):
     JOB_CHARGES_PRICING = "job_charges_pricing"
     STOCK_MATERIAL_REFRESH = "stock_material_refresh"
     JOB_CHARGES_REFRESH = "job_charges_refresh"
+    JOB_METHODS = "job_methods"

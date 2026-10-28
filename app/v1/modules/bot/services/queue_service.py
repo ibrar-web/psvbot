@@ -45,6 +45,7 @@ from app.v1.modules.bot.pricing_fetch.job_charges_pricing import (
     run_job_charges_pricing_flow,
     run_job_charges_refresh_flow,
 )
+from app.v1.modules.bot.pricing_fetch.job_methods import run_job_methods_flow
 from app.v1.modules.bot.pricing_fetch.stock_material_pricing import (
     run_stock_material_pricing_flow,
     run_stock_material_refresh_flow,
@@ -61,6 +62,7 @@ TASK_HANDLERS = {
     TaskType.JOB_CHARGES_PRICING.value: run_job_charges_pricing_flow,
     TaskType.STOCK_MATERIAL_REFRESH.value: run_stock_material_refresh_flow,
     TaskType.JOB_CHARGES_REFRESH.value: run_job_charges_refresh_flow,
+    TaskType.JOB_METHODS.value: run_job_methods_flow,
 }
 
 TASKS_COLLECTION = "tasks"
@@ -1051,6 +1053,7 @@ _RESULT_URL_PATH_OVERRIDES = {
     TaskType.JOB_CHARGES_PRICING.value: "/api/v1/stock-mapping/job/job-charges-result",
     TaskType.STOCK_MATERIAL_REFRESH.value: "/api/v1/stock-mapping/job/stock-material-refresh-result",
     TaskType.JOB_CHARGES_REFRESH.value: "/api/v1/stock-mapping/job/job-charges-refresh-result",
+    TaskType.JOB_METHODS.value: "/api/v1/stock-mapping/job/job-methods-result",
 }
 
 
@@ -1061,6 +1064,7 @@ _PRICING_REFRESH_TASK_TYPES = {
 _PRICING_FETCH_TASK_TYPES = {
     TaskType.STOCK_MATERIAL_PRICING.value,
     TaskType.JOB_CHARGES_PRICING.value,
+    TaskType.JOB_METHODS.value,
     *_PRICING_REFRESH_TASK_TYPES,
 }
 
@@ -1166,7 +1170,8 @@ async def _call_record_result(
         }
     elif task_type in _PRICING_FETCH_TASK_TYPES:
         # Full pricing snapshot for the tenant: "data" holds every fetched
-        # stock/charge row, "failed" the rows PSV wouldn't return details for.
+        # stock/charge/job method row, "failed" the rows PSV wouldn't return
+        # details for.
         payload = {
             "queue_id": queue_id,
             "task_type": task_type,
