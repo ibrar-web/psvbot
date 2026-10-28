@@ -47,6 +47,7 @@ from app.v1.modules.bot.pricing_fetch.job_charges_pricing import (
 )
 from app.v1.modules.bot.pricing_fetch.job_methods import run_job_methods_flow
 from app.v1.modules.bot.pricing_fetch.stock_material_pricing import (
+    STOCK_FILTER_KEY,
     run_stock_material_pricing_flow,
     run_stock_material_refresh_flow,
 )
@@ -1061,6 +1062,10 @@ _PRICING_REFRESH_TASK_TYPES = {
     TaskType.STOCK_MATERIAL_REFRESH.value,
     TaskType.JOB_CHARGES_REFRESH.value,
 }
+_STOCK_MATERIAL_TASK_TYPES = {
+    TaskType.STOCK_MATERIAL_PRICING.value,
+    TaskType.STOCK_MATERIAL_REFRESH.value,
+}
 _PRICING_FETCH_TASK_TYPES = {
     TaskType.STOCK_MATERIAL_PRICING.value,
     TaskType.JOB_CHARGES_PRICING.value,
@@ -1188,6 +1193,9 @@ async def _call_record_result(
             # removed_labels are known labels PSV no longer has.
             payload["known_rows"] = result.get("known_rows", 0)
             payload["removed_labels"] = result.get("removed_labels", [])
+        if task_type in _STOCK_MATERIAL_TASK_TYPES:
+            # The PSV filter the stock list was fetched with.
+            payload[STOCK_FILTER_KEY] = task_payload.get(STOCK_FILTER_KEY)
     else:
         tenant_id = task_payload.get("tenant_id") or (
             task_payload.get("quote") or {}

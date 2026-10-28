@@ -192,6 +192,8 @@
       "data": {
         "queue_id": "6a13ef0d4aff298d8c33daa0",
         "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "_stock_filter_note": "Required. One PSV Stock Definition filter field name: filterInvStock (Inventory Stock), dsfRegistered (MDSF Registered) or dsfUnRegistered (MDSF Non Registered), or null for no filter (every stock). Missing key or empty string fails the task; a name this PSV doesn't support fails the task.",
+        "stock_filter": "filterInvStock",
         "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/stock-mapping/job/stock-material-result",
         "tenant_credentials": {
           "printsmith_username": "<username>",
@@ -209,6 +211,7 @@
         "queue_id": "6a13ef0d4aff298d8c33daa0",
         "task_type": "stock_material_pricing",
         "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "stock_filter": "filterInvStock",
         "success": true,
         "error_message": null,
         "total_rows": 2,

@@ -29,6 +29,8 @@ STOCK_DETAILS_PATH = (
     "?stockId={}&lock=false&doDuplicate=false"
 )
 LIST_PAGE_SIZE = 100
+
+STOCK_FILTER_KEY = "stock_filter"
 DETAILS_CONCURRENCY = 5
 # The Pricing tab's blank sheets table has six quantity/price rows.
 BLANK_SHEET_ROWS = range(1, 7)
@@ -41,19 +43,37 @@ BLANK_SHEET_PRICE_QTY = 1
 ESTIMATORS = ("LFCopierDefinitions", "ColorCopierDefinitions")
 
 
-def _list_request(skip: int) -> Dict[str, Any]:
-    # Same body PSV's grid sends with only the Inventory Stock filter on.
+def stock_filter_of(task_payload: Dict[str, Any]) -> Optional[str]:
+    # The key must be sent; null means fetch every stock unfiltered.
+    stock_filter = task_payload.get(STOCK_FILTER_KEY)
+    if STOCK_FILTER_KEY in task_payload and stock_filter is None:
+        return None
+    if not isinstance(stock_filter, str) or not stock_filter.strip():
+        raise ValueError(
+            f"Task payload must include '{STOCK_FILTER_KEY}' as a PSV stock "
+            "filter field name, e.g. 'filterInvStock', or null for no filter"
+        )
+    return stock_filter.strip()
+
+
+def _list_request(
+    skip: int, stock_filter: Optional[str], take: int = LIST_PAGE_SIZE
+) -> Dict[str, Any]:
+    # Same body PSV's grid sends with only the stock_filter toggle on.
+    advance_filters = (
+        [{"fieldName": stock_filter, "fieldValue": True}]
+        if stock_filter
+        else []
+    )
     return {
         "gridInfo": {
             "sortField": "name",
             "sortDir": "desc",
-            "take": LIST_PAGE_SIZE,
+            "take": take,
             "skip": skip,
             "pageSize": 0,
             "filterList": [],
-            "advanceFilterList": [
-                {"fieldName": "filterInvStock", "fieldValue": True}
-            ],
+            "advanceFilterList": advance_filters,
             "top": 0,
         },
         "walkin": False,
@@ -64,14 +84,43 @@ def _list_request(skip: int) -> Dict[str, Any]:
     }
 
 
+def _stock_count(api: PsvApi, stock_filter: Optional[str]) -> int:
+    list_page = api.post(
+        STOCK_LIST_PATH.format(""), _list_request(0, stock_filter, take=1)
+    )
+    return list_page["currentTotalResultsCount"]
+
+
+def _check_stock_filter(api: PsvApi, stock_filter: Optional[str]) -> None:
+    # PSV ignores advanced filter names it doesn't know and returns every
+    # stock, so a filter matching the unfiltered total isn't applied.
+    if stock_filter is None:
+        logger.info("No stock filter, fetching every stock")
+        return
+    filtered_total = _stock_count(api, stock_filter)
+    unfiltered_total = _stock_count(api, None)
+    if filtered_total == unfiltered_total:
+        raise ValueError(
+            f"Stock filter '{stock_filter}' is not supported by this PSV "
+            f"(it matches all {unfiltered_total} stocks)"
+        )
+    logger.info(
+        "Stock filter '%s' matches %s of %s stocks",
+        stock_filter,
+        filtered_total,
+        unfiltered_total,
+    )
+
+
 def _fetch_stock_list(
-    api: PsvApi, estimator: str = ""
+    api: PsvApi, stock_filter: Optional[str], estimator: str = ""
 ) -> List[Dict[str, Any]]:
     stocks: List[Dict[str, Any]] = []
     skip = 0
     while True:
         list_page = api.post(
-            STOCK_LIST_PATH.format(estimator), _list_request(skip)
+            STOCK_LIST_PATH.format(estimator),
+            _list_request(skip, stock_filter),
         )
         page_stocks = list_page["stockDefinitionList"]
         stocks.extend(page_stocks)
@@ -79,19 +128,21 @@ def _fetch_stock_list(
         total = list_page["currentTotalResultsCount"]
         if not page_stocks or skip >= total:
             logger.info(
-                "Found %s inventory stocks for estimator '%s' "
-                "(PSV reports %s)",
+                "Found %s '%s' stocks for estimator '%s' (PSV reports %s)",
                 len(stocks),
+                stock_filter,
                 estimator,
                 total,
             )
             return stocks
 
 
-def _fetch_stock_estimators(api: PsvApi) -> Dict[int, str]:
+def _fetch_stock_estimators(
+    api: PsvApi, stock_filter: Optional[str]
+) -> Dict[int, str]:
     stock_estimators: Dict[int, str] = {}
     for estimator in ESTIMATORS:
-        for stock in _fetch_stock_list(api, estimator):
+        for stock in _fetch_stock_list(api, stock_filter, estimator):
             stock_estimators.setdefault(stock["id"], estimator)
     return stock_estimators
 
@@ -152,9 +203,9 @@ def _stock_label(stock: Dict[str, Any]) -> str:
 
 
 def _fetch_stock_details(
-    api: PsvApi, stocks: List[Dict[str, Any]]
+    api: PsvApi, stocks: List[Dict[str, Any]], stock_filter: Optional[str]
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    stock_estimators = _fetch_stock_estimators(api)
+    stock_estimators = _fetch_stock_estimators(api, stock_filter)
     results = api.get_many(
         [STOCK_DETAILS_PATH.format(stock["id"]) for stock in stocks],
         DETAILS_CONCURRENCY,
@@ -198,20 +249,36 @@ def _fetch_stock_details(
 def _fetch_stock_material_pricing(
     page: Page, task_payload: Dict[str, Any]
 ) -> FetchResult:
-    logger.info("Fetching stock material pricing from PSV API")
+    stock_filter = stock_filter_of(task_payload)
+    logger.info(
+        "Fetching stock material pricing from PSV API with filter '%s'",
+        stock_filter,
+    )
     api = PsvApi(page)
-    rows, failed = _fetch_stock_details(api, _fetch_stock_list(api))
+    _check_stock_filter(api, stock_filter)
+    rows, failed = _fetch_stock_details(
+        api, _fetch_stock_list(api, stock_filter), stock_filter
+    )
     return rows, failed, {}
 
 
 def _refresh_stock_material_pricing(
     page: Page, task_payload: Dict[str, Any]
 ) -> FetchResult:
-    logger.info("Refreshing stock material pricing from PSV API")
+    stock_filter = stock_filter_of(task_payload)
+    logger.info(
+        "Refreshing stock material pricing from PSV API with filter '%s'",
+        stock_filter,
+    )
     api = PsvApi(page)
-    stocks = {stock["id"]: stock for stock in _fetch_stock_list(api)}
+    _check_stock_filter(api, stock_filter)
+    stocks = {
+        stock["id"]: stock for stock in _fetch_stock_list(api, stock_filter)
+    }
     new_stocks, extra = split_known(stocks, _stock_label, task_payload)
-    rows, failed = _fetch_stock_details(api, list(new_stocks.values()))
+    rows, failed = _fetch_stock_details(
+        api, list(new_stocks.values()), stock_filter
+    )
     return rows, failed, extra
 
 
