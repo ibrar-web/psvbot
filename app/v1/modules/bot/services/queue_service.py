@@ -1129,7 +1129,11 @@ async def _call_record_result(
         task_payload.get("estimate_id")
         or result.get("estimate_id")
     )
-    error_payload = None if success else (error_message or result.get("message"))
+    # On success, error_message carries a non-fatal warning if any (e.g. the
+    # estimate was created but its PDF never opened), otherwise None.
+    error_payload = (
+        result.get("warning") if success else (error_message or result.get("message"))
+    )
 
     if task_type == TaskType.CREATE_ESTIMATE.value:
         # Matches the receiving endpoint's actual schema exactly (given):

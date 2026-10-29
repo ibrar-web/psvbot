@@ -443,7 +443,7 @@ def test_full_flow() -> bool:
                         for attempt in range(2):
                             try:
                                 _check_timeout(f"{current_step}_attempt_{attempt + 1}")
-                                invoice_path, estimate_totals, invoice_total = invoice_page.complete_information_tabs(
+                                invoice_path, estimate_totals, invoice_total, scraped_estimate_id = invoice_page.complete_information_tabs(
                                     resume_from="estimate_summary",
                                     quote_record=quote_record,
                                     customer_selection_status=customer_selection_status,
@@ -459,6 +459,7 @@ def test_full_flow() -> bool:
                         print(f"  [PASS] Invoice tabs done — PDF: {invoice_path}")
                         print(f"  [INFO] Estimate totals: {estimate_totals}")
                         print(f"  [INFO] Invoice total: {invoice_total}")
+                        print(f"  [INFO] Estimate id: {scraped_estimate_id}")
 
                     else:
                         # ----------------------------------------------------------------
@@ -505,7 +506,7 @@ def test_full_flow() -> bool:
                         for attempt in range(2):
                             try:
                                 _check_timeout(f"{current_step}_attempt_{attempt + 1}")
-                                invoice_path, estimate_totals, invoice_total = invoice_page.complete_information_tabs(
+                                invoice_path, estimate_totals, invoice_total, scraped_estimate_id = invoice_page.complete_information_tabs(
                                     resume_from="auto",
                                     quote_record=quote_record,
                                     customer_selection_status=customer_selection_status,
@@ -521,6 +522,7 @@ def test_full_flow() -> bool:
                         print(f"  [PASS] Invoice tabs done — PDF: {invoice_path}")
                         print(f"  [INFO] Estimate totals: {estimate_totals}")
                         print(f"  [INFO] Invoice total: {invoice_total}")
+                        print(f"  [INFO] Estimate id: {scraped_estimate_id}")
 
                     # ----------------------------------------------------------------
                     # Step 6 — Logout (both branches)
@@ -536,6 +538,8 @@ def test_full_flow() -> bool:
                     print(f"  invoice_file        : {invoice_path}")
                     print(f"  estimate_totals     : {estimate_totals}")
                     print(f"  invoice_total       : {invoice_total}")
+                    print(f"  estimate_id         : {scraped_estimate_id}")
+                    print(f"  pdf_downloaded      : {invoice_path is not None}")
                     print(f"  customer_selection  : {customer_selection_status}")
 
                 except InvalidLoginCredentialsError as exc:

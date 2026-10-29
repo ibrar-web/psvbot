@@ -1,5 +1,6 @@
 import logging
 import re
+import shutil
 import tempfile
 import time
 from datetime import date, datetime, timedelta
@@ -43,6 +44,13 @@ class EstimatedSummaryTab(BasePage):
     # Shipping, Sales Tax and Deposits), e.g. "$ 1,393.11".
     INVOICE_TOTAL_VALUE = "css=label[name='total_value']:visible"
     INVOICE_TOTAL_TIMEOUT_MS = 10000
+    # Read-only estimate number field on the Estimate Summary tab.
+    ESTIMATE_ID_INPUT = "input[name='invoice_number']"
+    ESTIMATE_ID_TIMEOUT_MS = 10000
+    ESTIMATE_ID_PRE_PRINT_TIMEOUT_MS = 2000
+
+    PDF_DOWNLOAD_ATTEMPTS = 2
+    PDF_DOWNLOAD_TIMEOUT_MS = 30_000
 
     def _debug(self, message: str) -> None:
         if DEBUG:
@@ -115,6 +123,33 @@ class EstimatedSummaryTab(BasePage):
         invoice_total = total_text.replace("$", "").replace(",", "").strip()
         self._debug(f"Invoice total: {invoice_total}")
         return invoice_total
+
+    def read_estimate_id(self, timeout_ms: Optional[int] = None) -> str:
+        """Read the estimate number from the read-only invoice_number input.
+
+        A new estimate shows a placeholder ("-new-") until printing saves it,
+        so only a value containing a digit is accepted. Returns "" if no
+        such value appears within the timeout.
+        """
+        self.wait_for_spinner_to_disappear()
+        try:
+            handle = self.page.wait_for_function(
+                """(selector) => {
+                    const inputs = Array.from(document.querySelectorAll(selector));
+                    const value = inputs
+                      .map(input => (input.value || "").trim())
+                      .find(v => /\\d/.test(v));
+                    return value || false;
+                }""",
+                arg=self.ESTIMATE_ID_INPUT,
+                timeout=timeout_ms or self.ESTIMATE_ID_TIMEOUT_MS,
+            )
+            estimate_id = str(handle.json_value() or "").strip()
+        except PlaywrightTimeoutError:
+            logger.warning("Estimate id (invoice_number) not found on Estimate Summary")
+            return ""
+        self._debug(f"Estimate id: {estimate_id}")
+        return estimate_id
 
     def remove_all_items(self) -> None:
         """Remove all job items from the Estimate Summary table.
@@ -206,7 +241,12 @@ class EstimatedSummaryTab(BasePage):
     def click_us685_eestimate_and_download(
         self,
         customer_selection_status: Optional[Dict[str, Any]] = None,
-    ) -> Path:
+    ) -> Optional[Path]:
+        """Click the print button and download the estimate PDF.
+
+        Returns None if the PDF did not open after PDF_DOWNLOAD_ATTEMPTS
+        tries (some tenants show a blank screen instead of the PDF).
+        """
         temp_dir = Path(tempfile.mkdtemp(prefix="psv_invoices_"))
         customer_selection_status = customer_selection_status or {}
 
@@ -215,10 +255,37 @@ class EstimatedSummaryTab(BasePage):
 
         self._debug("Waiting for US685 E-Estimate button on Estimate Summary")
 
-        if HEADLESS:
-            return self._download_headless(temp_dir)
-        else:
-            return self._download_headed(temp_dir)
+        for attempt in range(1, self.PDF_DOWNLOAD_ATTEMPTS + 1):
+            try:
+                if HEADLESS:
+                    return self._download_headless(temp_dir)
+                return self._download_headed(temp_dir)
+            except Exception as exc:
+                self._debug(
+                    f"Estimate PDF attempt {attempt}/{self.PDF_DOWNLOAD_ATTEMPTS} failed: {exc}"
+                )
+                self._close_extra_pages()
+
+        logger.warning(
+            "Estimate PDF did not open after %s attempts; continuing without it",
+            self.PDF_DOWNLOAD_ATTEMPTS,
+        )
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return None
+
+    def _close_extra_pages(self) -> None:
+        """Close any tab left open by a failed print attempt (e.g. a blank one)."""
+        for other_page in list(self.page.context.pages):
+            if other_page == self.page:
+                continue
+            try:
+                other_page.close()
+            except Exception:
+                pass
+        try:
+            self.page.bring_to_front()
+        except Exception:
+            pass
 
 
 
@@ -400,9 +467,7 @@ class EstimatedSummaryTab(BasePage):
         job_details.wait_for_spinner_to_disappear()
 
     def _download_headless(self, temp_dir: Path) -> Path:
-        download_timeout = max(self._timeout_ms, 120_000)
-
-        with self.page.expect_download(timeout=download_timeout) as download_info:
+        with self.page.expect_download(timeout=self.PDF_DOWNLOAD_TIMEOUT_MS) as download_info:
             self.click(self.US685_E_ESTIMATE_BUTTON)
             self._debug("US685 E-Estimate clicked; waiting for download")
 
@@ -417,6 +482,7 @@ class EstimatedSummaryTab(BasePage):
         failure = download.failure()
         if failure:
             raise RuntimeError(f"Download failed: {failure}")
+        self._ensure_not_empty(target_path)
 
         return target_path
 
@@ -424,18 +490,19 @@ class EstimatedSummaryTab(BasePage):
         # In headed mode Chromium opens the PDF in a new tab via window.open().
         # Wait for that tab, grab the URL, download it via urllib, then close
         # the tab so the flow returns to the main page and can proceed to logout.
-        with self.page.context.expect_page(timeout=max(self._timeout_ms, 120_000)) as new_page_info:
+        with self.page.context.expect_page(timeout=self.PDF_DOWNLOAD_TIMEOUT_MS) as new_page_info:
             self.click(self.US685_E_ESTIMATE_BUTTON)
             self._debug("US685 E-Estimate clicked; waiting for generated document tab")
 
         new_page = new_page_info.value
-        new_page.wait_for_load_state("domcontentloaded", timeout=max(self._timeout_ms, 120_000))
 
         try:
+            new_page.wait_for_load_state("domcontentloaded", timeout=self.PDF_DOWNLOAD_TIMEOUT_MS)
             download_url = self._wait_for_download_url(new_page)
             self._debug(f"Resolved invoice download URL: {download_url}")
             cookies = self.page.context.cookies()
             saved_path = self._download_invoice(download_url, temp_dir, cookies, new_page)
+            self._ensure_not_empty(saved_path)
             self._debug(f"Invoice downloaded to: {saved_path}")
             return saved_path
         finally:
@@ -480,7 +547,7 @@ class EstimatedSummaryTab(BasePage):
                 }"""
             )
 
-        deadline = time.monotonic() + max(self.timeout, 120)
+        deadline = time.monotonic() + self.PDF_DOWNLOAD_TIMEOUT_MS / 1000
         while time.monotonic() < deadline:
             try:
                 url = resolve_url()
@@ -538,6 +605,11 @@ class EstimatedSummaryTab(BasePage):
         if "." not in filename:
             filename = f"{filename}.pdf"
         return filename
+
+    def _ensure_not_empty(self, path: Path) -> None:
+        if path.stat().st_size == 0:
+            path.unlink(missing_ok=True)
+            raise RuntimeError("Downloaded estimate file is empty")
 
     def _unique_path(self, path: Path) -> Path:
         if not path.exists():

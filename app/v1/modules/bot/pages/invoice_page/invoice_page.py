@@ -33,7 +33,7 @@ class InvoicePage(BasePage):
         resume_from: str = "auto",
         quote_record: Optional[Dict[str, Any]] = None,
         customer_selection_status: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[Path, Dict[int, str], str]:
+    ) -> Tuple[Optional[Path], Dict[int, str], str, str]:
         """
         resume_from:
         - auto: if account info looks complete, continue from job details.
@@ -43,11 +43,13 @@ class InvoicePage(BasePage):
           choose its job method, then continue from job details.
 
         Returns:
-            Tuple of (invoice_path, estimate_totals, invoice_total) where
-            estimate_totals maps 1-based requirement index to the
-            collect-total value captured before other charges are added, and
+            Tuple of (invoice_path, estimate_totals, invoice_total,
+            estimate_id) where invoice_path is None if the estimate PDF did
+            not open, estimate_totals maps 1-based requirement index to the
+            collect-total value captured before other charges are added,
             invoice_total is the final estimate Total read from the Estimate
-            Summary once every job and charge has been added.
+            Summary once every job and charge has been added, and
+            estimate_id is the estimate number shown on the Estimate Summary.
         """
         quote_record = quote_record or {}
         requirements = self._normalize_requirements(quote_record)
@@ -141,14 +143,14 @@ class InvoicePage(BasePage):
                     )
                     normalized = "job"
 
-            invoice_path, invoice_total = self._retry_step(
+            invoice_path, invoice_total, estimate_id = self._retry_step(
                 "estimate_summary_download",
                 lambda: self._download_from_estimate_summary(
                     requirement_customer_status,
                     quote_record=quote_record,
                 ),
             )
-            return invoice_path, estimate_totals, invoice_total
+            return invoice_path, estimate_totals, invoice_total, estimate_id
         finally:
             self.stop_warning_auto_dismiss()
 
@@ -424,7 +426,7 @@ class InvoicePage(BasePage):
         self,
         customer_selection_status: Optional[Dict[str, Any]] = None,
         quote_record: Optional[Dict[str, Any]] = None,
-    ) -> Path:
+    ) -> Tuple[Optional[Path], str, str]:
         estimated_summary_tab = EstimatedSummaryTab(self.page, self.timeout)
         self._debug("Switching to Estimate Summary tab")
         estimated_summary_tab.switch_to_tab()
@@ -451,11 +453,19 @@ class InvoicePage(BasePage):
         estimated_summary_tab.set_wanted_date(quote_record or {})
         # Every job and charge is on the estimate now, so this is the final total.
         invoice_total = estimated_summary_tab.read_invoice_total()
+        # Read the estimate id before printing so it is returned even when
+        # the PDF fails to open. A new estimate only gets its number once
+        # printing saves it, so in that case read it again afterwards.
+        estimate_id = estimated_summary_tab.read_estimate_id(
+            timeout_ms=EstimatedSummaryTab.ESTIMATE_ID_PRE_PRINT_TIMEOUT_MS,
+        )
         self._debug("Downloading invoice from Estimate Summary")
         invoice_path = estimated_summary_tab.click_us685_eestimate_and_download(
             customer_selection_status=customer_selection_status,
         )
-        return invoice_path, invoice_total
+        if not estimate_id:
+            estimate_id = estimated_summary_tab.read_estimate_id()
+        return invoice_path, invoice_total, estimate_id
 
     def _build_delivery_charge(self, quote_record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Build the delivery charge dict from the quote, or None if no delivery.

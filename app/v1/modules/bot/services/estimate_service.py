@@ -231,7 +231,7 @@ def run_estimate_flow(
                 for attempt in range(2):
                     try:
                         _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                        invoice_path, estimate_totals, invoice_total = invoice_page.complete_information_tabs(
+                        invoice_path, estimate_totals, invoice_total, scraped_estimate_id = invoice_page.complete_information_tabs(
                             resume_from="estimate_summary",
                             quote_record=quote_record,
                             customer_selection_status=customer_selection_status,
@@ -293,7 +293,7 @@ def run_estimate_flow(
                 for attempt in range(2):
                     try:
                         _ensure_within_timeout(started_at, f"{current_step}_attempt_{attempt + 1}")
-                        invoice_path, estimate_totals, invoice_total = invoice_page.complete_information_tabs(
+                        invoice_path, estimate_totals, invoice_total, scraped_estimate_id = invoice_page.complete_information_tabs(
                             resume_from="auto",
                             quote_record=quote_record,
                             customer_selection_status=customer_selection_status,
@@ -313,20 +313,43 @@ def run_estimate_flow(
             _debug(f"Estimate totals collected: {estimate_totals}")
             logger.info("Estimate totals: %s", estimate_totals)
             _debug(f"Invoice total collected: {invoice_total}")
+            _debug(f"Estimate id collected: {scraped_estimate_id}")
 
-            current_step = "save_summary"
-            _ensure_within_timeout(started_at, current_step)
-            upload_result = _upload_summary_file(invoice_path, quote_record)
+            message = "Create Estimate flow completed"
+            pdf_warning: Optional[str] = None
+            if invoice_path is not None:
+                current_step = "save_summary"
+                _ensure_within_timeout(started_at, current_step)
+                upload_result = _upload_summary_file(invoice_path, quote_record)
+            else:
+                # The estimate and its totals exist in PSV even though the
+                # PDF never opened, so report success without a file.
+                pdf_warning = (
+                    "Estimate created but the estimate PDF did not open after "
+                    f"{EstimatedSummaryTab.PDF_DOWNLOAD_ATTEMPTS} attempts"
+                )
+                message = f"{message}; {pdf_warning}"
+                logger.warning(pdf_warning)
+                upload_result = {
+                    "summary_file_name": None,
+                    "summary_file_path": None,
+                    "summary_folder_prefix": None,
+                    "summary_file_storage_key": None,
+                    "summary_file_url": None,
+                }
 
             current_step = "logout"
             logout_succeeded, logout_error = _logout_if_possible(page, retries=1)
 
             return {
                 "status": "success",
-                "message": "Create Estimate flow completed",
+                "message": message,
+                "warning": pdf_warning,
+                "pdf_downloaded": invoice_path is not None,
+                "estimate_id": scraped_estimate_id or estimate_id or None,
                 "step": current_step,
                 "current_url": page.url,
-                "invoice_file": str(invoice_path),
+                "invoice_file": str(invoice_path) if invoice_path is not None else None,
                 "logout_succeeded": logout_succeeded,
                 "logout_error": logout_error,
                 "session_reused": False,
