@@ -86,6 +86,10 @@ def run_estimate_history_export_flow(
             _ensure_within_timeout(started_at, current_step)
             history_page.clear_filters()
 
+            current_step = "apply_won_filter"
+            _ensure_within_timeout(started_at, current_step)
+            history_page.apply_won_filter()
+
             current_step = "download_csv"
             _ensure_within_timeout(started_at, current_step)
             csv_path = history_page.download_csv()
