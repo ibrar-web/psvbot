@@ -193,6 +193,7 @@ class InvoicePage(BasePage):
             "sides": requirement.get("sides", ""),
             "size": requirement.get("size", ""),
             "job_method": requirement.get("job_method", ""),
+            "estimator": requirement.get("estimator", ""),
             "agent_total": requirement.get("total", ""),
             "vendor_name": requirement.get("vendor_name", ""),
             "parts": requirement.get("parts", []),
@@ -316,8 +317,9 @@ class InvoicePage(BasePage):
         job_details_tab = JobDetailsTab(self.page, self.timeout)
 
         method = (job_data.get("job_method") or "").strip().lower()
-        self._debug(f"Job Details dispatch: job_method='{method}'")
-        if method.startswith("sublet"):
+        estimator = (job_data.get("estimator") or "").strip().lower()
+        self._debug(f"Job Details dispatch: job_method='{method}', estimator='{estimator}'")
+        if estimator == "outsideservices":
             self._complete_sublet_job_details(job_details_tab, job_data)
             return
         if method == "multi-part":

@@ -590,6 +590,7 @@ def _build_bot_quote_record(
                 "sides": requirement.get("sides", ""),
                 "description": requirement.get("description", ""),
                 "job_method": requirement.get("job_method", ""),
+                "estimator": requirement.get("estimator", ""),
                 "job_charges": requirement.get("job_charges", []),
                 "other_charges": requirement.get(
                     "other_charges",
