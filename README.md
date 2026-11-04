@@ -44,7 +44,7 @@ API_BEARER_TOKEN=change-me
 MONGO_URL=mongodb+srv://alpha_multiteant_user:oJI521378EtcfNEB@multitenant-cluster.krts4k2.mongodb.net/?appName=multitenant-cluster
 MONGO_DB=alphagraphics-queue-service
 QUEUE_WORKER_CONCURRENCY=4
-QUEUE_MAX_ATTEMPTS=3
+QUEUE_MAX_ATTEMPTS=1
 BUCKET_NAME=your-gcs-bucket
 GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
 PRINTSMITH_URL=https://your-company.printsmithvision.com/PrintSmith/PrintSmith.html
@@ -133,7 +133,7 @@ API_BEARER_TOKEN=change-me
 MONGO_URL=mongodb+srv://alpha_multiteant_user:oJI521378EtcfNEB@multitenant-cluster.krts4k2.mongodb.net/?appName=multitenant-cluster
 MONGO_DB=alphagraphics-queue-service
 QUEUE_WORKER_CONCURRENCY=4
-QUEUE_MAX_ATTEMPTS=3
+QUEUE_MAX_ATTEMPTS=1
 BUCKET_NAME=your-gcs-bucket
 GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
 PRINTSMITH_URL=https://your-company.printsmithvision.com/PrintSmith/PrintSmith.html

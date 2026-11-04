@@ -75,9 +75,8 @@ TASK_STATUS_FAILED = "failed"
 TASK_STATUS_CALLBACK_PENDING = "callback_pending"
 TASK_STATUS_CALLBACK_PROCESSING = "callback_processing"
 TASK_STATUS_CALLBACK_FAILED = "callback_failed"
-# Initial processing attempt plus at least three timeout-only retries.
-MIN_QUEUE_MAX_ATTEMPTS = 4
-MAX_TASK_ATTEMPTS = max(QUEUE_MAX_ATTEMPTS, MIN_QUEUE_MAX_ATTEMPTS)
+# Total processing attempts per task (1 = run once, no retries on failure).
+MAX_TASK_ATTEMPTS = max(QUEUE_MAX_ATTEMPTS, 1)
 CALLBACK_MAX_ATTEMPTS = 3
 CALLBACK_RETRY_DELAY_SECONDS = float(
     os.getenv("QUEUE_CALLBACK_RETRY_DELAY_SECONDS", "60")
