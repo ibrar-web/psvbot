@@ -491,6 +491,11 @@ class InvoicePage(BasePage):
         if not delivery_name:
             return None
 
+        # "Pickup" means the customer collects the order, so no delivery charge.
+        if "".join(ch for ch in delivery_name.lower() if ch.isalnum()) == "pickup":
+            self._debug(f"Skipping delivery charge for pickup: {delivery_name!r}")
+            return None
+
         return {
             "charge_name": delivery_name,
             "charge_price": delivery.get("charge_price", delivery.get("price")),
