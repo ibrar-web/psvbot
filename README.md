@@ -70,7 +70,8 @@ curl -X POST http://127.0.0.1:8000/enqueue-task \
     "quote": {
       "_id": "quote-123",
       "tenant_id": "tenant-1",
-      "contact_person": "John Doe",
+      "first_name": "John",
+      "last_name": "Doe",
       "contact_email": "customer@example.com"
     },
     "requirements": [
@@ -159,7 +160,8 @@ curl -X POST http://127.0.0.1:8000/enqueue-task \
     "quote": {
       "_id": "quote-123",
       "tenant_id": "tenant-1",
-      "contact_person": "John Doe",
+      "first_name": "John",
+      "last_name": "Doe",
       "contact_email": "customer@example.com"
     },
     "requirements": [

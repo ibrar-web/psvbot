@@ -61,6 +61,8 @@ class InvoicePage(BasePage):
                 "company_name", quote_record.get("account_name", "")
             ),
             "contact_person": quote_record.get("contact_person", ""),
+            "first_name": quote_record.get("first_name", ""),
+            "last_name": quote_record.get("last_name", ""),
             "contact_email": quote_record.get("contact_email", ""),
             "contact_phone": quote_record.get("contact_phone", ""),
             "street": quote_record.get("street", ""),

@@ -47,7 +47,8 @@ QUOTE_RECORD = {
       "street": "",
       "city": "",
       "account_name": "QATestingAdmin",
-      "contact_person": "QATestingAdmin",
+      "first_name": "QATesting",
+      "last_name": "Admin",
       "contact_email": "qatestingadmin@yopmail.com",
       "contact_phone": "",
       "customer_name": None,
@@ -190,7 +191,17 @@ def _build_bot_quote_record(payload: Dict[str, Any]) -> Dict[str, Any]:
         "printsmith_password": tenant_credentials.get("printsmith_password") or "",
         "printsmith_company": tenant_credentials.get("printsmith_company") or "",
         "account_name": quote.get("account_name", ""),
-        "contact_person": quote.get("contact_person", ""),
+        "first_name": quote.get("first_name") or "",
+        "last_name": quote.get("last_name") or "",
+        "contact_person": " ".join(
+            part
+            for part in (
+                str(quote.get("first_name") or "").strip(),
+                str(quote.get("last_name") or "").strip(),
+            )
+            if part
+        )
+        or quote.get("contact_person", ""),
         "contact_email": quote.get("contact_email", ""),
         "contact_phone": quote.get("contact_phone", ""),
         "delivery": quote.get("delivery") or {},

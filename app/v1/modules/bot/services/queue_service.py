@@ -559,6 +559,14 @@ def _extract_queue_id(payload: Dict[str, Any]) -> str:
     ).strip()
 
 
+def _build_contact_person(quote: Dict[str, Any]) -> str:
+    """Full contact name used for the customer search; falls back to legacy contact_person."""
+    first_name = str(quote.get("first_name") or "").strip()
+    last_name = str(quote.get("last_name") or "").strip()
+    full_name = " ".join(part for part in (first_name, last_name) if part)
+    return full_name or str(quote.get("contact_person") or "").strip()
+
+
 def _build_bot_quote_record(
     payload: Dict[str, Any],
     queue_id: Optional[str] = None,
@@ -619,7 +627,9 @@ def _build_bot_quote_record(
         "company_name": quote.get("company_name", quote.get("account_name", "")),
         "street": quote.get("street", ""),
         "city": quote.get("city", ""),
-        "contact_person": quote.get("contact_person", ""),
+        "first_name": quote.get("first_name") or "",
+        "last_name": quote.get("last_name") or "",
+        "contact_person": _build_contact_person(quote),
         "contact_email": quote.get("contact_email", ""),
         "contact_phone": quote.get("contact_phone", ""),
         "delivery": quote.get("delivery") or {},

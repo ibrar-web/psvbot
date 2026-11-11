@@ -16,6 +16,7 @@ class ContactPersonTab(BasePage):
     INVOICE_FORM = "//form[.//a[@name='save_inv_address_btn']]"
 
     FIRST_NAME_INPUT = f"xpath={CONTACT_FORM}//input[@name='i_first_name_value']"
+    LAST_NAME_INPUT = f"xpath={CONTACT_FORM}//input[@name='i_last_name_value']"
     EMAIL_INPUT = f"xpath={CONTACT_FORM}//input[@name='i_email_value']"
     INVALID_EMAIL_DIALOG = (
         "xpath=//div[contains(@class,'ui-confirmdialog')]"
@@ -48,9 +49,11 @@ class ContactPersonTab(BasePage):
         self.wait_for_visible(self.FIRST_NAME_INPUT)
         self._wait_for_spinner_overlay()
 
-        self._safe_fill(self.FIRST_NAME_INPUT, data.get("contact_person", data.get("first_name", "")))
+        first_name = data.get("first_name") or data.get("contact_person") or ""
+        self._safe_fill(self.FIRST_NAME_INPUT, first_name)
+        self._safe_fill(self.LAST_NAME_INPUT, self._value_or_space(data.get("last_name")))
         self._fill_email_with_retry(data.get("contact_email", data.get("email", "")))
-        self._safe_fill(self.PHONE_INPUT, data.get("contact_phone", data.get("phone", "")))
+        self._safe_fill(self.PHONE_INPUT, self._value_or_space(data.get("contact_phone")))
 
         self._debug("Saving contact details; filling invoice form")
         self.page.wait_for_timeout(1000)  # UI settle before invoice form becomes stable
@@ -78,6 +81,12 @@ class ContactPersonTab(BasePage):
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _value_or_space(value: object) -> str:
+        """Optional fields get a single space when missing or blank."""
+        text = str(value or "").strip()
+        return text or " "
 
     def _safe_fill(self, selector: str, value: str, retries: int = 3) -> None:
         last_exc: Exception | None = None
