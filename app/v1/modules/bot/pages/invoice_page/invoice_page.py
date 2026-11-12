@@ -182,6 +182,7 @@ class InvoicePage(BasePage):
                 "stock_search_term",
                 requirement.get("stock_search", ""),
             ),
+            "stock_attributes": requirement.get("stock_attributes") or {},
             "price_breakup_quantity": requirement.get(
                 "price_breakup_quantity",
                 requirement.get("quantity", ""),

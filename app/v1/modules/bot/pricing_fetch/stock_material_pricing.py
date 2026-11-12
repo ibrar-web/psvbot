@@ -190,6 +190,12 @@ def _build_stock(details: Dict[str, Any], estimator: str) -> Dict[str, Any]:
         "size": size,
         "price": _blank_sheet_price(details),
         "estimator": estimator,
+        # Basis weight in lb, e.g. 80 for an 80 lb stock.
+        "weight": details.get("weight"),
+        "color": _name_of(details.get("color"), objects),
+        "finish": _name_of(details.get("finish"), objects),
+        # Caliper in inches, e.g. 0.014 for a 14pt stock.
+        "thickness": details.get("thickness"),
         "stock_level_charge": [
             _build_stock_charge(charge, objects)
             for charge in stock_charges

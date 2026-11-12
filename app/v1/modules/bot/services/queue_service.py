@@ -592,6 +592,7 @@ def _build_bot_quote_record(
         requirements.append(
             {
                 "stock_search": requirement.get("stock_search", ""),
+                "stock_attributes": requirement.get("stock_attributes") or {},
                 "quantity": requirement.get("quantity", ""),
                 "size": requirement.get("size", ""),
                 "sides": requirement.get("sides", ""),

@@ -167,6 +167,7 @@ def _build_bot_quote_record(payload: Dict[str, Any]) -> Dict[str, Any]:
         requirements.append(
             {
                 "stock_search": req.get("stock_search", ""),
+                "stock_attributes": req.get("stock_attributes") or {},
                 "quantity": req.get("quantity", ""),
                 "size": req.get("size", ""),
                 "sides": req.get("sides", ""),

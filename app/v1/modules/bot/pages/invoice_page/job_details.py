@@ -50,6 +50,18 @@ class JobDetailsTab(BasePage):
         "xpath=//div[contains(@class,'stock_picker_header')]"
         "//button[.//span[normalize-space()='Reset']]"
     )
+    # stock_attributes key -> Stock Picker column header labels. The column
+    # positions change with the user's "Customize Columns" setting and a
+    # hidden column has no filter cell, so filters are found by header text
+    # and skipped when the column isn't shown.
+    STOCK_ATTRIBUTE_COLUMNS = {
+        "weight": ("weight",),
+        "thickness": ("thickness", "caliper"),
+        "color": ("color",),
+        "finish": ("finish",),
+    }
+    # Kendo string filters apply after a short debounce.
+    STOCK_FILTER_SETTLE_MS = 1000
     CHARGES_MODAL = "xpath=//div[@id='charges_popup']"
     CHARGES_SEARCH_INPUT = (
         "xpath=//div[@id='charges_popup']"
@@ -338,14 +350,26 @@ class JobDetailsTab(BasePage):
         else:
             self.wait_for_visible(self.STOCK_PICKER_BUTTON)
 
-    def select_stock_from_picker(self, data: Mapping[str, str]) -> None:
+    def select_stock_from_picker(self, data: Mapping[str, Any]) -> None:
         stock_search_term = " ".join((data.get("stock_search_term") or "gpa").split())
         if not stock_search_term:
             self._debug("No stock search term provided; skipping stock picker")
             return
 
         self._open_stock_picker()
+        # Filters left over from a previous stock search would otherwise
+        # narrow this one.
+        self._clear_stock_attribute_filters()
         self._search_stock(stock_search_term)
+        if self._apply_stock_attribute_filters(data.get("stock_attributes")):
+            if self._click_matching_stock_row(stock_search_term):
+                self._confirm_stock_selection()
+                return
+            self._debug(
+                "No stock matches the stock attributes; searching by stock name only"
+            )
+            self._clear_stock_attribute_filters()
+            self._search_stock(stock_search_term)
         self._select_matching_stock_row(stock_search_term)
         self._confirm_stock_selection()
 
@@ -868,6 +892,13 @@ class JobDetailsTab(BasePage):
 
 
     def _select_matching_stock_row(self, term: str) -> None:
+        if not self._click_matching_stock_row(term):
+            self._cancel_stock_selection()
+            raise InvalidStockSearchError(
+                f"Invalid stock search term '{term}': no matching stock found in Stock Picker"
+            )
+
+    def _click_matching_stock_row(self, term: str) -> bool:
         self._debug(f"Selecting best matching stock row for: {term}")
         self.wait_for_spinner_to_disappear()
         try:
@@ -934,12 +965,105 @@ class JobDetailsTab(BasePage):
             selected_text = "__NO_MATCH__"
 
         if not selected_text or selected_text == "__NO_MATCH__":
-            self._cancel_stock_selection()
-            raise InvalidStockSearchError(
-                f"Invalid stock search term '{term}': no matching stock found in Stock Picker"
-            )
+            return False
         self.wait_for_spinner_to_disappear()
         self._wait_for_stock_row_selected(selected_text)
+        return True
+
+    @staticmethod
+    def _stock_filter_value(value: Any) -> str:
+        if value is None or isinstance(value, bool):
+            return ""
+        if isinstance(value, (int, float)):
+            return f"{value:g}"
+        return " ".join(str(value).split())
+
+    def _mark_stock_filter_input(self, key: str) -> bool:
+        """Tag the filter input under the column whose header matches one
+        of the key's labels, so Playwright can target it. False when that
+        column isn't shown in the Stock Picker.
+        """
+        return bool(
+            self.page.evaluate(
+                """([key, labels]) => {
+                    const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                      .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                    if (!btn) return false;
+                    const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
+                    modalRoot.querySelectorAll(`[data-bot-stock-filter="${key}"]`)
+                      .forEach(node => node.removeAttribute("data-bot-stock-filter"));
+
+                    const header = Array.from(modalRoot.querySelectorAll("th[role='columnheader']"))
+                      .filter(th => th.offsetWidth > 0)
+                      .find(th => {
+                        const text = (th.innerText || th.textContent || "")
+                          .replace(/\\s+/g, " ").trim().toLowerCase();
+                        return labels.some(label => text === label || text.startsWith(label + " "));
+                      });
+                    const colIndex = header?.getAttribute("aria-colindex");
+                    if (!colIndex) return false;
+                    const input = modalRoot.querySelector(
+                      `tr.k-filter-row td[aria-colindex="${colIndex}"] input`
+                    );
+                    if (!input) return false;
+                    input.setAttribute("data-bot-stock-filter", key);
+                    return true;
+                }""",
+                [key, list(self.STOCK_ATTRIBUTE_COLUMNS[key])],
+            )
+        )
+
+    def _apply_stock_attribute_filters(self, stock_attributes: Any) -> bool:
+        """Type each stock attribute into its Stock Picker column filter.
+        Null values and columns PSV doesn't show are skipped; returns
+        whether any filter was applied.
+        """
+        if not isinstance(stock_attributes, Mapping):
+            return False
+        applied = []
+        for key in self.STOCK_ATTRIBUTE_COLUMNS:
+            value = self._stock_filter_value(stock_attributes.get(key))
+            if not value:
+                continue
+            try:
+                if not self._mark_stock_filter_input(key):
+                    self._debug(f"Stock Picker has no '{key}' column; skipping its filter")
+                    continue
+                filter_input = self.page.locator(f"[data-bot-stock-filter='{key}']").first
+                filter_input.click(timeout=self._timeout_ms)
+                filter_input.fill(value)
+                filter_input.press("Enter")
+                self.wait_for_spinner_to_disappear()
+                applied.append(f"{key}={value}")
+            except Exception:
+                logger.warning("Could not apply the '%s' stock filter; skipping it", key, exc_info=True)
+        if not applied:
+            return False
+        self._debug(f"Applied stock attribute filters: {', '.join(applied)}")
+        self.page.wait_for_timeout(self.STOCK_FILTER_SETTLE_MS)
+        self.wait_for_spinner_to_disappear()
+        return True
+
+    def _clear_stock_attribute_filters(self) -> None:
+        cleared = False
+        for key in self.STOCK_ATTRIBUTE_COLUMNS:
+            try:
+                if not self._mark_stock_filter_input(key):
+                    continue
+                filter_input = self.page.locator(f"[data-bot-stock-filter='{key}']").first
+                if not filter_input.input_value().strip():
+                    continue
+                self._debug(f"Clearing Stock Picker '{key}' filter")
+                filter_input.locator(
+                    "xpath=ancestor::td[1]//button[.//span[contains(@class,'k-i-filter-clear')]]"
+                ).first.click(timeout=self._timeout_ms)
+                self.wait_for_spinner_to_disappear()
+                cleared = True
+            except Exception:
+                logger.warning("Could not clear the '%s' stock filter", key, exc_info=True)
+        if cleared:
+            self.page.wait_for_timeout(self.STOCK_FILTER_SETTLE_MS)
+            self.wait_for_spinner_to_disappear()
 
     def _wait_for_stock_row_selected(self, selected_text: str) -> None:
         normalized_target = " ".join((selected_text or "").split()).strip().lower()

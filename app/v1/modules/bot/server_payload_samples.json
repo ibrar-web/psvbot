@@ -221,14 +221,22 @@
             "name": "Tango Digital C2S SBS 14pt 90M 18 X12 450/cs",
             "size": "18 x 12",
             "price": 1.5006599999999999,
-            "job_method": "Digital Color",
+            "estimator": "ColorCopierDefinitions",
+            "weight": 180,
+            "color": "White",
+            "finish": "C2S",
+            "thickness": 0.014,
             "stock_level_charge": []
           },
           {
             "name": "EcoFoil Glossy Card 1 (GC1)",
             "size": "17.75 x 12.5",
             "price": 4.87956,
-            "job_method": "Digital Color",
+            "estimator": "ColorCopierDefinitions",
+            "weight": 0,
+            "color": "SILVER",
+            "finish": "Silk",
+            "thickness": 0.017,
             "stock_level_charge": [
               {
                 "command": "Pre Press",
@@ -250,6 +258,62 @@
             "name": "Example stock",
             "reason": "HTTP 500"
           }
+        ]
+      }
+    }
+  },
+  "stock_material_refresh": {
+    "incoming_request": {
+      "_direction": "INCOMING — server sends this to the bot",
+      "task_type": "stock_material_refresh",
+      "machine_name": "ibrarpc",
+      "data": {
+        "queue_id": "6a13ef0d4aff298d8c33daa1",
+        "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "stock_filter": "filterInvStock",
+        "_known_labels_note": "Stock names the server already stores. Only PSV stocks whose name is not in this list (compared case-insensitively, whitespace collapsed) get their details fetched.",
+        "known_labels": [
+          "Tango Digital C2S SBS 14pt 90M 18 X12 450/cs"
+        ],
+        "BACK_URL_RECORD_RESULT": "http://localhost:8000/api/v1/stock-mapping/job/stock-material-result",
+        "tenant_credentials": {
+          "printsmith_username": "<username>",
+          "printsmith_password": "<password>",
+          "printsmith_url": "https://<company>.myprintdesk.net/PrintSmith/PrintSmith.html",
+          "printsmith_company": "<company>"
+        }
+      }
+    },
+    "outgoing_result_response": {
+      "_direction": "OUTGOING — bot POSTs this back to the server once the job finishes",
+      "posted_to": "derived from BACK_URL_RECORD_RESULT: same scheme/host/port, path replaced with /api/v1/stock-mapping/job/stock-material-refresh-result — see _derive_result_url() in services/queue_service.py",
+      "_note": "Same shape as stock_material_pricing, but data only holds stocks that were not in known_labels. known_rows is how many PSV stocks matched a known label (not re-fetched); removed_labels are known labels PSV no longer has (deleted or renamed).",
+      "payload": {
+        "queue_id": "6a13ef0d4aff298d8c33daa1",
+        "task_type": "stock_material_refresh",
+        "tenant_id": "6a0ac09549e818e8e4b8b447",
+        "stock_filter": "filterInvStock",
+        "success": true,
+        "error_message": null,
+        "total_rows": 1,
+        "data": [
+          {
+            "name": "Mohawk Color Copy 98 Wrt Br Wh 032 37M 18 X12",
+            "size": "18 x 12",
+            "price": 0.25,
+            "estimator": "ColorCopierDefinitions",
+            "weight": 32,
+            "color": "Bright White",
+            "finish": "Smooth",
+            "thickness": 0.0052,
+            "stock_level_charge": []
+          }
+        ],
+        "failed_rows": 0,
+        "failed": [],
+        "known_rows": 96,
+        "removed_labels": [
+          "Old discontinued stock"
         ]
       }
     }
