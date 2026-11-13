@@ -39,6 +39,11 @@ class EstimatedSummaryTab(BasePage):
     # account, so match on the stable name="print_btn" attribute only,
     # not the label text.
     US685_E_ESTIMATE_BUTTON = "xpath=//div[@name='print_btn_group']//button[@name='print_btn']"
+    # Save button right next to the print button; saving before printing
+    # makes sure the estimate (and its number) is persisted first.
+    SAVE_BUTTON = "css=button[name='save_btn']:visible"
+    # Short pause after the save finishes before clicking print.
+    SAVE_SETTLE_MS = 200
     WANTED_DATE_INPUT = "xpath=//input[@name='wantedDate']"
     # Final estimate total in the bottom-right summary panel (below Net Sub,
     # Shipping, Sales Tax and Deposits), e.g. "$ 1,393.11".
@@ -253,6 +258,8 @@ class EstimatedSummaryTab(BasePage):
         if customer_selection_status.get("used_fallback_customer"):
             self._create_prospect()
 
+        self.save_estimate()
+
         self._debug("Waiting for US685 E-Estimate button on Estimate Summary")
 
         for attempt in range(1, self.PDF_DOWNLOAD_ATTEMPTS + 1):
@@ -272,6 +279,25 @@ class EstimatedSummaryTab(BasePage):
         )
         shutil.rmtree(temp_dir, ignore_errors=True)
         return None
+
+    def save_estimate(self) -> None:
+        """Click Save next to the print button and wait for the save to finish.
+
+        Skips silently if the Save button is not shown for this tenant.
+        """
+        self.wait_for_spinner_to_disappear()
+        if not super().is_visible(self.SAVE_BUTTON):
+            self._debug("Save button not found on Estimate Summary; skipping save")
+            return
+
+        self._debug("Clicking Save before printing the estimate")
+        self.click(self.SAVE_BUTTON)
+        # The progress bar can take a moment to render after the click, so
+        # give it a chance to appear before waiting for it to finish.
+        self.wait_for_spinner_to_appear()
+        self.wait_for_spinner_to_disappear()
+        self.page.wait_for_timeout(self.SAVE_SETTLE_MS)
+        self._debug("Estimate saved")
 
     def _close_extra_pages(self) -> None:
         """Close any tab left open by a failed print attempt (e.g. a blank one)."""
