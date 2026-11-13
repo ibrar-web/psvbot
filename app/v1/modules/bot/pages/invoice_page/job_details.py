@@ -352,8 +352,10 @@ class JobDetailsTab(BasePage):
             self.wait_for_visible(self.STOCK_PICKER_BUTTON)
 
     def select_stock_from_picker(self, data: Mapping[str, Any]) -> None:
-        stock_search_term = " ".join((data.get("stock_search_term") or "gpa").split())
-        if not stock_search_term:
+        # Keep the term exactly as sent: PSV's Stock Name filter matches
+        # literally, so collapsing a double space finds nothing.
+        stock_search_term = data.get("stock_search_term") or "gpa"
+        if not stock_search_term.strip():
             self._debug("No stock search term provided; skipping stock picker")
             return
 
