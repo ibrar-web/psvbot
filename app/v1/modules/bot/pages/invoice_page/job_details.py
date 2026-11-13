@@ -59,6 +59,7 @@ class JobDetailsTab(BasePage):
         "thickness": ("thickness", "caliper"),
         "color": ("color",),
         "finish": ("finish",),
+        "parent_size": ("parent size", "size"),
     }
     # Kendo string filters apply after a short debounce.
     STOCK_FILTER_SETTLE_MS = 1000
@@ -978,40 +979,50 @@ class JobDetailsTab(BasePage):
             return f"{value:g}"
         return " ".join(str(value).split())
 
-    def _mark_stock_filter_input(self, key: str) -> bool:
+    def _mark_stock_filter_input(self, key: str, log_miss: bool = False) -> bool:
         """Tag the filter input under the column whose header matches one
         of the key's labels, so Playwright can target it. False when that
-        column isn't shown in the Stock Picker.
+        column isn't shown in the Stock Picker; with log_miss, the visible
+        column headers are logged to show what PSV actually calls them.
         """
-        return bool(
-            self.page.evaluate(
-                """([key, labels]) => {
-                    const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
-                      .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
-                    if (!btn) return false;
-                    const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
-                    modalRoot.querySelectorAll(`[data-bot-stock-filter="${key}"]`)
-                      .forEach(node => node.removeAttribute("data-bot-stock-filter"));
+        result = self.page.evaluate(
+            """([key, labels]) => {
+                const btn = Array.from(document.querySelectorAll("button[name='save_stock_details']"))
+                  .find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+                if (!btn) return ["<stock modal not visible>"];
+                const modalRoot = btn.closest(".modal-content") || btn.closest(".modal") || document;
+                modalRoot.querySelectorAll(`[data-bot-stock-filter="${key}"]`)
+                  .forEach(node => node.removeAttribute("data-bot-stock-filter"));
 
-                    const header = Array.from(modalRoot.querySelectorAll("th[role='columnheader']"))
-                      .filter(th => th.offsetWidth > 0)
-                      .find(th => {
-                        const text = (th.innerText || th.textContent || "")
-                          .replace(/\\s+/g, " ").trim().toLowerCase();
-                        return labels.some(label => text === label || text.startsWith(label + " "));
-                      });
-                    const colIndex = header?.getAttribute("aria-colindex");
-                    if (!colIndex) return false;
-                    const input = modalRoot.querySelector(
-                      `tr.k-filter-row td[aria-colindex="${colIndex}"] input`
-                    );
-                    if (!input) return false;
-                    input.setAttribute("data-bot-stock-filter", key);
-                    return true;
-                }""",
-                [key, list(self.STOCK_ATTRIBUTE_COLUMNS[key])],
-            )
+                const headerText = th => (th.innerText || th.textContent || "")
+                  .replace(/\\s+/g, " ").trim().toLowerCase();
+                const headers = Array.from(modalRoot.querySelectorAll("th[role='columnheader']"))
+                  .filter(th => th.offsetWidth > 0);
+                const header = headers.find(th => {
+                  const text = headerText(th);
+                  return labels.some(label => text === label || text.startsWith(label + " "));
+                });
+                const colIndex = header?.getAttribute("aria-colindex");
+                if (!colIndex) {
+                  return headers.map(th => `${th.getAttribute("aria-colindex")}:${headerText(th)}`);
+                }
+                const input = modalRoot.querySelector(
+                  `tr.k-filter-row td[aria-colindex="${colIndex}"] input`
+                );
+                if (!input) return [`${colIndex}:<no filter input>`];
+                input.setAttribute("data-bot-stock-filter", key);
+                return true;
+            }""",
+            [key, list(self.STOCK_ATTRIBUTE_COLUMNS[key])],
         )
+        if result is True:
+            return True
+        if log_miss:
+            self._debug(
+                f"Stock Picker '{key}' column not found by labels "
+                f"{self.STOCK_ATTRIBUTE_COLUMNS[key]}; visible headers: {result}"
+            )
+        return False
 
     def _apply_stock_attribute_filters(self, stock_attributes: Any) -> bool:
         """Type each stock attribute into its Stock Picker column filter.
@@ -1026,7 +1037,7 @@ class JobDetailsTab(BasePage):
             if not value:
                 continue
             try:
-                if not self._mark_stock_filter_input(key):
+                if not self._mark_stock_filter_input(key, log_miss=True):
                     self._debug(f"Stock Picker has no '{key}' column; skipping its filter")
                     continue
                 filter_input = self.page.locator(f"[data-bot-stock-filter='{key}']").first
