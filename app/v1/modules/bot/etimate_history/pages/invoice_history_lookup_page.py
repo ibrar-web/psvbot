@@ -898,9 +898,20 @@ class InvoiceHistoryLookupPage(EstimateHistoryPage):
                 const rows = Array.from(document.querySelectorAll("div[id^='charge_index_']"));
                 const results = [];
                 for (const row of rows) {
-                    // Skip press-level ("P") and stock-level ("S") charges.
-                    const hasLevelBadge = !!row.querySelector(
-                        '.charge-desc .badge-container .tag_press, .charge-desc .badge-container .tag_stock'
+                    // Skip press-level ("P") and stock-level ("S") auto-added charges.
+                    // PSV marks these with a badge whose text is exactly "P" or "S".
+                    // Also match the CSS classes as a fallback.
+                    const badgeContainer = row.querySelector('.badge-container');
+                    const badgeTexts = badgeContainer
+                        ? Array.from(badgeContainer.querySelectorAll('span, div, label'))
+                            .map(el => (el.innerText || el.textContent || '').trim())
+                        : [];
+                    const hasAutoLabel = badgeTexts.some(t => t === 'P' || t === 'S');
+                    const hasLevelBadge = hasAutoLabel || !!row.querySelector(
+                        '.charge-desc .badge-container .tag_press, '
+                        + '.charge-desc .badge-container .tag_stock, '
+                        + '.badge-container [class*="tag_press"], '
+                        + '.badge-container [class*="tag_stock"]'
                     );
                     if (hasLevelBadge) continue;
                     const nameEl = row.querySelector('.charge_desc_label');

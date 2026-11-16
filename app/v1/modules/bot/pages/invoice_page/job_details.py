@@ -1160,9 +1160,14 @@ class JobDetailsTab(BasePage):
         """Return the names of charges already listed in the Charges grid.
 
         Selecting a stock (or setting the quantity) can make PrintSmith
-        auto-add stock/press level charges, so these are read right before
-        the Add New Charges modal is opened.
+        auto-add stock/press level charges asynchronously. Wait briefly
+        after the spinner clears to let those charges finish rendering
+        before we read the list, otherwise the filter runs too early and
+        misses them.
         """
+        self.wait_for_spinner_to_disappear()
+        # Give PSV a moment to finish rendering auto-added P/S charges.
+        self.page.wait_for_timeout(1500)
         self.wait_for_spinner_to_disappear()
         names = self.page.evaluate(
             """() => Array.from(document.querySelectorAll("div[id^='charge_index_']"))
