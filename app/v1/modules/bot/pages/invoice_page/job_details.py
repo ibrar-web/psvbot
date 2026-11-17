@@ -1160,9 +1160,14 @@ class JobDetailsTab(BasePage):
         """Return the names of charges already listed in the Charges grid.
 
         Selecting a stock (or setting the quantity) can make PrintSmith
-        auto-add stock/press level charges, so these are read right before
-        the Add New Charges modal is opened.
+        auto-add stock/press level charges asynchronously. Wait briefly
+        after the spinner clears to let those charges finish rendering
+        before we read the list, otherwise the filter runs too early and
+        misses them.
         """
+        self.wait_for_spinner_to_disappear()
+        # Give PSV a moment to finish rendering auto-added P/S charges.
+        self.page.wait_for_timeout(1500)
         self.wait_for_spinner_to_disappear()
         names = self.page.evaluate(
             """() => Array.from(document.querySelectorAll("div[id^='charge_index_']"))
@@ -1424,7 +1429,10 @@ class JobDetailsTab(BasePage):
                     or ""
                 ).strip(),
                 "quantity": charge.get("quantity"),
-                "price": charge.get("price"),
+                "price": self._first_value(
+                    charge,
+                    ("price", "charge_price", "amount"),
+                ),
                 "description": str(charge.get("description") or "").strip(),
             }
         return {
@@ -1478,6 +1486,15 @@ class JobDetailsTab(BasePage):
                 return value
         return ""
 
+    def _first_value(self, data: Mapping[str, Any], keys: tuple[str, ...]) -> Any:
+        for key in keys:
+            value = data.get(key)
+            if value is None:
+                continue
+            if str(value).strip():
+                return value
+        return None
+
     def _fill_charges_only_field(self, selector: str, value: Any, label: str) -> bool:
         text = str(value or "").strip()
         if not text:
@@ -1493,6 +1510,7 @@ class JobDetailsTab(BasePage):
         locator.press("Enter")
         self.wait_for_spinner_to_disappear()
         return True
+
 
     def _confirm_charge_item(self, term: str) -> None:
         self._debug(f"Confirming selected charge item: {term}")
