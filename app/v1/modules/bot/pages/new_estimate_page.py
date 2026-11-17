@@ -81,39 +81,44 @@ class NewEstimatePage(BasePage):
         )
 
     def _select_walk_in_customer(self, data: Mapping[str, str]) -> dict[str, Any]:
-        primary_customer_name = (
-            str(data.get("contact_person") or "walk-in").strip() or "walk-in"
-        )
+        """Try company name, then contact person, then fall back to walk-in."""
         fallback_customer_name = "walk-in"
-        self._debug(f"Typing customer search: {primary_customer_name}")
-        self._wait_for_customer_search_to_settle()
-        self._replace_customer_search_value(primary_customer_name)
-        self._wait_for_customer_search_to_settle()
+        candidates: list[str] = []
+        for key in ("company_name", "contact_person"):
+            name = str(data.get(key) or "").strip()
+            if name and name.lower() not in (c.lower() for c in candidates):
+                candidates.append(name)
 
-        self._debug(f"Selecting '{primary_customer_name}' from customer dropdown")
-        selection_outcome = self._select_customer_dropdown_option(primary_customer_name)
-        if selection_outcome != "selected":
-            self._debug(
-                f"Could not find '{primary_customer_name}' in dropdown, "
-                f"using fallback customer value: {fallback_customer_name}"
-            )
-            self._replace_customer_search_value(fallback_customer_name)
+        self._wait_for_customer_search_to_settle()
+        selection_outcome = "no_candidates"
+        for customer_name in candidates:
+            self._debug(f"Typing customer search: {customer_name}")
+            self._replace_customer_search_value(customer_name)
             self._wait_for_customer_search_to_settle()
-            self._debug("Selecting 'walk-in' from customer dropdown")
-            self._select_walk_in_dropdown_option()
-            self._wait_for_customer_search_to_settle()
-            return {
-                "used_fallback_customer": True,
-                "requested_customer_name": primary_customer_name,
-                "selected_customer_name": fallback_customer_name,
-                "fallback_reason": selection_outcome,
-            }
+
+            self._debug(f"Selecting '{customer_name}' from customer dropdown")
+            selection_outcome = self._select_customer_dropdown_option(customer_name)
+            if selection_outcome == "selected":
+                self._wait_for_customer_search_to_settle()
+                return {
+                    "used_fallback_customer": False,
+                    "requested_customer_name": customer_name,
+                    "selected_customer_name": customer_name,
+                    "fallback_reason": None,
+                }
+            self._debug(f"Could not find '{customer_name}' in dropdown ({selection_outcome})")
+
+        self._debug(f"No customer match; using fallback customer value: {fallback_customer_name}")
+        self._replace_customer_search_value(fallback_customer_name)
+        self._wait_for_customer_search_to_settle()
+        self._debug("Selecting 'walk-in' from customer dropdown")
+        self._select_walk_in_dropdown_option()
         self._wait_for_customer_search_to_settle()
         return {
-            "used_fallback_customer": False,
-            "requested_customer_name": primary_customer_name,
-            "selected_customer_name": primary_customer_name,
-            "fallback_reason": None,
+            "used_fallback_customer": True,
+            "requested_customer_name": " / ".join(candidates) or fallback_customer_name,
+            "selected_customer_name": fallback_customer_name,
+            "fallback_reason": selection_outcome,
         }
 
     def _replace_customer_search_value(self, value: str) -> None:

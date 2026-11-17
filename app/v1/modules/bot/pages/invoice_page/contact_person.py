@@ -38,6 +38,14 @@ class ContactPersonTab(BasePage):
     DONE_BUTTON = f"xpath={CONTACT_FORM}//a[@name='save_edit_contact_details_btn']"
     INVOICE_DONE_BUTTON = f"xpath={INVOICE_FORM}//a[@name='save_inv_address_btn']"
 
+    # "Available contacts" popup: always in the DOM, shown (display: block)
+    # when PrintSmith finds existing contacts matching the entered details.
+    AVAILABLE_CONTACTS_MODAL_CSS = "app-modal-pup-up.dup_contact_popup .modal"
+    AVAILABLE_CONTACTS_CLOSE_BUTTON = (
+        "app-modal-pup-up.dup_contact_popup input[type='button'][value='Close']"
+    )
+    AVAILABLE_CONTACTS_APPEAR_TIMEOUT_MS = 3000
+
     def _debug(self, message: str) -> None:
         if DEBUG:
             print(f"[PrintSmith][ContactPersonTab] {message}")
@@ -63,10 +71,12 @@ class ContactPersonTab(BasePage):
         self.wait_for_visible(self.DONE_BUTTON)
         self.click(self.DONE_BUTTON)
         self._wait_for_spinner_overlay()
+        self._close_available_contacts_popup_if_present()
 
     def switch_to_job_details_tab(self) -> None:
         self._debug("Switching to Job Details tab")
         self.wait_for_spinner_to_disappear()
+        self._close_available_contacts_popup_if_present(wait_ms=0)
         self.click(self.JOB_DETAILS_TAB)
         self.page.wait_for_function(
             """() => {
@@ -140,6 +150,51 @@ class ContactPersonTab(BasePage):
         self.wait_for_visible(self.INVOICE_DONE_BUTTON)
         self.click(self.INVOICE_DONE_BUTTON)
         self._wait_for_spinner_overlay()
+        self._close_available_contacts_popup_if_present()
+
+    def _is_available_contacts_popup_visible(self) -> bool:
+        return bool(
+            self.page.evaluate(
+                """(sel) => {
+                    const modal = document.querySelector(sel);
+                    if (!modal) return false;
+                    const style = window.getComputedStyle(modal);
+                    return style.display !== "none" && style.visibility !== "hidden";
+                }""",
+                self.AVAILABLE_CONTACTS_MODAL_CSS,
+            )
+        )
+
+    def _close_available_contacts_popup_if_present(self, wait_ms: int | None = None) -> bool:
+        """Close the "Available contacts" popup if it appears after a Done click."""
+        wait_ms = self.AVAILABLE_CONTACTS_APPEAR_TIMEOUT_MS if wait_ms is None else wait_ms
+        if wait_ms > 0:
+            try:
+                self.page.wait_for_function(
+                    """(sel) => {
+                        const modal = document.querySelector(sel);
+                        return !!modal && window.getComputedStyle(modal).display !== "none";
+                    }""",
+                    arg=self.AVAILABLE_CONTACTS_MODAL_CSS,
+                    timeout=wait_ms,
+                )
+            except PlaywrightTimeoutError:
+                return False
+        if not self._is_available_contacts_popup_visible():
+            return False
+
+        self._debug("'Available contacts' popup detected; clicking Close")
+        self._loc(self.AVAILABLE_CONTACTS_CLOSE_BUTTON).first.click(timeout=self._timeout_ms)
+        self.page.wait_for_function(
+            """(sel) => {
+                const modal = document.querySelector(sel);
+                return !modal || window.getComputedStyle(modal).display === "none";
+            }""",
+            arg=self.AVAILABLE_CONTACTS_MODAL_CSS,
+            timeout=self._timeout_ms,
+        )
+        self._wait_for_spinner_overlay()
+        return True
 
     def _fill_invoice_address_with_retry(self, data: Mapping[str, str], retries: int = 2) -> None:
         last_exc: Exception | None = None
