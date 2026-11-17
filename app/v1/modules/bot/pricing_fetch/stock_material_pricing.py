@@ -212,12 +212,15 @@ def _fetch_stock_details(
     api: PsvApi, stocks: List[Dict[str, Any]], stock_filter: Optional[str]
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     stock_estimators = _fetch_stock_estimators(api, stock_filter)
-    results = api.get_many(
+    batches = api.iter_get_many(
         [STOCK_DETAILS_PATH.format(stock["id"]) for stock in stocks],
         DETAILS_CONCURRENCY,
     )
 
     rows, failed = [], []
+    # Rows are built as each batch arrives so the raw stock definitions,
+    # which are large, are never all held in memory at once.
+    results = (result for batch in batches for result in batch)
     for stock, result in zip(stocks, results):
         if result["ok"]:
             rows.append(

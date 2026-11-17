@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterator, List
 
 from playwright.sync_api import Page
 
@@ -12,6 +12,10 @@ REQUEST_TIMEOUT_MS = 30_000
 # Many failures usually mean PSV is rejecting us (session, load), so the
 # remaining requests are skipped instead of sent.
 STOP_AFTER_FAILURES = 20
+# Each page.evaluate result is serialized to one JSON string by Playwright's
+# Node driver; sending every request in one call ran it out of heap, so
+# requests go in batches of this size.
+BATCH_SIZE = 50
 
 # Runs inside the logged-in PSV page so the JSESSIONID cookie is sent.
 # PSV's web app adds the starttime/messageid headers to every REST call.
@@ -116,30 +120,73 @@ class PsvApi:
     ) -> List[Dict[str, Any]]:
         # Each result is {"ok": True, "data": ...} or
         # {"ok": False, "reason": ...}, in the same order as paths.
+        results: List[Dict[str, Any]] = []
+        for batch_results in self.iter_get_many(paths, concurrency):
+            results.extend(batch_results)
+        return results
+
+    def iter_get_many(
+        self, paths: List[str], concurrency: int
+    ) -> Iterator[List[Dict[str, Any]]]:
+        # Yields results per batch of BATCH_SIZE paths, in order, so callers
+        # can drop each batch's raw data before the next one is fetched.
         requests = [
             {"url": REST_BASE_PATH + path, "method": "GET"} for path in paths
         ]
-        return self._send(requests, concurrency)
+        return self._send_batches(requests, concurrency)
 
     def _send(
         self, requests: List[Dict[str, Any]], concurrency: int
     ) -> List[Dict[str, Any]]:
-        logger.info("Sending %s PSV API requests", len(requests))
-        results = self._page.evaluate(
-            FETCH_SCRIPT,
-            [
-                requests,
-                concurrency,
-                MAX_ATTEMPTS,
-                REQUEST_TIMEOUT_MS,
-                STOP_AFTER_FAILURES,
-            ],
+        results: List[Dict[str, Any]] = []
+        for batch_results in self._send_batches(requests, concurrency):
+            results.extend(batch_results)
+        return results
+
+    def _send_batches(
+        self, requests: List[Dict[str, Any]], concurrency: int
+    ) -> Iterator[List[Dict[str, Any]]]:
+        batch_count = -(-len(requests) // BATCH_SIZE)
+        logger.info(
+            "Sending %s PSV API requests in %s batches",
+            len(requests),
+            batch_count,
         )
-        failed_count = sum(not result["ok"] for result in results)
+        failed_count = 0
+        for start in range(0, len(requests), BATCH_SIZE):
+            batch = requests[start:start + BATCH_SIZE]
+            failures_left = STOP_AFTER_FAILURES - failed_count
+            if failures_left <= 0:
+                batch_results = [
+                    {"ok": False, "reason": "skipped"} for _ in batch
+                ]
+            else:
+                batch_results = self._evaluate_batch(
+                    batch, concurrency, failures_left
+                )
+            failed_count += sum(not result["ok"] for result in batch_results)
+            yield batch_results
+
         if failed_count:
             logger.warning(
                 "%s of %s PSV API requests failed or were skipped",
                 failed_count,
                 len(requests),
             )
-        return results
+
+    def _evaluate_batch(
+        self,
+        batch: List[Dict[str, Any]],
+        concurrency: int,
+        failures_left: int,
+    ) -> List[Dict[str, Any]]:
+        return self._page.evaluate(
+            FETCH_SCRIPT,
+            [
+                batch,
+                concurrency,
+                MAX_ATTEMPTS,
+                REQUEST_TIMEOUT_MS,
+                failures_left,
+            ],
+        )
